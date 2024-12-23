@@ -24,9 +24,9 @@ from openpilot.selfdrive.modeld.constants import ModelConstants
 # friction in the steering wheel that needs to be overcome to
 # move it at all, this is compensated for too.
 
-LOW_SPEED_X = [0, 10, 20, 30]
-LOW_SPEED_Y = [15, 13, 10, 5]
-LOW_SPEED_Y_NN = [12, 3, 1, 0]
+LOW_SPEED_X = [0, 10, 20, 30, 40, 50, 60, 70]
+LOW_SPEED_Y = [30, 27, 24, 21, 18, 15, 12, 10]
+LOW_SPEED_Y_NN = [30, 27, 24, 21, 18, 15, 12, 10]
 
 LAT_PLAN_MIN_IDX = 5
 
@@ -90,8 +90,8 @@ class LatControlTorque(LatControl):
 
       # Scaling the lateral acceleration "friction response" could be helpful for some.
       # Increase for a stronger response, decrease for a weaker response.
-      self.lat_jerk_friction_factor = 0.4
-      self.lat_accel_friction_factor = 0.7 # in [0, 3], in 0.05 increments. 3 is arbitrary safety limit
+      self.lat_jerk_friction_factor = 1.2
+      self.lat_accel_friction_factor = 2.2 # in [0, 3], in 0.05 increments. 3 is arbitrary safety limit
 
       # precompute time differences between ModelConstants.T_IDXS
       self.t_diffs = np.diff(ModelConstants.T_IDXS)

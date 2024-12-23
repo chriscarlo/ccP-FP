@@ -95,7 +95,6 @@ class RadarInterface(RadarInterfaceBase):
           self.pts[ii].vRel = msg['ACC_ObjRelSpd']
           self.pts[ii].aRel = float('nan')
           self.pts[ii].yvRel = float('nan')
-
         else:
           if ii in self.pts:
             del self.pts[ii]
@@ -117,7 +116,6 @@ class RadarInterface(RadarInterfaceBase):
             self.pts[addr].vRel = msg['REL_SPEED']
             self.pts[addr].aRel = msg['REL_ACCEL']
             self.pts[addr].yvRel = float('nan')
-
         else:
             del self.pts[addr]
 

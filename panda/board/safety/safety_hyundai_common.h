@@ -62,12 +62,23 @@ void hyundai_common_cruise_state_check(const bool cruise_engaged) {
   }
 }
 
+void hyundai_lkas_button_check(const bool lkas_pressed) {
+  // Check LKAS button press
+  if (lkas_pressed && !lkas_pressed_prev) {
+    if (alternative_experience & ALT_EXP_ALWAYS_ON_LATERAL) {
+      aol_allowed = true;
+    }
+  }
+  lkas_pressed_prev = lkas_pressed;
+}
+
 void hyundai_common_cruise_buttons_check(const int cruise_button, const bool main_button) {
   if (main_button && main_button != cruise_main_prev) {
+    acc_main_on = !acc_main_on;
     if (acc_main_on && (alternative_experience & ALT_EXP_ALWAYS_ON_LATERAL)) {
+      aol_allowed = true;
       controls_allowed = false;
     }
-    acc_main_on = !acc_main_on;
   }
   cruise_main_prev = main_button;
   if ((cruise_button == HYUNDAI_BTN_RESUME) || (cruise_button == HYUNDAI_BTN_SET) || (cruise_button == HYUNDAI_BTN_CANCEL) || main_button) {

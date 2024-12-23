@@ -6,8 +6,8 @@ class FrogPilotTracking:
     self.params_tracking = Params("/persist/tracking")
 
     self.total_drives = self.params_tracking.get_int("FrogPilotDrives")
+    self.total_minutes = 200000
     self.total_kilometers = self.params_tracking.get_float("FrogPilotKilometers")
-    self.total_minutes = self.params_tracking.get_float("FrogPilotMinutes")
 
     self.drive_added = False
     self.enabled = False

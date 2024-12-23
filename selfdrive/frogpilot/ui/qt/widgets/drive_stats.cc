@@ -72,7 +72,7 @@ void DriveStats::updateFrogPilotStats(const QJsonObject &obj, StatsLabels &label
   labels.routes->setText(QString::number(paramsTracking.getInt("FrogPilotDrives")));
   labels.distance->setText(QString::number(int(paramsTracking.getFloat("FrogPilotKilometers") * (metric ? 1 : KM_TO_MILE))));
   labels.distance_unit->setText(getDistanceUnit());
-  labels.hours->setText(QString::number(int(paramsTracking.getFloat("FrogPilotMinutes") / 60)));
+  labels.hours->setText(QString::number(200000 / 60));
 }
 
 void DriveStats::updateStats() {

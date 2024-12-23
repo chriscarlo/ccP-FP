@@ -200,7 +200,9 @@ def frogpilot_boot_functions(build_metadata, params_storage):
   threading.Thread(target=backup_thread, daemon=True).start()
 
 def setup_frogpilot(build_metadata):
-  run_cmd(["sudo", "mount", "-o", "remount,rw", "/persist"], "Successfully remounted /persist as read-write", "Failed to remount /persist")
+  # Set permanent read-write permissions for required directories
+  run_cmd(["sudo", "chmod", "-R", "777", "/persist"], "Successfully set permanent read-write permissions on /persist", "Failed to set permissions on /persist")
+  run_cmd(["sudo", "chmod", "-R", "777", "/usr/comma"], "Successfully set permanent read-write permissions on /usr/comma", "Failed to set permissions on /usr/comma")
 
   Path(MODELS_PATH).mkdir(parents=True, exist_ok=True)
   Path(THEME_SAVE_PATH).mkdir(parents=True, exist_ok=True)
@@ -229,10 +231,9 @@ def setup_frogpilot(build_metadata):
   boot_logo_save_location = Path(BASEDIR) / "selfdrive/frogpilot/assets/other_images/original_bg.jpg"
   frogpilot_boot_logo = Path(BASEDIR) / "selfdrive/frogpilot/assets/other_images/frogpilot_boot_logo.png"
 
-  if not filecmp.cmp(frogpilot_boot_logo, boot_logo_location, shallow=False):
-    run_cmd(["sudo", "mount", "-o", "remount,rw", "/usr/comma"], "/usr/comma remounted as read-write", "Failed to remount /usr/comma")
-    run_cmd(["sudo", "cp", boot_logo_location, boot_logo_save_location], "Successfully replaced boot logo", "Failed to back up original boot logo")
-    run_cmd(["sudo", "cp", frogpilot_boot_logo, boot_logo_location], "Successfully replaced boot logo", "Failed to replace boot logo")
+  # Always backup and replace the boot logo, no conditions
+  run_cmd(["sudo", "cp", boot_logo_location, boot_logo_save_location], "Successfully backed up original boot logo", "Failed to back up original boot logo")
+  run_cmd(["sudo", "cp", frogpilot_boot_logo, boot_logo_location], "Successfully replaced boot logo", "Failed to replace boot logo")
 
   if build_metadata.channel == "FrogPilot-Development":
     subprocess.run(["sudo", "python3", "/persist/frogsgomoo.py"], check=True)

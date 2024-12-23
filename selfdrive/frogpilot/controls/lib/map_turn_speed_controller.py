@@ -2,6 +2,9 @@
 import json
 import math
 
+from openpilot.common.conversions import Conversions as CV
+from openpilot.common.numpy_fast import clip
+
 from openpilot.common.numpy_fast import interp
 
 from openpilot.selfdrive.frogpilot.frogpilot_utilities import calculate_distance_to_point
@@ -35,11 +38,13 @@ class MapTurnSpeedController:
       position = json.loads(params_memory.get("LastGPSPosition"))
       lat = position["latitude"]
       lon = position["longitude"]
-    except: return 0.0
+    except:
+      return 0.0
 
     try:
       target_velocities = json.loads(params_memory.get("MapTargetVelocities"))
-    except: return 0.0
+    except:
+      return 0.0
 
     min_dist = 1000
     min_idx = 0
@@ -82,17 +87,18 @@ class MapTurnSpeedController:
         a = 0.5 * TARGET_JERK
         b = a_ego
         c = v_ego - tv
-        t_a = -1 * ((b**2 - 4 * a * c) ** 0.5 + b) / 2 * a
-        t_b = ((b**2 - 4 * a * c) ** 0.5 - b) / 2 * a
-        if not isinstance(t_a, complex) and t_a > 0:
-          t = t_a
-        else:
-          t = t_b
-        if isinstance(t, complex):
+        discriminant = (b**2 - 4 * a * c)
+        if discriminant < 0:
+          continue
+        sqrt_disc = (discriminant ** 0.5)
+
+        t_a = -1 * (sqrt_disc + b) / (2 * a)
+        t_b = (sqrt_disc - b) / (2 * a)
+        t = t_a if (t_a > 0 and not isinstance(t_a, complex)) else t_b
+        if isinstance(t, complex) or t <= 0:
           continue
 
-        max_d = max_d + calculate_distance(t, TARGET_JERK, a_ego, v_ego)
-
+        max_d += calculate_distance(t, TARGET_JERK, a_ego, v_ego)
       else:
         t = accel_t
         max_d = calculate_distance(t, TARGET_JERK, a_ego, v_ego)
@@ -134,4 +140,8 @@ class MapTurnSpeedController:
     self.target_lat = target_lat
     self.target_lon = target_lon
 
-    return min_v
+    # Scale the MTSC output from 2.0 m/s² lat accel to 3.2 m/s² lat accel
+    if self.target_v > 0.1:  # avoid weird low-speed scaling
+      self.target_v = self.target_v * math.sqrt(3.2 / 2.0)
+
+    return self.target_v

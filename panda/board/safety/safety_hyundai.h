@@ -4,9 +4,9 @@
   .max_steer = (steer), \
   .max_rate_up = (rate_up), \
   .max_rate_down = (rate_down), \
-  .max_rt_delta = 112, \
+  .max_rt_delta = 448, \
   .max_rt_interval = 250000, \
-  .driver_torque_allowance = 50, \
+  .driver_torque_allowance = 450, \
   .driver_torque_factor = 2, \
   .type = TorqueDriverLimited, \
    /* the EPS faults when the steering angle is above a certain threshold for too long. to prevent this, */ \
@@ -17,17 +17,17 @@
   .has_steer_req_tolerance = true, \
 }
 
-const SteeringLimits HYUNDAI_STEERING_LIMITS = HYUNDAI_LIMITS(384, 3, 7);
-const SteeringLimits HYUNDAI_STEERING_LIMITS_ALT = HYUNDAI_LIMITS(270, 2, 3);
+const SteeringLimits HYUNDAI_STEERING_LIMITS = HYUNDAI_LIMITS(500, 15, 15);
+const SteeringLimits HYUNDAI_STEERING_LIMITS_ALT = HYUNDAI_LIMITS(500, 15, 15);
 
 const LongitudinalLimits HYUNDAI_LONG_LIMITS = {
-  .max_accel = 200,   // 1/100 m/s2
-  .min_accel = -350,  // 1/100 m/s2
+  .max_accel = 500,   // 1/100 m/s2
+  .min_accel = -600,  // 1/100 m/s2
 };
 
 const LongitudinalLimits HYUNDAI_LONG_LIMITS_SPORT = {
-  .max_accel = 400,   // 1/100 m/s2
-  .min_accel = -350,  // 1/100 m/s2
+  .max_accel = 500,   // 1/100 m/s2
+  .min_accel = -600,  // 1/100 m/s2
 };
 
 const CanMsg HYUNDAI_TX_MSGS[] = {
@@ -178,6 +178,14 @@ static void hyundai_rx_hook(const CANPacket_t *to_push) {
       int torque_driver_new = (GET_BYTES(to_push, 0, 2) & 0x7ffU) - 1024U;
       // update array of samples
       update_sample(&torque_driver, torque_driver_new);
+    }
+
+    bool lkas_button = false;
+    if (addr == 0x391) {
+      lkas_button = GET_BIT(to_push, 4U);
+      if (alternative_experience & ALT_EXP_ALWAYS_ON_LATERAL) {
+        hyundai_lkas_button_check(lkas_button);
+      }
     }
 
     // ACC steering wheel buttons

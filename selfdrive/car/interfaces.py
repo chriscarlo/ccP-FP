@@ -32,8 +32,8 @@ GearShifter = car.CarState.GearShifter
 EventName = car.CarEvent.EventName
 
 MAX_CTRL_SPEED = (V_CRUISE_MAX + 4) * CV.KPH_TO_MS
-ACCEL_MAX = 2.0
-ACCEL_MIN = -3.5
+ACCEL_MAX = 5.0
+ACCEL_MIN = -6.0
 FRICTION_THRESHOLD = 0.3
 
 NEURAL_PARAMS_PATH = os.path.join(BASEDIR, 'selfdrive/car/torque_data/neural_ff_weights.json')
@@ -238,7 +238,7 @@ class CarInterfaceBase(ABC):
     self.use_nnff = not comma_nnff_supported and nnff_supported and self.frogpilot_toggles.nnff
     self.use_nnff_lite = not self.use_nnff and self.frogpilot_toggles.nnff_lite
 
-    self.always_on_lateral_disabled = False
+    self.always_on_lateral_enabled = False
     self.belowSteerSpeed_shown = False
     self.disable_belowSteerSpeed = False
     self.disable_resumeRequired = False
@@ -334,7 +334,7 @@ class CarInterfaceBase(ABC):
                                        lateral_accel_error: float, lateral_accel_deadzone: float, friction_compensation: bool, gravity_adjusted: bool) -> float:
     # The default is a linear relationship between torque and lateral acceleration (accounting for road roll and steering friction)
     friction = get_friction(lateral_accel_error, lateral_accel_deadzone, FRICTION_THRESHOLD, torque_params, friction_compensation)
-    return (latcontrol_inputs.lateral_acceleration / float(torque_params.latAccelFactor)) + friction
+    return latcontrol_inputs.lateral_acceleration / max(float(torque_params.latAccelFactor), 1e-9) + friction
 
   def torque_from_lateral_accel(self) -> TorqueFromLateralAccelCallbackType:
     return self.torque_from_lateral_accel_linear
@@ -421,7 +421,7 @@ class CarInterfaceBase(ABC):
       ret.cruiseState.speedCluster = ret.cruiseState.speed
 
     # Add any additional frogpilotCarStates
-    fp_ret.alwaysOnLateralDisabled = self.always_on_lateral_disabled
+    fp_ret.alwaysOnLateralEnabled = self.always_on_lateral_enabled
     fp_ret.distanceLongPressed = self.frogpilot_distance_functions(frogpilot_toggles)
     fp_ret.ecoGear |= ret.gearShifter == GearShifter.eco
     fp_ret.sportGear |= ret.gearShifter == GearShifter.sport
@@ -483,7 +483,7 @@ class CarInterfaceBase(ABC):
 
       # FrogPilot button presses
       if b.type == FrogPilotButtonType.lkas and b.pressed:
-        self.always_on_lateral_disabled = not self.always_on_lateral_disabled
+        self.always_on_lateral_enabled = not self.always_on_lateral_enabled
 
     # Handle permanent and temporary steering faults
     self.steering_unpressed = 0 if cs_out.steeringPressed else self.steering_unpressed + 1

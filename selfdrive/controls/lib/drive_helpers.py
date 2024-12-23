@@ -9,9 +9,9 @@ from openpilot.common.realtime import DT_CTRL
 #          model predictions above this speed can be unpredictable
 # V_CRUISE's are in kph
 V_CRUISE_MIN = 8
-V_CRUISE_MAX = 145
+V_CRUISE_MAX = 195
 V_CRUISE_UNSET = 255
-V_CRUISE_INITIAL = 40
+V_CRUISE_INITIAL = 24
 V_CRUISE_INITIAL_EXPERIMENTAL_MODE = 105
 IMPERIAL_INCREMENT = round(CV.MPH_TO_KPH, 1)  # round here to avoid rounding errors incrementing set speed
 
@@ -22,7 +22,7 @@ CAR_ROTATION_RADIUS = 0.0
 MAX_CURVATURE = 0.2
 
 # EU guidelines
-MAX_LATERAL_JERK = 5.0
+MAX_LATERAL_JERK = 8.0
 MAX_VEL_ERR = 5.0
 
 ButtonEvent = car.CarState.ButtonEvent

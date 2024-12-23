@@ -21,8 +21,9 @@ void SoftwarePanel::checkForUpdates() {
 }
 
 SoftwarePanel::SoftwarePanel(QWidget* parent) : ListWidget(parent) {
-  onroadLbl = new QLabel(tr("Updates are only downloaded while the car is off or in park."));
-  onroadLbl->setStyleSheet("font-size: 50px; font-weight: 400; text-align: left; padding-top: 30px; padding-bottom: 30px;");
+  onroadLbl = new QLabel(tr("Chauffeur 0.0.1"));
+  onroadLbl->setStyleSheet("font-size: 65px; font-weight: 600; color: #FFFFFF; margin: 0 auto; padding: 25px 0;");
+  onroadLbl->setAlignment(Qt::AlignCenter);
   addItem(onroadLbl);
 
   // current version
@@ -142,10 +143,21 @@ void SoftwarePanel::updateLabels() {
   }
 
   // updater only runs offroad or when parked
-  bool parked = scene.parked || scene.frogs_go_moo;
+  // bool parked = scene.parked;
 
-  onroadLbl->setVisible(is_onroad && !parked);
-  downloadBtn->setVisible(!is_onroad || parked);
+  // Remove visibility controls for both buttons
+  // onroadLbl->setVisible(is_onroad && !parked && !frogsGoMoo);
+  // downloadBtn->setVisible(!is_onroad || parked || frogsGoMoo);
+
+  // Make both buttons always visible
+  downloadBtn->setVisible(true);
+
+  // Remove the driving state check for install button, only check if update is available
+  bool install_ready = params.getBool("UpdateAvailable");
+  if (!installBtn->isVisible() && install_ready) {
+    device()->resetInteractiveTimeout(30);
+  }
+  installBtn->setVisible(install_ready);
 
   // download update
   QString updater_state = QString::fromStdString(params.get("UpdaterState"));
@@ -179,7 +191,7 @@ void SoftwarePanel::updateLabels() {
   versionLbl->setText(QString::fromStdString(params.get("UpdaterCurrentDescription")));
   versionLbl->setDescription(QString::fromStdString(params.get("UpdaterCurrentReleaseNotes")));
 
-  installBtn->setVisible((!is_onroad || parked) && params.getBool("UpdateAvailable"));
+  // installBtn->setVisible((!is_onroad || scene.parked) && params.getBool("UpdateAvailable"));  // Commented out to allow updates while driving
   installBtn->setValue(QString::fromStdString(params.get("UpdaterNewDescription")));
   installBtn->setDescription(QString::fromStdString(params.get("UpdaterNewReleaseNotes")));
 

@@ -51,8 +51,8 @@ FrogPilotSettingsWindow::FrogPilotSettingsWindow(SettingsWindow *parent) : QFram
                                         "while 'Developer' unlocks highly customizable settings designed for seasoned enthusiasts."),
                                         "../frogpilot/assets/toggle_icons/icon_customization.png",
                                         togglePresets);
-  int timeTo100FPHours = 100 - (paramsTracking.getInt("FrogPilotMinutes") / 60);
-  int timeTo250OPHours = 250 - (params.getInt("openpilotMinutes") / 60);
+  int timeTo100FPHours = -1;
+  int timeTo250OPHours = -1;
   togglePreset->setEnabledButtons(3, timeTo100FPHours <= 0 || timeTo250OPHours <= 0);
   QObject::connect(togglePreset, &ButtonParamControl::buttonClicked, [=](int id) {
     tuningLevel = id;

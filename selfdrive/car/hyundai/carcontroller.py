@@ -110,12 +110,13 @@ class CarController(CarControllerBase):
       if actuators.accel < 0 or CS.out.vEgo < 3.57 or self.jerk_limiter.using_e2e:
         accel = self.jerk_limiter.calculate_limited_accel(
                       accel, actuators, CS, LongCtrlState, interp, clip)
+      elif frogpilot_toggles.sport_plus and actuators.accel > 0:
+        accel = clip(actuators.accel, CarControllerParams.ACCEL_MIN, min(frogpilot_toggles.max_desired_acceleration, get_max_allowed_accel(CS.out.vEgo)))
       else:
         accel = clip(actuators.accel, CarControllerParams.ACCEL_MIN, min(frogpilot_toggles.max_desired_acceleration, CarControllerParams.ACCEL_MAX))
 
     if frogpilot_toggles.sport_plus:
       accel = clip(actuators.accel, CarControllerParams.ACCEL_MIN, min(frogpilot_toggles.max_desired_acceleration, get_max_allowed_accel(CS.out.vEgo)))
-
     else:
       accel = clip(actuators.accel, CarControllerParams.ACCEL_MIN, min(frogpilot_toggles.max_desired_acceleration, CarControllerParams.ACCEL_MAX))
     stopping = actuators.longControlState == LongCtrlState.stopping

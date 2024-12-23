@@ -42,12 +42,14 @@ FrogPilotLateralPanel::FrogPilotLateralPanel(FrogPilotSettingsWindow *parent) : 
 
         bool forcingAutoTune = params.getBool("ForceAutoTune");
         bool forcingAutoTuneOff = params.getBool("ForceAutoTuneOff");
+
         if (!hasAutoTune && forcingAutoTune || hasAutoTune && !forcingAutoTuneOff) {
           modifiedAdvancedLateralTuneKeys.erase("SteerFriction");
           modifiedAdvancedLateralTuneKeys.erase("SteerKP");
           modifiedAdvancedLateralTuneKeys.erase("SteerLatAccel");
           modifiedAdvancedLateralTuneKeys.erase("SteerRatio");
         }
+
 
         if (hasAutoTune) {
           modifiedAdvancedLateralTuneKeys.erase("ForceAutoTune");
@@ -274,6 +276,39 @@ void FrogPilotLateralPanel::showEvent(QShowEvent *event) {
   steerRatioToggle->updateControl(steerRatioStock * 0.75, steerRatioStock * 1.25);
 
   hideToggles();
+
+  if (params.getBool("AdvancedLateralTune")) {
+    std::set<QString> modifiedAdvancedLateralTuneKeys = advancedLateralTuneKeys;
+
+    bool forcingAutoTune = params.getBool("ForceAutoTune");
+    bool forcingAutoTuneOff = params.getBool("ForceAutoTuneOff");
+
+    if (forcingAutoTuneOff) {
+      modifiedAdvancedLateralTuneKeys.erase("ForceAutoTune");
+    }
+
+    if (!hasAutoTune && forcingAutoTune) {
+      modifiedAdvancedLateralTuneKeys.erase("SteerFriction");
+      modifiedAdvancedLateralTuneKeys.erase("SteerKP");
+      modifiedAdvancedLateralTuneKeys.erase("SteerLatAccel");
+      modifiedAdvancedLateralTuneKeys.erase("SteerRatio");
+    }
+
+    if (hasAutoTune && !forcingAutoTuneOff) {
+      modifiedAdvancedLateralTuneKeys.erase("SteerFriction");
+      modifiedAdvancedLateralTuneKeys.erase("SteerKP");
+      modifiedAdvancedLateralTuneKeys.erase("SteerLatAccel");
+      modifiedAdvancedLateralTuneKeys.erase("SteerRatio");
+    }
+
+    bool usingNNFF = hasNNFFLog && params.getBool("LateralTune") && params.getBool("NNFF");
+    if (!liveValid || usingNNFF) {
+      modifiedAdvancedLateralTuneKeys.erase("SteerFriction");
+      modifiedAdvancedLateralTuneKeys.erase("SteerLatAccel");
+    }
+
+    showToggles(modifiedAdvancedLateralTuneKeys);
+  }
 }
 
 void FrogPilotLateralPanel::updateState(const UIState &s) {
