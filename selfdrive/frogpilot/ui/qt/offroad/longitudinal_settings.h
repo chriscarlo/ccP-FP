@@ -1,6 +1,8 @@
 #pragma once
 
 #include <set>
+#include <QButtonGroup>
+#include <QString>
 
 #include "selfdrive/frogpilot/ui/qt/offroad/frogpilot_settings.h"
 

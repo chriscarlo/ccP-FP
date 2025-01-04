@@ -16,12 +16,11 @@ from openpilot.selfdrive.frogpilot.frogpilot_variables import CRUISING_SPEED, PL
 
 from openpilot.selfdrive.frogpilot.frogpilot_utilities import calculate_road_curvature
 
-
 # ---------------------------------------------------------------------------
 # Non-linear function for max comfortable lateral acceleration (m/s^2)
 # ---------------------------------------------------------------------------
 # Single logistic approximation that:
-#   - ~1.5 m/s^2 near 10 mph
+#   - ~1.7 m/s^2 near 10 mph
 #   - ~3.0 m/s^2 near 40 mph
 #   - ~3.2 m/s^2 near 70 mph
 #   - saturates at ~3.2 for higher speeds
@@ -34,7 +33,7 @@ def nonlinear_lat_accel(v_ego_ms: float, turn_aggressiveness: float = 1.0) -> fl
     turn_aggressiveness: user multiplier
 
   This logistic is centered around ~30 mph and tuned so that:
-    - at 10 mph => ~1.5  (slightly above 1.5, e.g. 1.53)
+    - at 10 mph => ~1.7
     - at 40 mph => ~3.0
     - at 70 mph => ~3.2
   """
@@ -42,10 +41,10 @@ def nonlinear_lat_accel(v_ego_ms: float, turn_aggressiveness: float = 1.0) -> fl
   v_ego_mph = v_ego_ms * CV.MS_TO_MPH
 
   # Lower bound + range
-  base = 1.5      # ~lowest lat accel
-  span = 1.7      # (3.2 - 1.5) = 1.7 total range
-  center = 50.0   # "middle" in mph
-  k = 0.18       # slope factor
+  base = 1.7      # ~lowest lat accel
+  span = 1.9      # (3.2 - 1.5) = 1.7 total range
+  center = 45.0   # "middle" in mph
+  k = 0.14        # slope factor
 
   # logistic form: f(x) = base + span / (1 + e^{-k (x - center)})
   lat_acc = base + span / (1.0 + math.exp(-k * (v_ego_mph - center)))
@@ -88,10 +87,21 @@ class FrogPilotVCruise:
         self.previous_speed_limit = 0
         self.tracked_model_length = 0
 
-        # For “turn smoothing” only while actually turning:
-        self.vtsc_target_prev = 0.0       # last loop’s speed target
+        # ================== CHANGED LINES BELOW ==================
+        # 1) Lower threshold to detect turns sooner => earlier slow-down
+        self.turn_lat_acc_threshold = 0.3  # was 0.5 before
+
+        # 2) (Optional) Lower CRUISING_SPEED so we can control from ~15 mph
+        #    If you define CRUISING_SPEED elsewhere, remove or adjust this.
+        global CRUISING_SPEED
+        CRUISING_SPEED = 6.7  # ≈ 15 mph in m/s (was ~8.94 m/s for 20 mph)
+
+        # Keep turn smoothing alpha the same, or tweak as desired
         self.turn_smoothing_alpha = 0.3   # how strong smoothing is in-turn
-        self.turn_lat_acc_threshold = 0.5 # m/s^2 threshold to define “in turn”
+        # ================== CHANGED LINES ABOVE ==================
+
+        # to store the last loop's speed target (for smoothing):
+        self.vtsc_target_prev = 0.0
 
     def update(self, carControl, carState, controlsState,
                frogpilotCarControl, frogpilotCarState, frogpilotNavigation,
@@ -240,7 +250,9 @@ class FrogPilotVCruise:
         else:
             self.slc_target = 0
 
+        # -------------------------------------------------------------
         # Vision Turn Speed Controller (VTSC)
+        # -------------------------------------------------------------
         if frogpilot_toggles.vision_turn_controller and v_ego > CRUISING_SPEED and carControl.longActive:
             c = abs(self.frogpilot_planner.road_curvature)
 
@@ -253,25 +265,26 @@ class FrogPilotVCruise:
                 # 2) Convert lat accel => max cornering speed
                 v_curvature_ms = math.sqrt(lat_acc / c)
 
+            # Clip final speed so it won't exceed v_cruise or go below CRUISING_SPEED
             v_curvature_ms = clip(v_curvature_ms, CRUISING_SPEED, v_cruise)
 
-            # Only smooth if we are actively in a turn (to reduce oscillations)
             current_lat_acc = c * (v_ego ** 2)
             in_turn = (current_lat_acc > self.turn_lat_acc_threshold)
 
+            # If in a turn, apply smoothing; otherwise respond quickly
             if in_turn:
                 alpha = self.turn_smoothing_alpha
-                # low-pass filter w.r.t. previous
                 self.vtsc_target = alpha * self.vtsc_target_prev + (1.0 - alpha) * v_curvature_ms
             else:
-                # no smoothing => respond quickly
                 self.vtsc_target = v_curvature_ms
 
             self.vtsc_target_prev = self.vtsc_target
         else:
             self.vtsc_target = v_cruise if v_cruise != V_CRUISE_UNSET else 0
 
+        # -------------------------------------------------------------
         # Force Standstill / Stop
+        # -------------------------------------------------------------
         if (frogpilot_toggles.force_standstill
             and carState.standstill
             and not self.override_force_stop
@@ -312,6 +325,7 @@ class FrogPilotVCruise:
 
 # OPTIONAL Example: Test or Visualization Code
 if __name__ == "__main__":
+  # Quick test to verify lat accel function
   test_mph = list(range(5, 80, 5))
   test_ms  = [s * CV.MPH_TO_MS for s in test_mph]
 
@@ -322,7 +336,7 @@ if __name__ == "__main__":
   for mph, v, a in zip(test_mph, test_ms, lat_accels):
     print(f"{mph:4.0f} | {v:10.2f} | {a:15.3f} | {(a/9.81):10.2f}")
 
-  # Quick plot (if desired)
+  # If needed, you can uncomment and plot the resulting lat accel curve:
   # import matplotlib.pyplot as plt
   # fig, ax = plt.subplots()
   # ax.plot(test_mph, lat_accels, color='blue', marker='o', label='Logistic Lat Accel')

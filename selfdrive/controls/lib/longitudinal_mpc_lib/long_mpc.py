@@ -17,6 +17,7 @@ else:
 
 from casadi import SX, vertcat
 
+
 MODEL_NAME = 'long'
 LONG_MPC_DIR = os.path.dirname(os.path.abspath(__file__))
 EXPORT_DIR = os.path.join(LONG_MPC_DIR, "c_generated_code")
@@ -36,82 +37,147 @@ X_EGO_COST = 0.
 V_EGO_COST = 0.
 A_EGO_COST = 0.
 J_EGO_COST = 5.0
-A_CHANGE_COST = 200.
+A_CHANGE_COST = 100.
 DANGER_ZONE_COST = 100.
 CRASH_DISTANCE = .25
-LEAD_DANGER_FACTOR = 0.75
+LEAD_DANGER_FACTOR = 1.0
 LIMIT_COST = 1e6
 ACADOS_SOLVER_TYPE = 'SQP_RTI'
 # Default lead acceleration decay set to 50% at 1s
 LEAD_ACCEL_TAU = 1.5
-
 
 # Fewer timestamps don't hurt performance and lead to
 # much better convergence of the MPC with low iterations
 N = 12
 MAX_T = 10.0
 T_IDXS_LST = [index_function(idx, max_val=MAX_T, max_idx=N) for idx in range(N+1)]
-
 T_IDXS = np.array(T_IDXS_LST)
 FCW_IDXS = T_IDXS < 5.0
 T_DIFFS = np.diff(T_IDXS, prepend=[0.])
 COMFORT_BRAKE = 2.5
 STOP_DISTANCE = 6.0
 
+DISCOMFORT_BRAKE = 5.0
+OHSHIT_STOP_DISTANCE = 2.0
+
+
 def get_jerk_factor(aggressive_jerk_acceleration=0.5, aggressive_jerk_danger=0.5, aggressive_jerk_speed=0.5,
                     standard_jerk_acceleration=1.0, standard_jerk_danger=1.0, standard_jerk_speed=1.0,
                     relaxed_jerk_acceleration=1.0, relaxed_jerk_danger=1.0, relaxed_jerk_speed=1.0,
                     custom_personalities=False, personality=log.LongitudinalPersonality.standard):
   if custom_personalities:
-    if personality==log.LongitudinalPersonality.relaxed:
+    if personality == log.LongitudinalPersonality.relaxed:
       return relaxed_jerk_acceleration, relaxed_jerk_danger, relaxed_jerk_speed
-    elif personality==log.LongitudinalPersonality.standard:
+    elif personality == log.LongitudinalPersonality.standard:
       return standard_jerk_acceleration, standard_jerk_danger, standard_jerk_speed
-    elif personality==log.LongitudinalPersonality.aggressive:
+    elif personality == log.LongitudinalPersonality.aggressive:
       return aggressive_jerk_acceleration, aggressive_jerk_danger, aggressive_jerk_speed
     else:
       raise NotImplementedError("Longitudinal personality not supported")
   else:
-    if personality==log.LongitudinalPersonality.relaxed:
+    if personality == log.LongitudinalPersonality.relaxed:
       return 1.0, 1.0, 1.0
-    elif personality==log.LongitudinalPersonality.standard:
+    elif personality == log.LongitudinalPersonality.standard:
       return 1.0, 1.0, 1.0
-    elif personality==log.LongitudinalPersonality.aggressive:
+    elif personality == log.LongitudinalPersonality.aggressive:
       return 0.5, 0.5, 0.5
     else:
       raise NotImplementedError("Longitudinal personality not supported")
 
 
-def get_T_FOLLOW(aggressive_follow=1.25, standard_follow=1.45, relaxed_follow=1.75, custom_personalities=False, personality=log.LongitudinalPersonality.standard):
+def get_T_FOLLOW(aggressive_follow=1.25, standard_follow=1.45, relaxed_follow=1.75,
+                 custom_personalities=False, personality=log.LongitudinalPersonality.standard):
   if custom_personalities:
-    if personality==log.LongitudinalPersonality.relaxed:
+    if personality == log.LongitudinalPersonality.relaxed:
       return relaxed_follow
-    elif personality==log.LongitudinalPersonality.standard:
+    elif personality == log.LongitudinalPersonality.standard:
       return standard_follow
-    elif personality==log.LongitudinalPersonality.aggressive:
+    elif personality == log.LongitudinalPersonality.aggressive:
       return aggressive_follow
     else:
       raise NotImplementedError("Longitudinal personality not supported")
   else:
-    if personality==log.LongitudinalPersonality.relaxed:
+    if personality == log.LongitudinalPersonality.relaxed:
       return 1.75
-    elif personality==log.LongitudinalPersonality.standard:
+    elif personality == log.LongitudinalPersonality.standard:
       return 1.45
-    elif personality==log.LongitudinalPersonality.aggressive:
+    elif personality == log.LongitudinalPersonality.aggressive:
       return 1.25
     else:
       raise NotImplementedError("Longitudinal personality not supported")
 
+
 def get_stopped_equivalence_factor(v_lead):
   return (v_lead**2) / (2 * COMFORT_BRAKE)
 
+
 def get_safe_obstacle_distance(v_ego, t_follow):
   return (v_ego**2) / (2 * COMFORT_BRAKE) + t_follow * v_ego + STOP_DISTANCE
+
 
 def desired_follow_distance(v_ego, v_lead, t_follow=None):
   if t_follow is None:
     t_follow = get_T_FOLLOW()
   return get_safe_obstacle_distance(v_ego, t_follow) - get_stopped_equivalence_factor(v_lead)
+
+# for more urgent scenarios
+def get_ohshit_equivalence_factor(v_lead):
+  return (v_lead**2) / (2 * DISCOMFORT_BRAKE)
+
+
+def get_unsafe_obstacle_distance(v_ego, t_follow):
+  return (v_ego**2) / (2 * DISCOMFORT_BRAKE) + t_follow * v_ego + OHSHIT_STOP_DISTANCE
+
+
+def fuck_this_follow_distance(v_ego, v_lead, t_follow=None):
+  if t_follow is None:
+    t_follow = get_T_FOLLOW()
+  return get_unsafe_obstacle_distance(v_ego, t_follow) - get_ohshit_equivalence_factor(v_lead)
+
+
+def get_dynamic_j_ego_cost_array(x_obstacle, x_ego, v_ego, v_lead, t_follow, J_EGO_COST):
+  """
+  Returns an array of jerk costs for each time step in the horizon, going from
+  normal cost (J_EGO_COST) at/above desired distance down to near zero
+  when below an "oh-shit" distance.
+
+  If v_ego <= v_lead, we won't reduce the jerk cost (not actually closing).
+  """
+
+  # Convert scalars to arrays if necessary, so we can do elementwise ops
+  if not isinstance(x_obstacle, np.ndarray):
+    x_obstacle = np.array([float(x_obstacle)])
+  n_steps = x_obstacle.shape[0]
+
+  def ensure_array(val):
+    if not isinstance(val, np.ndarray):
+      return np.full(n_steps, float(val))
+    return val
+
+  x_ego_arr = ensure_array(x_ego)
+  v_ego_arr = ensure_array(v_ego)
+  v_lead_arr = ensure_array(v_lead)
+  t_follow_arr = ensure_array(t_follow)
+
+  # Distances normalized by (v_ego+10)
+  current_dist = (x_obstacle - x_ego_arr) / (v_ego_arr + 10.0)
+
+  desired_dist = desired_follow_distance(v_ego_arr, v_lead_arr, t_follow_arr) / (v_ego_arr + 10.0)
+  ohshit_dist  = fuck_this_follow_distance(v_ego_arr, v_lead_arr, t_follow_arr) / (v_ego_arr + 10.0)
+
+  # Only reduce cost if actually closing on the lead
+  is_closing = v_ego_arr > v_lead_arr  # bool array
+
+  # ratio: 1.0 above desired_dist -> 0.0 below ohshit_dist
+  ratio = (current_dist - ohshit_dist) / np.maximum(desired_dist - ohshit_dist, 1e-9)
+  ratio = np.clip(ratio, 0.0, 1.0)  # stays between 0 and 1
+
+  # blend based on is_closing
+  # if not closing, jerk cost remains J_EGO_COST
+  # if closing, jerk cost is ratio * J_EGO_COST
+  dyn_j_array = np.where(is_closing, ratio * J_EGO_COST, J_EGO_COST)
+
+  return dyn_j_array
 
 
 def gen_long_model():
@@ -183,10 +249,6 @@ def gen_long_ocp():
 
   desired_dist_comfort = get_safe_obstacle_distance(v_ego, lead_t_follow)
 
-  # The main cost in normal operation is how close you are to the "desired" distance
-  # from an obstacle at every timestep. This obstacle can be a lead car
-  # or other object. In e2e mode we can use x_position targets as a cost
-  # instead.
   costs = [((x_obstacle - x_ego) - (desired_dist_comfort)) / (v_ego + 10.),
            x_ego,
            v_ego,
@@ -196,9 +258,6 @@ def gen_long_ocp():
   ocp.model.cost_y_expr = vertcat(*costs)
   ocp.model.cost_y_expr_e = vertcat(*costs[:-1])
 
-  # Constraints on speed, acceleration and desired distance to
-  # the obstacle, which is treated as a slack constraint so it
-  # behaves like an asymmetrical cost.
   constraints = vertcat(v_ego,
                         (a_ego - a_min),
                         (a_max - a_ego),
@@ -209,8 +268,6 @@ def gen_long_ocp():
   ocp.constraints.x0 = x0
   ocp.parameter_values = np.array([-1.2, 1.2, 0.0, 0.0, get_T_FOLLOW(), LEAD_DANGER_FACTOR])
 
-
-  # We put all constraint cost weights to 0 and only set them at runtime
   cost_weights = np.zeros(CONSTR_DIM)
   ocp.cost.zl = cost_weights
   ocp.cost.Zl = cost_weights
@@ -221,22 +278,14 @@ def gen_long_ocp():
   ocp.constraints.uh = 1e4*np.ones(CONSTR_DIM)
   ocp.constraints.idxsh = np.arange(CONSTR_DIM)
 
-  # The HPIPM solver can give decent solutions even when it is stopped early
-  # Which is critical for our purpose where compute time is strictly bounded
-  # We use HPIPM in the SPEED_ABS mode, which ensures fastest runtime. This
-  # does not cause issues since the problem is well bounded.
   ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
   ocp.solver_options.hessian_approx = 'GAUSS_NEWTON'
   ocp.solver_options.integrator_type = 'ERK'
   ocp.solver_options.nlp_solver_type = ACADOS_SOLVER_TYPE
   ocp.solver_options.qp_solver_cond_N = 1
-
-  # More iterations take too much time and less lead to inaccurate convergence in
-  # some situations. Ideally we would run just 1 iteration to ensure fixed runtime.
   ocp.solver_options.qp_solver_iter_max = 10
   ocp.solver_options.qp_tol = 1e-3
 
-  # set prediction horizon
   ocp.solver_options.tf = Tf
   ocp.solver_options.shooting_nodes = T_IDXS
 
@@ -253,9 +302,7 @@ class LongitudinalMpc:
     self.source = SOURCES[2]
 
   def reset(self):
-    # self.solver = AcadosOcpSolverCython(MODEL_NAME, ACADOS_SOLVER_TYPE, N)
     self.solver.reset()
-    # self.solver.options_set('print_level', 2)
     self.v_solution = np.zeros(N+1)
     self.a_solution = np.zeros(N+1)
     self.prev_a = np.array(self.a_solution)
@@ -284,37 +331,80 @@ class LongitudinalMpc:
   def set_cost_weights(self, cost_weights, constraint_cost_weights):
     W = np.asfortranarray(np.diag(cost_weights))
     for i in range(N):
-      # TODO don't hardcode A_CHANGE_COST idx
-      # reduce the cost on (a-a_prev) later in the horizon.
+      # reduce cost on (a-a_prev) over time
       W[4,4] = cost_weights[4] * np.interp(T_IDXS[i], [0.0, 1.0, 2.0], [1.0, 1.0, 0.0])
       self.solver.cost_set(i, 'W', W)
-    # Setting the slice without the copy make the array not contiguous,
-    # causing issues with the C interface.
     self.solver.cost_set(N, 'W', np.copy(W[:COST_E_DIM, :COST_E_DIM]))
 
-    # Set L2 slack cost on lower bound constraints
+    # slack cost
     Zl = np.array(constraint_cost_weights)
     for i in range(N):
       self.solver.cost_set(i, 'Zl', Zl)
 
-  def set_weights(self, acceleration_jerk=1.0, danger_jerk=1.0, speed_jerk=1.0, prev_accel_constraint=True, personality=log.LongitudinalPersonality.standard):
+  def set_weights(self, acceleration_jerk=1.0, danger_jerk=1.0, speed_jerk=1.0,
+                  prev_accel_constraint=True, personality=log.LongitudinalPersonality.standard):
+    """
+    Updated version that uses array-based dynamic jerk cost.
+    """
     if self.mode == 'acc':
-      a_change_cost = acceleration_jerk if prev_accel_constraint else 0
-      cost_weights = [X_EGO_OBSTACLE_COST, X_EGO_COST, V_EGO_COST, A_EGO_COST, a_change_cost, speed_jerk]
-      constraint_cost_weights = [LIMIT_COST, LIMIT_COST, LIMIT_COST, danger_jerk]
+      a_change_cost = acceleration_jerk if prev_accel_constraint else 0.0
+
+      # Generate an array of jerk costs for each horizon step
+      # We'll consider self.params[:,2] as x_obstacle,
+      # self.x0[0] as x_ego, self.x0[1] as v_ego,
+      # self.params[:,4] as t_follow, etc.
+      # For simplicity, let's assume the lead speed is also self.x0[1].
+      dyn_j_ego_array = get_dynamic_j_ego_cost_array(
+        x_obstacle=self.params[:,2],
+        x_ego=self.x0[0],
+        v_ego=self.x0[1],
+        v_lead=self.x0[1],
+        t_follow=self.params[:,4],
+        J_EGO_COST=J_EGO_COST
+      )
+
+      # Our "base" cost weights for the 6 cost dimensions:
+      #   0) obstacle distance cost,
+      #   1) x_ego cost,
+      #   2) v_ego cost,
+      #   3) a_ego cost,
+      #   4) a_change cost,
+      #   5) jerk cost (this will be overwritten per step)
+      base_cost_weights = [3.0, 0.0, 0.0, 0.0, a_change_cost, 1.0]
+
+      constraint_cost_weights = [LIMIT_COST, LIMIT_COST, LIMIT_COST, 50.0]
+
+      # Instead of setting a single W for the entire horizon, we set W per step:
+      for i in range(N):
+        W_step = np.diag(base_cost_weights)
+        # Lower the cost on (a-a_prev) as time goes
+        W_step[4,4] = a_change_cost * np.interp(T_IDXS[i], [0.0, 1.0, 2.0], [1.0, 1.0, 0.0])
+        # The dynamic jerk cost for step i
+        W_step[5,5] = dyn_j_ego_array[i]
+        self.solver.cost_set(i, 'W', W_step)
+
+      # Terminal cost matrix (no jerk dimension)
+      W_e = np.copy(np.diag(base_cost_weights[:COST_E_DIM]))
+      self.solver.cost_set(N, 'W', W_e)
+
+      Zl = np.array(constraint_cost_weights)
+      for i in range(N):
+        self.solver.cost_set(i, 'Zl', Zl)
+
     elif self.mode == 'blended':
+      # Original "blended" weights example (unchanged)
       a_change_cost = 40.0 if prev_accel_constraint else 0
       cost_weights = [0., 0.1, 0.2, 5.0, a_change_cost, 1.0]
       constraint_cost_weights = [LIMIT_COST, LIMIT_COST, LIMIT_COST, 50.0]
+      self.set_cost_weights(cost_weights, constraint_cost_weights)
     else:
       raise NotImplementedError(f'Planner mode {self.mode} not recognized in planner cost set')
-    self.set_cost_weights(cost_weights, constraint_cost_weights)
 
   def set_cur_state(self, v, a):
     v_prev = self.x0[1]
     self.x0[1] = v
     self.x0[2] = a
-    if abs(v_prev - v) > 2.:  # probably only helps if v < v_prev
+    if abs(v_prev - v) > 2.:  # large jump in speed
       for i in range(N+1):
         self.solver.set(i, 'x', self.x0)
 
@@ -334,14 +424,11 @@ class LongitudinalMpc:
       a_lead = lead.aLeadK
       a_lead_tau = lead.aLeadTau
     else:
-      # Fake a fast lead car, so mpc can keep running in the same mode
       x_lead = 50.0
       v_lead = v_ego + 10.0
       a_lead = 0.0
       a_lead_tau = LEAD_ACCEL_TAU
 
-    # MPC will not converge if immediate crash is expected
-    # Clip lead distance to what is still possible to brake for
     min_x_lead = ((v_ego + v_lead)/2) * (v_ego - v_lead) / (-ACCEL_MIN * 2)
     x_lead = clip(x_lead, min_x_lead, 1e8)
     v_lead = clip(v_lead, 0.0, 1e8)
@@ -350,8 +437,6 @@ class LongitudinalMpc:
     return lead_xv
 
   def set_accel_limits(self, min_a, max_a):
-    # TODO this sets a max accel limit, but the minimum limit is only for cruise decel
-    # needs refactor
     self.cruise_min_a = min_a
     self.max_a = max_a
 
@@ -362,49 +447,37 @@ class LongitudinalMpc:
     lead_xv_0 = self.process_lead(lead_one)
     lead_xv_1 = self.process_lead(lead_two)
 
-    # To estimate a safe distance from a moving lead, we calculate how much stopping
-    # distance that lead needs as a minimum. We can add that to the current distance
-    # and then treat that as a stopped car/obstacle at this new distance.
     lead_0_obstacle = lead_xv_0[:,0] + get_stopped_equivalence_factor(lead_xv_0[:,1])
     lead_1_obstacle = lead_xv_1[:,0] + get_stopped_equivalence_factor(lead_xv_1[:,1])
 
     self.params[:,0] = ACCEL_MIN
-    # negative accel constraint causes problems because negative speed is not allowed
     self.params[:,1] = max(0.0, self.max_a)
 
-    # Update in ACC mode or ACC/e2e blend
     if self.mode == 'acc':
       self.params[:,5] = LEAD_DANGER_FACTOR
 
-      # Fake an obstacle for cruise, this ensures smooth acceleration to set speed
-      # when the leads are no factor.
+      # "Fake" an obstacle for cruise:
       v_lower = v_ego + (T_IDXS * self.cruise_min_a * 1.05)
-      # TODO does this make sense when max_a is negative?
       v_upper = v_ego + (T_IDXS * self.max_a * 1.05)
-      v_cruise_clipped = np.clip(v_cruise * np.ones(N+1),
-                                 v_lower,
-                                 v_upper)
+      v_cruise_clipped = np.clip(v_cruise * np.ones(N+1), v_lower, v_upper)
       cruise_obstacle = np.cumsum(T_DIFFS * v_cruise_clipped) + get_safe_obstacle_distance(v_cruise_clipped, t_follow)
+
       x_obstacles = np.column_stack([lead_0_obstacle, lead_1_obstacle, cruise_obstacle])
       self.source = SOURCES[np.argmin(x_obstacles[0])]
 
-      # These are not used in ACC mode
       x[:], v[:], a[:], j[:] = 0.0, 0.0, 0.0, 0.0
 
     elif self.mode == 'blended':
       self.params[:,5] = 1.0
+      x_obstacles = np.column_stack([lead_0_obstacle, lead_1_obstacle])
 
-      x_obstacles = np.column_stack([lead_0_obstacle,
-                                     lead_1_obstacle])
       cruise_target = T_IDXS * np.clip(v_cruise, v_ego - 2.0, 1e3) + x[0]
       xforward = ((v[1:] + v[:-1]) / 2) * (T_IDXS[1:] - T_IDXS[:-1])
       x = np.cumsum(np.insert(xforward, 0, x[0]))
-
       x_and_cruise = np.column_stack([x, cruise_target])
       x = np.min(x_and_cruise, axis=1)
 
       self.source = 'e2e' if x_and_cruise[1,0] < x_and_cruise[1,1] else 'cruise'
-
     else:
       raise NotImplementedError(f'Planner mode {self.mode} not recognized in planner update')
 
@@ -427,8 +500,6 @@ class LongitudinalMpc:
     else:
       self.crash_cnt = 0
 
-    # Check if it got within lead comfort range
-    # TODO This should be done cleaner
     if self.mode == 'blended':
       if any((lead_0_obstacle - get_safe_obstacle_distance(self.x_sol[:,1], t_follow))- self.x_sol[:,0] < 0.0):
         self.source = 'lead0'
@@ -437,8 +508,6 @@ class LongitudinalMpc:
         self.source = 'lead1'
 
   def run(self):
-    # t0 = time.monotonic()
-    # reset = 0
     for i in range(N+1):
       self.solver.set(i, 'p', self.params[i])
     self.solver.constraints_set(0, "lbx", self.x0)
@@ -449,13 +518,6 @@ class LongitudinalMpc:
     self.time_qp_solution = float(self.solver.get_stats('time_qp')[0])
     self.time_linearization = float(self.solver.get_stats('time_lin')[0])
     self.time_integrator = float(self.solver.get_stats('time_sim')[0])
-
-    # qp_iter = self.solver.get_stats('statistics')[-1][-1] # SQP_RTI specific
-    # print(f"long_mpc timings: tot {self.solve_time:.2e}, qp {self.time_qp_solution:.2e}, lin {self.time_linearization:.2e}, \
-    # integrator {self.time_integrator:.2e}, qp_iter {qp_iter}")
-    # res = self.solver.get_residuals()
-    # print(f"long_mpc residuals: {res[0]:.2e}, {res[1]:.2e}, {res[2]:.2e}, {res[3]:.2e}")
-    # self.solver.print_statistics()
 
     for i in range(N+1):
       self.x_sol[i] = self.solver.get(i, 'x')
@@ -474,9 +536,6 @@ class LongitudinalMpc:
         self.last_cloudlog_t = t
         cloudlog.warning(f"Long mpc reset, solution_status: {self.solution_status}")
       self.reset()
-      # reset = 1
-    # print(f"long_mpc timings: total internal {self.solve_time:.2e}, external: {(time.monotonic() - t0):.2e} qp {self.time_qp_solution:.2e}, \
-    # lin {self.time_linearization:.2e} qp_iter {qp_iter}, reset {reset}")
 
 
 if __name__ == "__main__":

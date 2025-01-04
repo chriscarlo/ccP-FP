@@ -18,6 +18,7 @@ FrogPilotLateralPanel::FrogPilotLateralPanel(FrogPilotSettingsWindow *parent) : 
 
     {"LaneChangeCustomizations", tr("Lane Change Settings"), tr("How openpilot handles lane changes."), "../frogpilot/assets/toggle_icons/icon_lane.png"},
     {"NudgelessLaneChange", tr("Automatic Lane Changes"), tr("Conducts lane changes without needing to touch the steering wheel upon turn signal activation."), ""},
+    {"AutoOvertake", tr("Automatic Overtaking"), tr("Automatically initiates lane changes to pass slower vehicles when safe."), ""},
     {"LaneChangeTime", tr("Lane Change Delay"), tr("Delays lane changes by the set time to prevent sudden changes."), ""},
     {"LaneDetectionWidth", tr("Lane Width Requirement"), tr("Sets the minimum lane width for openpilot to detect a lane as a lane."), ""},
     {"MinimumLaneChangeSpeed", tr("Minimum Speed for Lane Change"), tr("Sets the minimum speed required for openpilot to perform a lane change."), ""},
@@ -353,14 +354,16 @@ void FrogPilotLateralPanel::updateMetric() {
   }
 }
 
-void FrogPilotLateralPanel::showToggles(const std::set<QString> &keys) {
+void FrogPilotLateralPanel::showToggles(const std::set<QString> & /*keys*/) {
   setUpdatesEnabled(false);
 
   for (auto &[key, toggle] : toggles) {
-    toggle->setVisible(keys.find(key) != keys.end() && tuningLevel >= frogpilotToggleLevels[key].toDouble());
+    // Always show toggles
+    toggle->setVisible(true);
   }
 
-  static_cast<FrogPilotParamManageControl*>(toggles["AlwaysOnLateral"])->setVisibleButton(tuningLevel >= 1);
+  // Always show button
+  static_cast<FrogPilotParamManageControl*>(toggles["AlwaysOnLateral"])->setVisibleButton(true);
 
   setUpdatesEnabled(true);
   update();
@@ -370,16 +373,12 @@ void FrogPilotLateralPanel::hideToggles() {
   setUpdatesEnabled(false);
 
   for (auto &[key, toggle] : toggles) {
-    bool subToggles = advancedLateralTuneKeys.find(key) != advancedLateralTuneKeys.end() ||
-                      aolKeys.find(key) != aolKeys.end() ||
-                      laneChangeKeys.find(key) != laneChangeKeys.end() ||
-                      lateralTuneKeys.find(key) != lateralTuneKeys.end() ||
-                      qolKeys.find(key) != qolKeys.end();
-
-    toggle->setVisible(!subToggles && tuningLevel >= frogpilotToggleLevels[key].toDouble());
+    // Always show toggles
+    toggle->setVisible(true);
   }
 
-  static_cast<FrogPilotParamManageControl*>(toggles["AlwaysOnLateral"])->setVisibleButton(tuningLevel >= 1);
+  // Always show button
+  static_cast<FrogPilotParamManageControl*>(toggles["AlwaysOnLateral"])->setVisibleButton(true);
 
   setUpdatesEnabled(true);
   update();

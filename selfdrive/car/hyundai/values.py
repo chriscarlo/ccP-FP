@@ -498,7 +498,7 @@ class CAR(Platforms):
       HyundaiCarDocs("Kia EV6 (without HDA II) 2022-24", "Highway Driving Assist", car_parts=CarParts.common([CarHarness.hyundai_l])),
       HyundaiCarDocs("Kia EV6 (with HDA II) 2022-24", "Highway Driving Assist II", car_parts=CarParts.common([CarHarness.hyundai_p]))
     ],
-    CarSpecs(mass=2185, wheelbase=2.90, steerRatio=11.46 * 1.11, tireStiffnessFactor=0.65),
+    CarSpecs(mass=2185, wheelbase=2.90, steerRatio=15.35, tireStiffnessFactor=0.65),
     flags=HyundaiFlags.EV,
   ) # CarSpecs edited to reflect EV6 GT model
   KIA_CARNIVAL_4TH_GEN = HyundaiCanFDPlatformConfig(

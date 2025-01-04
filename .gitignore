@@ -83,3 +83,11 @@ build/
 
 poetry.toml
 Pipfile
+selfdrive/frogpilot/controls/lib/chauffer_files/chauffeur_accel.py
+selfdrive/frogpilot/controls/lib/chauffer_files/chauffeur_lead_handling.py
+selfdrive/frogpilot/controls/lib/zz_old/follow.py
+selfdrive/frogpilot/controls/lib/zz_old/frogpilot_acceleration.py
+selfdrive/frogpilot/controls/lib/zz_old/frogpilot_following.py
+selfdrive/frogpilot/controls/lib/old/follow.py
+selfdrive/frogpilot/controls/lib/chauffer_files/chauffeur_vcruise.py
+selfdrive/frogpilot/controls/lib/zz_old/frogpilot_vcruise.py
