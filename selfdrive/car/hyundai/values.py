@@ -409,8 +409,8 @@ class CAR(Platforms):
       HyundaiCarDocs("Kia Niro Plug-in Hybrid 2021", car_parts=CarParts.common([CarHarness.hyundai_d])),
       HyundaiCarDocs("Kia Niro Plug-in Hybrid 2022", car_parts=CarParts.common([CarHarness.hyundai_f])),
     ],
-    KIA_NIRO_EV.specs,
-    flags=HyundaiFlags.HYBRID | HyundaiFlags.MANDO_RADAR,
+    CarSpecs(mass=3543 * CV.LB_TO_KG, wheelbase=2.7, steerRatio=13.6, tireStiffnessFactor=0.385),  # average of all the cars
+    flags= HyundaiFlags.MANDO_RADAR | HyundaiFlags.HYBRID,
   )
   KIA_NIRO_HEV_2021 = HyundaiPlatformConfig(
     [

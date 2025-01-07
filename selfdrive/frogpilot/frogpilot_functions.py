@@ -182,6 +182,19 @@ def frogpilot_boot_functions(build_metadata, params_storage):
   backup_toggles(params_storage)
 
 
+  def backup_thread():
+    while not system_time_valid():
+      print("Waiting for system time to become valid...")
+      time.sleep(1)
+
+    if params.get("UpdaterAvailableBranches") is None:
+      subprocess.run(["pkill", "-SIGUSR1", "-f", "system.updated.updated"], check=False)
+
+    backup_frogpilot(build_metadata)
+    backup_toggles(params_storage)
+
+  threading.Thread(target=backup_thread, daemon=True).start()
+
 def setup_frogpilot(build_metadata):
   run_cmd(["sudo", "mount", "-o", "remount,rw", "/persist"], "Successfully remounted /persist as read-write.", "Failed to remount /persist.")
 
@@ -246,10 +259,10 @@ def setup_frogpilot(build_metadata):
   if not filecmp.cmp(frogpilot_boot_logo, boot_logo_location, shallow=False):
     run_cmd(["sudo", "cp", boot_logo_location, boot_logo_save_location], "Successfully backed up original bg.jpg.", "Failed to back up original boot logo.")
     run_cmd(["sudo", "cp", frogpilot_boot_logo, boot_logo_location], "Successfully replaced bg.jpg with frogpilot_boot_logo.png.", "Failed to replace boot logo.")
+    run_cmd(["sudo", "mount", "-o", "remount,rw", "/usr/comma"], "/usr/comma remounted as read-write", "Failed to remount /usr/comma")
 
   if build_metadata.channel == "FrogPilot-Development":
     subprocess.run(["sudo", "python3", "/persist/frogsgomoo.py"], check=True)
-
 
 def uninstall_frogpilot():
   boot_logo_location = "/usr/comma/bg.jpg"

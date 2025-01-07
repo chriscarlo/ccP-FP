@@ -21,7 +21,7 @@ ChubbsPilot is an open-sourced fork of openpilot, featuring clear commits strivi
 ------
 ChubbsPilot was last updated on:
 
-**December 1st, 2024**
+**January 18th, 2025**
 
 Features
 ------

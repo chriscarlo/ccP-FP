@@ -135,10 +135,7 @@ class CarInterface(CarInterfaceBase):
 
     # Determine experimental longitudinal availability
     unsupported_long_cars = (
-        CANFD_UNSUPPORTED_LONGITUDINAL_CAR | NON_SCC_CAR
-        if is_canfd_car
-        else UNSUPPORTED_LONGITUDINAL_CAR | NON_SCC_CAR
-    )
+      CANFD_UNSUPPORTED_LONGITUDINAL_CAR | NON_SCC_CAR if is_canfd_car else NON_SCC_CAR | UNSUPPORTED_LONGITUDINAL_CAR)
     ret.experimentalLongitudinalAvailable = candidate not in unsupported_long_cars
 
     # Configure longitudinal control flags
@@ -148,7 +145,8 @@ class CarInterface(CarInterfaceBase):
 
     # Configure radar settings
     if DBC[ret.carFingerprint]["radar"] is None and ret.fpFlags & HyundaiFlagsFP.FP_CAMERA_SCC_LEAD.value:
-        #ret.radarTimeStep = 0.02
+        ret.radarTimeStep = 0.02
+        ret.radarUnavailable = False
 
     # *** feature detection ***
     if candidate in CANFD_CAR:
