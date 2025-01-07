@@ -243,7 +243,7 @@ def create_acc_control(packer, CAN, CS, enabled, accel_last, accel, stopping, ga
 
   values = {
     "ACCMode": 0 if not enabled else (2 if gas_override else 1),
-    "MainMode_ACC": 1,
+    "MainMode_ACC": 1 if CS.out.cruiseState.available else 0,
     "StopReq": 1 if stopping else 0,
     "aReqValue": a_val,
     "aReqRaw": a_raw,
@@ -329,6 +329,7 @@ def create_adrv_messages(packer, CAN, frame):
     values = {
       'SET_ME_E1': 0xe1,
       'SET_ME_3A': 0x3a,
+      'TauGapSet' : 1,
     }
     ret.append(packer.make_can_msg("ADRV_0x200", CAN.ECAN, values))
 

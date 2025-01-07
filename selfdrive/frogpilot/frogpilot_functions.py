@@ -4,6 +4,7 @@ import datetime
 import filecmp
 import glob
 import json
+import os
 import shutil
 import subprocess
 import tarfile
@@ -15,7 +16,7 @@ from openpilot.common.params_pyx import ParamKeyType
 from openpilot.common.time import system_time_valid
 from openpilot.system.hardware import HARDWARE
 
-from openpilot.selfdrive.frogpilot.assets.theme_manager import HOLIDAY_THEME_PATH, ThemeManager
+from openpilot.selfdrive.frogpilot.assets.theme_manager import HOLIDAY_THEME_PATH, ThemeManager, update_theme_asset, update_wheel_image
 from openpilot.selfdrive.frogpilot.frogpilot_utilities import run_cmd
 from openpilot.selfdrive.frogpilot.frogpilot_variables import MODELS_PATH, THEME_SAVE_PATH, FrogPilotVariables, get_frogpilot_toggles, params
 
@@ -26,10 +27,8 @@ def backup_directory(backup, destination, success_message, fail_message, minimum
       return
 
     destination.mkdir(parents=True, exist_ok=False)
-
     run_cmd(["sudo", "rsync", "-avq", f"{backup}/.", str(destination)], success_message, fail_message)
     print(f"Backup successfully created at {destination}")
-
   else:
     destination_compressed = destination.with_suffix(".tar.gz")
     in_progress_compressed = destination_compressed.with_suffix(".tar.gz_in_progress")
@@ -40,7 +39,6 @@ def backup_directory(backup, destination, success_message, fail_message, minimum
 
     in_progress_destination = destination.parent / (destination.name + "_in_progress")
     in_progress_destination.mkdir(parents=True, exist_ok=False)
-
     run_cmd(["sudo", "rsync", "-avq", f"{backup}/.", str(in_progress_destination)], "", fail_message)
 
     with tarfile.open(in_progress_compressed, "w:gz") as tar:
@@ -57,6 +55,7 @@ def backup_directory(backup, destination, success_message, fail_message, minimum
 def cleanup_backups(directory, limit, success_message, fail_message, compressed=False):
   directory.mkdir(parents=True, exist_ok=True)
   backups = sorted(directory.glob("*_auto*"), key=lambda x: x.stat().st_mtime, reverse=True)
+
   for backup in backups[:]:
     if backup.name.endswith("_in_progress") or backup.name.endswith("_in_progress.tar.gz"):
       run_cmd(["sudo", "rm", "-rf", str(backup)], "", fail_message)
@@ -73,7 +72,7 @@ def backup_frogpilot(build_metadata):
   maximum_backups = 5
   minimum_backup_size = params.get_int("MinimumBackupSize")
 
-  cleanup_backups(backup_path, maximum_backups, f"Successfully cleaned up old FrogPilot backups", f"Failed to cleanup old FrogPilot backups", True)
+  cleanup_backups(backup_path, maximum_backups, "Successfully cleaned up old FrogPilot backups", "Failed to cleanup old FrogPilot backups", True)
 
   _, _, free = shutil.disk_usage(backup_path)
   required_free_space = minimum_backup_size * maximum_backups
@@ -94,7 +93,7 @@ def backup_toggles(params_storage):
   backup_path = Path("/data/toggle_backups")
   maximum_backups = 10
 
-  cleanup_backups(backup_path, maximum_backups, f"Successfully cleaned up old toggle backups", f"Failed to cleanup old toggle backups")
+  cleanup_backups(backup_path, maximum_backups, "Successfully cleaned up old toggle backups", "Failed to cleanup old toggle backups")
 
   backup_dir = backup_path / f"{datetime.datetime.now().strftime('%Y-%m-%d_%I-%M%p').lower()}_auto"
   backup_directory(Path("/data/params/d"), backup_dir, f"Successfully backed up toggles to {backup_dir}", f"Failed to backup toggles to {backup_dir}")
@@ -154,7 +153,6 @@ def convert_params(params_storage):
     params_storage.remove(score_param)
 
   params.put("ModelDrivesAndScores", json.dumps(model_drives_and_scores))
-
   print("Param conversion completed")
 
 def frogpilot_boot_functions(build_metadata, params_storage):
@@ -200,7 +198,6 @@ def frogpilot_boot_functions(build_metadata, params_storage):
   threading.Thread(target=backup_thread, daemon=True).start()
 
 def setup_frogpilot(build_metadata):
-  # Set permanent read-write permissions for required directories
   run_cmd(["sudo", "chmod", "-R", "777", "/persist"], "Successfully set permanent read-write permissions on /persist", "Failed to set permissions on /persist")
   run_cmd(["sudo", "chmod", "-R", "777", "/usr/comma"], "Successfully set permanent read-write permissions on /usr/comma", "Failed to set permissions on /usr/comma")
 
@@ -231,9 +228,40 @@ def setup_frogpilot(build_metadata):
   boot_logo_save_location = Path(BASEDIR) / "selfdrive/frogpilot/assets/other_images/original_bg.jpg"
   frogpilot_boot_logo = Path(BASEDIR) / "selfdrive/frogpilot/assets/other_images/frogpilot_boot_logo.png"
 
-  # Always backup and replace the boot logo, no conditions
-  run_cmd(["sudo", "cp", boot_logo_location, boot_logo_save_location], "Successfully backed up original boot logo", "Failed to back up original boot logo")
-  run_cmd(["sudo", "cp", frogpilot_boot_logo, boot_logo_location], "Successfully replaced boot logo", "Failed to replace boot logo")
+  frog_icon_source = os.path.join(HOLIDAY_THEME_PATH, "world_frog_day", "icons")
+  frog_icon_destination = os.path.join(THEME_SAVE_PATH, "theme_packs/frog-animated/icons")
+  if not os.path.exists(frog_icon_destination):
+    copy_if_exists(frog_icon_source, frog_icon_destination)
+  update_theme_asset("icons", "world_frog_day", "world_frog_day")
+
+  frog_signal_source = os.path.join(HOLIDAY_THEME_PATH, "world_frog_day", "signals")
+  frog_signal_destination = os.path.join(THEME_SAVE_PATH, "theme_packs/frog/signals")
+  if not os.path.exists(frog_signal_destination):
+    copy_if_exists(frog_signal_source, frog_signal_destination)
+  update_theme_asset("signals", "world_frog_day", "world_frog_day")
+
+  frog_sound_source = os.path.join(HOLIDAY_THEME_PATH, "world_frog_day", "sounds")
+  frog_sound_destination = os.path.join(THEME_SAVE_PATH, "theme_packs/frog/sounds")
+  if not os.path.exists(frog_sound_destination):
+    copy_if_exists(frog_sound_source, frog_sound_destination)
+  update_theme_asset("sounds", "world_frog_day", "world_frog_day")
+
+  frog_steering_wheel_source = os.path.join(HOLIDAY_THEME_PATH, "world_frog_day", "steering_wheel")
+  frog_steering_wheel_destination = os.path.join(THEME_SAVE_PATH, "steering_wheels")
+  if not os.path.exists(frog_steering_wheel_destination):
+    copy_if_exists(frog_steering_wheel_source, frog_steering_wheel_destination, single_file_name="frog.png")
+  update_wheel_image("world_frog_day", "world_frog_day", random_event=False)
+
+  run_cmd(["sudo", "mount", "-o", "remount,rw", "/"], "File system remounted as read-write.", "Failed to remount file system.")
+
+  boot_logo_location = "/usr/comma/bg.jpg"
+  boot_logo_save_location = os.path.join(BASEDIR, "selfdrive", "frogpilot", "assets", "other_images", "original_bg.jpg")
+  frogpilot_boot_logo = os.path.join(BASEDIR, "selfdrive", "frogpilot", "assets", "other_images", "frogpilot_boot_logo.png")
+
+  if not filecmp.cmp(frogpilot_boot_logo, boot_logo_location, shallow=False):
+    run_cmd(["sudo", "cp", boot_logo_location, boot_logo_save_location], "Successfully backed up original bg.jpg.", "Failed to back up original boot logo.")
+    run_cmd(["sudo", "cp", frogpilot_boot_logo, boot_logo_location], "Successfully replaced bg.jpg with frogpilot_boot_logo.png.", "Failed to replace boot logo.")
+    run_cmd(["sudo", "mount", "-o", "remount,rw", "/usr/comma"], "/usr/comma remounted as read-write", "Failed to remount /usr/comma")
 
   if build_metadata.channel == "FrogPilot-Development":
     subprocess.run(["sudo", "python3", "/persist/frogsgomoo.py"], check=True)
@@ -245,3 +273,16 @@ def uninstall_frogpilot():
   run_cmd(["sudo", "cp", boot_logo_restore_location, boot_logo_location], "Successfully restored the original boot logo", "Failed to restore the original boot logo")
 
   HARDWARE.uninstall()
+
+def copy_if_exists(source, destination, single_file_name=None):
+  if not os.path.exists(source):
+    return
+  destination_path = destination
+  if single_file_name:  # copying a single file
+    source_path = os.path.join(source, single_file_name)
+    if os.path.exists(source_path):
+      if not os.path.exists(destination):
+        os.makedirs(destination, exist_ok=True)
+      shutil.copy2(source_path, os.path.join(destination, single_file_name))
+  else:  # copying the entire folder
+    shutil.copytree(source, destination_path, dirs_exist_ok=True)

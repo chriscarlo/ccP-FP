@@ -7,7 +7,7 @@ from openpilot.selfdrive.car.hyundai.fingerprinting import can_fingerprint, get_
 from openpilot.selfdrive.car.hyundai.enable_radar_tracks import enable_radar_tracks
 from openpilot.selfdrive.car.hyundai.hyundaicanfd import CanBus
 from openpilot.selfdrive.car.hyundai.values import HyundaiFlags, HyundaiFlagsFP, CAR, DBC, CANFD_CAR, CAMERA_SCC_CAR, CANFD_RADAR_SCC_CAR, \
-                                         CANFD_UNSUPPORTED_LONGITUDINAL_CAR, EV_CAR, HYBRID_CAR, LEGACY_SAFETY_MODE_CAR, \
+                                         CANFD_UNSUPPORTED_LONGITUDINAL_CAR, NON_SCC_CAR, EV_CAR, HYBRID_CAR, LEGACY_SAFETY_MODE_CAR, \
                                          UNSUPPORTED_LONGITUDINAL_CAR, Buttons
 from openpilot.selfdrive.car.hyundai.radar_interface import RADAR_START_ADDR
 from openpilot.selfdrive.car import create_button_events, get_safety_config
@@ -102,54 +102,40 @@ class CarInterface(CarInterfaceBase):
         ret.fpFlags |= HyundaiFlagsFP.FP_CAMERA_SCC_LEAD.value
 
     # Configure longitudinal tuning
-    if params.get_bool("HKGtuning"):
-        ret.longitudinalTuning.deadzoneBP = [0.0]
-        ret.longitudinalTuning.deadzoneV = [0.0]
-        ret.longitudinalTuning.kpBP = [0.0]
-        ret.longitudinalTuning.kiBP = [0.0]
-        ret.longitudinalTuning.kiV = [0.0]
-        ret.vEgoStopping = 0.12
-        ret.vEgoStarting = 0.15
+    hkg_tuning = params.get_bool("HKGtuning")
+    ret.longitudinalTuning.deadzoneBP = [0.0]
+    ret.longitudinalTuning.deadzoneV = [0.0]
+    ret.longitudinalTuning.kpBP = [0.0]
+    ret.longitudinalTuning.kiBP = [0.0]
 
-        if ret.flags & (HyundaiFlags.HYBRID | HyundaiFlags.EV):
-            ret.startingState = False
-            ret.longitudinalActuatorDelay = 0.2
-        else:
-            ret.startingState = True
-            ret.startAccel = 1.0
-            ret.longitudinalActuatorDelay = 0.25
+    # HKG tuning without hat trick
+    if hkg_tuning and not hat_trick:
+      ret.longitudinalTuning.kiV = [0.0]
+      ret.vEgoStopping = 0.10
+      ret.vEgoStarting = 0.15
+      ret.longitudinalActuatorDelay = 0.2
 
-        if is_canfd_car:
-            ret.longitudinalTuning.kpV = [0.1]
-            ret.stoppingDecelRate = 0.15
-        else:
-            ret.longitudinalTuning.kpV = [0.5]
-            ret.stoppingDecelRate = 0.1
+      if ret.flags & (HyundaiFlags.HYBRID | HyundaiFlags.EV):
+          ret.startingState = False
+      else:
+          ret.startingState = True
+          ret.startAccel = 1.6
+
+      ret.longitudinalTuning.kpV = [0.4] if is_canfd_car else [0.1]
+      ret.stoppingDecelRate = 0.1
+
+    # Default tuning
     else:
-        ret.longitudinalTuning.deadzoneBP = [0.0]
-        ret.longitudinalTuning.deadzoneV = [0.0]
-        ret.longitudinalTuning.kpV = [0.1] if is_canfd_car else [0.5]
-        ret.longitudinalTuning.kiV = [0.0]
+      ret.longitudinalTuning.kpV = [0.5] if is_canfd_car else [0.1]
+      ret.longitudinalTuning.kiV = [0.0]
 
-    # Configure API-specific longitudinal tuning
+    # API-specific tuning
     if use_new_api:
-        # New API tuning parameters
-        if is_canfd_car:
-            ret.longitudinalTuning.kpV = [0.1]
-            ret.stoppingDecelRate = 0.1
-        else:
-            ret.longitudinalTuning.kpV = [0.5]
-            ret.stoppingDecelRate = 0.1
-    else:
-        # Old API tuning parameters (already handled above)
-        pass
+      ret.stoppingDecelRate = 0.1
 
     # Determine experimental longitudinal availability
     unsupported_long_cars = (
-        CANFD_UNSUPPORTED_LONGITUDINAL_CAR | CANFD_RADAR_SCC_CAR
-        if is_canfd_car
-        else UNSUPPORTED_LONGITUDINAL_CAR
-    )
+      CANFD_UNSUPPORTED_LONGITUDINAL_CAR | NON_SCC_CAR if is_canfd_car else NON_SCC_CAR | UNSUPPORTED_LONGITUDINAL_CAR)
     ret.experimentalLongitudinalAvailable = candidate not in unsupported_long_cars
 
     # Configure longitudinal control flags
@@ -207,7 +193,8 @@ class CarInterface(CarInterfaceBase):
       if 0x391 in fingerprint[0]:
         ret.flags |= HyundaiFlags.CAN_LFA_BTN.value
         ret.safetyConfigs[0].safetyParam |= Panda.FLAG_HYUNDAI_LFA_BTN
-
+      if candidate in NON_SCC_CAR:
+        ret.safetyConfigs[0].safetyParam |= Panda.FLAG_HYUNDAI_NON_SCC
     if ret.openpilotLongitudinalControl:
       ret.safetyConfigs[-1].safetyParam |= Panda.FLAG_HYUNDAI_LONG
     if ret.flags & HyundaiFlags.HYBRID:
@@ -215,7 +202,8 @@ class CarInterface(CarInterfaceBase):
     elif ret.flags & HyundaiFlags.EV:
       ret.safetyConfigs[-1].safetyParam |= Panda.FLAG_HYUNDAI_EV_GAS
 
-    if candidate in (CAR.HYUNDAI_KONA, CAR.HYUNDAI_KONA_EV, CAR.HYUNDAI_KONA_HEV, CAR.HYUNDAI_KONA_EV_2022):
+    if candidate in (CAR.HYUNDAI_KONA, CAR.HYUNDAI_KONA_EV, CAR.HYUNDAI_KONA_HEV, CAR.HYUNDAI_KONA_EV_2022,
+                     CAR.HYUNDAI_KONA_NON_SCC, CAR.HYUNDAI_KONA_EV_NON_SCC):
       ret.flags |= HyundaiFlags.ALT_LIMITS.value
       ret.safetyConfigs[-1].safetyParam |= Panda.FLAG_HYUNDAI_ALT_LIMITS
 
@@ -286,6 +274,8 @@ class CarInterface(CarInterfaceBase):
       ]
     else:
       ret.buttonEvents = create_button_events(self.CS.lkas_enabled, self.CS.lkas_previously_enabled, {1: FrogPilotButtonType.lkas})
+
+
 
     # On some newer model years, the CANCEL button acts as a pause/resume button based on the PCM state
     # To avoid re-engaging when openpilot cancels, check user engagement intention via buttons
