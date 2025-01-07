@@ -7,14 +7,11 @@ UtilitiesPanel::UtilitiesPanel(FrogPilotSettingsWindow *parent) : FrogPilotListW
   QObject::connect(flashPandaBtn, &ButtonControl::clicked, [=]() {
     if (ConfirmationDialog::confirm(tr("Are you sure you want to flash the Panda?"), tr("Flash"), this)) {
       std::thread([=]() {
-        uiState()->scene.keep_screen_on = true;
-
         flashPandaBtn->setEnabled(false);
         flashPandaBtn->setValue(tr("Flashing..."));
 
         system("python3 /data/openpilot/panda/board/flash.py");
         system("python3 /data/openpilot/panda/board/recover.py");
-        system("python3 /data/openpilot/panda/tests/reflash_internal_panda.py");
 
         flashPandaBtn->setValue(tr("Flashed!"));
         util::sleep_for(2000);
@@ -29,43 +26,41 @@ UtilitiesPanel::UtilitiesPanel(FrogPilotSettingsWindow *parent) : FrogPilotListW
   forceStartedBtn = new FrogPilotButtonsControl(tr("Force Started State"), tr("Forces openpilot either offroad or onroad."), {tr("OFFROAD"), tr("ONROAD"), tr("OFF")}, true);
   QObject::connect(forceStartedBtn, &FrogPilotButtonsControl::buttonClicked, [=](int id) {
     if (id == 0) {
-      paramsMemory.putBool("ForceOffroad", true);
-      paramsMemory.putBool("ForceOnroad", false);
+      params_memory.putBool("ForceOffroad", true);
+      params_memory.putBool("ForceOnroad", false);
     } else if (id == 1) {
-      paramsMemory.putBool("ForceOffroad", false);
-      paramsMemory.putBool("ForceOnroad", true);
+      params_memory.putBool("ForceOffroad", false);
+      params_memory.putBool("ForceOnroad", true);
     } else if (id == 2) {
-      paramsMemory.putBool("ForceOffroad", false);
-      paramsMemory.putBool("ForceOnroad", false);
+      params_memory.putBool("ForceOffroad", false);
+      params_memory.putBool("ForceOnroad", false);
     }
     forceStartedBtn->setCheckedButton(id);
   });
   forceStartedBtn->setCheckedButton(2);
   addItem(forceStartedBtn);
 
-  ButtonControl *resetTogglesBtn = new ButtonControl(tr("Reset Toggles to Default"), tr("RESET"), tr("Resets your toggle settings back to their default settings."));
-  QObject::connect(resetTogglesBtn, &ButtonControl::clicked, [=]() mutable {
-    QDir toggleDir("/data/params/d");
+  ButtonControl *resetTogglesBtn = new ButtonControl(tr("Reset Toggles to Default"), tr("RESET"), tr("Reset your toggle settings back to their default settings."));
+  QObject::connect(resetTogglesBtn, &ButtonControl::clicked, [=]() {
+    QDir persistParamsDir("/persist/params");
 
     if (ConfirmationDialog::confirm(tr("Are you sure you want to completely reset all of your toggle settings?"), tr("Reset"), this)) {
       std::thread([=]() mutable {
         resetTogglesBtn->setEnabled(false);
         resetTogglesBtn->setValue(tr("Resetting..."));
 
-        if (toggleDir.removeRecursively()) {
-          toggleDir.mkpath(".");
-          params.putBool("DoToggleReset", true);
+        persistParamsDir.removeRecursively();
+        persistParamsDir.mkpath(".");
 
-          resetTogglesBtn->setValue(tr("Reset!"));
+        params.putBool("DoToggleReset", true);
 
-          util::sleep_for(2000);
-          resetTogglesBtn->setValue(tr("Rebooting..."));
-          util::sleep_for(2000);
+        resetTogglesBtn->setValue(tr("Reset!"));
 
-          Hardware::reboot();
-        } else {
-          resetTogglesBtn->setValue(tr("Failed..."));
-        }
+        util::sleep_for(2000);
+        resetTogglesBtn->setValue(tr("Rebooting..."));
+        util::sleep_for(2000);
+
+        Hardware::reboot();
       }).detach();
     }
   });

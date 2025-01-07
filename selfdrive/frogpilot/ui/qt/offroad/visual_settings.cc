@@ -64,16 +64,6 @@ FrogPilotVisualsPanel::FrogPilotVisualsPanel(FrogPilotSettingsWindow *parent) : 
           modifiedAccessibilityKeys.erase("OnroadDistanceButton");
         }
 
-        if (customizationLevel == 0) {
-          modifiedAccessibilityKeys.erase("CameraView");
-          modifiedAccessibilityKeys.erase("DriverCamera");
-          modifiedAccessibilityKeys.erase("StandbyMode");
-          modifiedAccessibilityKeys.erase("StoppedTimer");
-        } else if (customizationLevel != 2) {
-          modifiedAccessibilityKeys.erase("CameraView");
-          modifiedAccessibilityKeys.erase("StandbyMode");
-        }
-
         showToggles(modifiedAccessibilityKeys);
       });
       visualToggle = qolToggle;
@@ -185,13 +175,6 @@ FrogPilotVisualsPanel::FrogPilotVisualsPanel(FrogPilotSettingsWindow *parent) : 
           modifiedNavigationUIKeys.erase("ShowSLCOffset");
         }
 
-        if (customizationLevel != 2) {
-          modifiedNavigationUIKeys.erase("MapStyle");
-          modifiedNavigationUIKeys.erase("RoadNameUI");
-          modifiedNavigationUIKeys.erase("ShowSLCOffset");
-          modifiedNavigationUIKeys.erase("UseVienna");
-        }
-
         showToggles(modifiedNavigationUIKeys);
       });
       visualToggle = customUIToggle;
@@ -201,7 +184,7 @@ FrogPilotVisualsPanel::FrogPilotVisualsPanel(FrogPilotSettingsWindow *parent) : 
       visualToggle = new FrogPilotButtonToggleControl(param, title, desc, mapToggles, mapToggleNames);
     } else if (param == "MapStyle") {
       QMap<int, QString> styleMap {
-        {0, tr("Stock openpilot")},
+        {0, tr("Stock")},
         {1, tr("Mapbox Streets")},
         {2, tr("Mapbox Outdoors")},
         {3, tr("Mapbox Light")},
@@ -243,10 +226,6 @@ FrogPilotVisualsPanel::FrogPilotVisualsPanel(FrogPilotSettingsWindow *parent) : 
           modifiedCustomOnroadUIKeys.erase("PedalsOnUI");
         }
 
-        if (customizationLevel != 2) {
-          modifiedCustomOnroadUIKeys.erase("AdjacentPath");
-        }
-
         showToggles(modifiedCustomOnroadUIKeys);
       });
       visualToggle = customUIToggle;
@@ -282,27 +261,17 @@ FrogPilotVisualsPanel::FrogPilotVisualsPanel(FrogPilotSettingsWindow *parent) : 
   }
 
   QObject::connect(parent, &FrogPilotSettingsWindow::closeParentToggle, this, &FrogPilotVisualsPanel::hideToggles);
-  QObject::connect(parent, &FrogPilotSettingsWindow::updateCarToggles, this, &FrogPilotVisualsPanel::updateCarToggles);
   QObject::connect(parent, &FrogPilotSettingsWindow::updateMetric, this, &FrogPilotVisualsPanel::updateMetric);
 }
 
 void FrogPilotVisualsPanel::showEvent(QShowEvent *event) {
-  customizationLevel = parent->customizationLevel;
-
-  toggles["AdvancedCustomUI"]->setVisible(customizationLevel == 2);
-  toggles["CustomUI"]->setVisible(customizationLevel != 0);
-  toggles["DeveloperUI"]->setVisible(customizationLevel == 2);
-  toggles["ModelUI"]->setVisible(customizationLevel == 2);
-  toggles["NavigationUI"]->setVisible(customizationLevel != 0);
-  toggles["QOLVisuals"]->setVisible(customizationLevel != 0 || !disableOpenpilotLongitudinal && hasOpenpilotLongitudinal);
-}
-
-void FrogPilotVisualsPanel::updateCarToggles() {
   disableOpenpilotLongitudinal = parent->disableOpenpilotLongitudinal;
+  frogpilot_toggle_levels = parent->frogpilot_toggle_levels;
   hasAutoTune = parent->hasAutoTune;
   hasBSM = parent->hasBSM;
   hasOpenpilotLongitudinal = parent->hasOpenpilotLongitudinal;
   hasRadar = parent->hasRadar;
+  tuningLevel = parent->tuningLevel;
 
   hideToggles();
 }
@@ -348,7 +317,7 @@ void FrogPilotVisualsPanel::showToggles(const std::set<QString> &keys) {
   setUpdatesEnabled(false);
 
   for (auto &[key, toggle] : toggles) {
-    toggle->setVisible(keys.find(key) != keys.end());
+    toggle->setVisible(keys.find(key) != keys.end() && tuningLevel >= frogpilot_toggle_levels[key].toDouble());
   }
 
   setUpdatesEnabled(true);
@@ -366,15 +335,10 @@ void FrogPilotVisualsPanel::hideToggles() {
                       modelUIKeys.find(key) != modelUIKeys.end() ||
                       navigationUIKeys.find(key) != navigationUIKeys.end();
 
-    toggle->setVisible(!subToggles);
+    toggle->setVisible(!subToggles && tuningLevel >= frogpilot_toggle_levels[key].toDouble());
   }
 
-  toggles["AdvancedCustomUI"]->setVisible(customizationLevel == 2);
-  toggles["CustomUI"]->setVisible(customizationLevel != 0);
-  toggles["DeveloperUI"]->setVisible(customizationLevel == 2);
-  toggles["ModelUI"]->setVisible(customizationLevel == 2);
-  toggles["NavigationUI"]->setVisible(customizationLevel != 0);
-  toggles["QOLVisuals"]->setVisible(customizationLevel != 0 || !disableOpenpilotLongitudinal && hasOpenpilotLongitudinal);
+  toggles["QOLVisuals"]->setVisible(toggles["QOLVisuals"]->isVisible() || !disableOpenpilotLongitudinal && hasOpenpilotLongitudinal);
 
   setUpdatesEnabled(true);
   update();

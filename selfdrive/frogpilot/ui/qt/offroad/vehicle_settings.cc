@@ -211,25 +211,19 @@ FrogPilotVehiclesPanel::FrogPilotVehiclesPanel(FrogPilotSettingsWindow *parent) 
     setModels();
   }
 
-  QObject::connect(parent, &FrogPilotSettingsWindow::updateCarToggles, this, &FrogPilotVehiclesPanel::updateCarToggles);
   QObject::connect(uiState(), &UIState::uiUpdate, this, &FrogPilotVehiclesPanel::updateState);
 }
 
 void FrogPilotVehiclesPanel::showEvent(QShowEvent *event) {
-  customizationLevel = parent->customizationLevel;
-
-  updateToggles();
-}
-
-void FrogPilotVehiclesPanel::updateCarToggles() {
   disableOpenpilotLongitudinal = parent->disableOpenpilotLongitudinal;
+  frogpilot_toggle_levels = parent->frogpilot_toggle_levels;
   hasExperimentalOpenpilotLongitudinal = parent->hasExperimentalOpenpilotLongitudinal;
   hasOpenpilotLongitudinal = parent->hasOpenpilotLongitudinal;
   hasSNG = parent->hasSNG;
   isBolt = parent->isBolt;
-  isGMPCMCruise = parent->isGMPCMCruise;
   isImpreza = parent->isImpreza;
   isVolt = parent->isVolt;
+  tuningLevel = parent->tuningLevel;
 
   updateToggles();
 }
@@ -250,8 +244,9 @@ void FrogPilotVehiclesPanel::setModels() {
 void FrogPilotVehiclesPanel::updateToggles() {
   setUpdatesEnabled(false);
 
-  disableOpenpilotLong->setVisible((hasOpenpilotLongitudinal && !hasExperimentalOpenpilotLongitudinal && !isGMPCMCruise && customizationLevel == 2) || disableOpenpilotLongitudinal);
-  forceFingerprint ->setVisible(customizationLevel == 2 || isBolt);
+  disableOpenpilotLong->setVisible(hasOpenpilotLongitudinal && !hasExperimentalOpenpilotLongitudinal && tuningLevel >= frogpilot_toggle_levels["DisableOpenpilotLongitudinal"].toDouble());
+  disableOpenpilotLong->setVisible(disableOpenpilotLong->isVisible() || disableOpenpilotLongitudinal);
+  forceFingerprint ->setVisible(tuningLevel >= frogpilot_toggle_levels["ForceFingerprint"].toDouble() || isBolt);
 
   selectMakeButton->setValue(carMake);
   selectModelButton->setValue(carModel);
@@ -297,15 +292,8 @@ void FrogPilotVehiclesPanel::updateToggles() {
       }
     }
 
-    toggle->setVisible(setVisible);
+    toggle->setVisible(setVisible && tuningLevel >= frogpilot_toggle_levels[key].toDouble());
   }
-
-  toggles["ClusterOffset"]->setVisible(toggles["ClusterOffset"]->isVisible() && customizationLevel == 2);
-  toggles["CrosstrekTorque"]->setVisible(toggles["CrosstrekTorque"]->isVisible() && customizationLevel == 2);
-  toggles["ExperimentalGMTune"]->setVisible(toggles["ExperimentalGMTune"]->isVisible() && customizationLevel == 2);
-  toggles["FrogsGoMoosTweak"]->setVisible(toggles["FrogsGoMoosTweak"]->isVisible() && customizationLevel == 2);
-  toggles["LongPitch"]->setVisible(toggles["LongPitch"]->isVisible() && customizationLevel == 2);
-  toggles["NewLongAPI"]->setVisible(toggles["NewLongAPI"]->isVisible() && customizationLevel == 2);
 
   setUpdatesEnabled(true);
   update();

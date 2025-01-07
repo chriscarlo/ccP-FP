@@ -17,16 +17,17 @@ private:
   void hideToggles();
   void showEvent(QShowEvent *event) override;
   void showToggles(const std::set<QString> &keys);
-  void updateCarToggles();
 
   FrogPilotSettingsWindow *parent;
+
+  QJsonObject frogpilot_toggle_levels;
 
   Params params;
 
   bool hasBSM;
   bool hasOpenpilotLongitudinal;
 
-  int customizationLevel;
+  int tuningLevel;
 
   std::map<QString, AbstractControl*> toggles;
 

@@ -21,9 +21,11 @@ private:
 
   FrogPilotSettingsWindow *parent;
 
+  QJsonObject frogpilot_toggle_levels;
+
   bool started;
 
-  int customizationLevel;
+  int tuningLevel;
 
   std::map<QString, AbstractControl*> toggles;
 

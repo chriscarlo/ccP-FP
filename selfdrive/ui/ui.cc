@@ -48,16 +48,17 @@ void update_leads(UIState *s, const cereal::RadarState::Reader &radar_state, con
   SubMaster &sm = *(s->sm);
   float path_offset_z = sm["liveCalibration"].getLiveCalibration().getHeight()[0];
 
-  cereal::RadarState::LeadData::Reader (cereal::RadarState::Reader::*get_lead_data[6])() const = {
+  cereal::RadarState::LeadData::Reader (cereal::RadarState::Reader::*get_lead_data[7])() const = {
     &cereal::RadarState::Reader::getLeadOne,
     &cereal::RadarState::Reader::getLeadTwo,
     &cereal::RadarState::Reader::getLeadLeft,
     &cereal::RadarState::Reader::getLeadRight,
     &cereal::RadarState::Reader::getLeadLeftFar,
-    &cereal::RadarState::Reader::getLeadRightFar
+    &cereal::RadarState::Reader::getLeadRightFar,
+    &cereal::RadarState::Reader::getLeadsLead
   };
 
-  for (int i = 0; i < 6; ++i) {
+  for (int i = 0; i < 7; ++i) {
     auto lead_data = (radar_state.*get_lead_data[i])();
     if (lead_data.getStatus()) {
       float z = line.getZ()[get_path_length_idx(line, lead_data.getDRel())];
@@ -271,7 +272,6 @@ static void update_state(UIState *s) {
     auto controlsState = sm["controlsState"].getControlsState();
     scene.enabled = controlsState.getEnabled();
     scene.experimental_mode = scene.enabled && controlsState.getExperimentalMode();
-    scene.v_cruise_diff = controlsState.getVCruiseCluster() - controlsState.getVCruise();
   }
   if (sm.updated("deviceState")) {
     auto deviceState = sm["deviceState"].getDeviceState();
@@ -317,7 +317,7 @@ static void update_state(UIState *s) {
     scene.vtsc_controlling_curve = frogpilotPlan.getVtscControllingCurve();
     scene.vtsc_speed = frogpilotPlan.getVtscSpeed();
     if (frogpilotPlan.getTogglesUpdated()) {
-      scene.frogpilot_toggles = QJsonDocument::fromJson(QString::fromStdString(params.get("FrogPilotToggles")).toUtf8()).object();
+      scene.frogpilot_toggles = QJsonDocument::fromJson(QString::fromStdString(s->params_memory.get("FrogPilotToggles", true)).toUtf8()).object();
       ui_update_params(s);
     }
   }
@@ -361,12 +361,6 @@ void ui_update_params(UIState *s) {
 }
 
 void ui_update_frogpilot_params(UIState *s) {
-  static bool boot_run = true;
-  if (boot_run) {
-    util::sleep_for(5000);
-    boot_run = false;
-  }
-
   loadThemeColors("", true);
 
   UIScene &scene = s->scene;
@@ -411,10 +405,11 @@ void ui_update_frogpilot_params(UIState *s) {
   scene.lead_metrics = scene.frogpilot_toggles.value("lead_metrics").toBool();
   scene.map_style = scene.frogpilot_toggles.value("map_style").toDouble();
   scene.memory_metrics = scene.frogpilot_toggles.value("memory_metrics").toBool();
-  scene.mtsc_enabled = scene.frogpilot_toggles.value("map_turn_speed_controller").toBool();
   scene.minimum_lane_change_speed = scene.frogpilot_toggles.value("minimum_lane_change_speed").toDouble();
+  scene.model_name = scene.frogpilot_toggles.value("model_name").toString();
   scene.model_randomizer = scene.frogpilot_toggles.value("model_randomizer").toBool();
   scene.model_ui = scene.frogpilot_toggles.value("model_ui").toBool();
+  scene.mtsc_enabled = scene.frogpilot_toggles.value("map_turn_speed_controller").toBool();
   scene.no_logging = scene.frogpilot_toggles.value("no_logging").toBool();
   scene.no_uploads = scene.frogpilot_toggles.value("no_uploads").toBool();
   scene.numerical_temp = scene.frogpilot_toggles.value("numerical_temp").toBool();
@@ -490,7 +485,7 @@ void UIState::updateStatus() {
   }
 
   scene.started |= scene.force_onroad;
-  scene.started &= !paramsMemory.getBool("ForceOffroad");
+  scene.started &= !params_memory.getBool("ForceOffroad");
 
   // Handle onroad/offroad transition
   if (scene.started != started_prev || sm->frame == 1) {
@@ -533,7 +528,7 @@ UIState::UIState(QObject *parent) : QObject(parent) {
   // FrogPilot variables
   wifi = new WifiManager(this);
 
-  scene.frogpilot_toggles = QJsonDocument::fromJson(QString::fromStdString(params.get("FrogPilotToggles")).toUtf8()).object();
+  scene.frogpilot_toggles = QJsonDocument::fromJson(QString::fromStdString(params_memory.get("FrogPilotToggles", true)).toUtf8()).object();
   ui_update_params(this);
 }
 
@@ -548,9 +543,9 @@ void UIState::update() {
   emit uiUpdate(*this);
 
   // FrogPilot variables
-  scene.conditional_status = scene.conditional_experimental && scene.enabled ? paramsMemory.getInt("CEStatus") : 0;
+  scene.conditional_status = scene.conditional_experimental && scene.enabled ? params_memory.getInt("CEStatus") : 0;
   scene.driver_camera_timer = scene.driver_camera_in_reverse && scene.reverse ? scene.driver_camera_timer + 1 : 0;
-  scene.force_onroad = paramsMemory.getBool("ForceOnroad");
+  scene.force_onroad = params_memory.getBool("ForceOnroad");
   scene.started_timer = scene.started || started_prev ? scene.started_timer + 1 : 0;
 
   if (scene.keep_screen_on) {

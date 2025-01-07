@@ -19,12 +19,13 @@ private:
   void hideToggles();
   void showEvent(QShowEvent *event) override;
   void showToggles(const std::set<QString> &keys);
-  void updateCarToggles();
   void updateMetric();
 
   FrogPilotSettingsWindow *parent;
 
   FrogPilotButtonsControl *curveDetectionBtn;
+
+  QJsonObject frogpilot_toggle_levels;
 
   Params params;
 
@@ -39,7 +40,7 @@ private:
   bool isToyota;
   bool slcOpen;
 
-  int customizationLevel;
+  int tuningLevel;
 
   std::map<QString, AbstractControl*> toggles;
 

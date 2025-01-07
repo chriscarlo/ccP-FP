@@ -124,18 +124,13 @@ FrogPilotSoundsPanel::FrogPilotSoundsPanel(FrogPilotSettingsWindow *parent) : Fr
   }
 
   QObject::connect(parent, &FrogPilotSettingsWindow::closeParentToggle, this, &FrogPilotSoundsPanel::hideToggles);
-  QObject::connect(parent, &FrogPilotSettingsWindow::updateCarToggles, this, &FrogPilotSoundsPanel::updateCarToggles);
 }
 
 void FrogPilotSoundsPanel::showEvent(QShowEvent *event) {
-  customizationLevel = parent->customizationLevel;
-
-  toggles["AlertVolumeControl"]->setVisible(customizationLevel == 2);
-}
-
-void FrogPilotSoundsPanel::updateCarToggles() {
+  frogpilot_toggle_levels = parent->frogpilot_toggle_levels;
   hasBSM = parent->hasBSM;
   hasOpenpilotLongitudinal = parent->hasOpenpilotLongitudinal;
+  tuningLevel = parent->tuningLevel;
 
   hideToggles();
 }
@@ -144,7 +139,7 @@ void FrogPilotSoundsPanel::showToggles(const std::set<QString> &keys) {
   setUpdatesEnabled(false);
 
   for (auto &[key, toggle] : toggles) {
-    toggle->setVisible(keys.find(key) != keys.end());
+    toggle->setVisible(keys.find(key) != keys.end() && tuningLevel >= frogpilot_toggle_levels[key].toDouble());
   }
 
   setUpdatesEnabled(true);
@@ -157,10 +152,9 @@ void FrogPilotSoundsPanel::hideToggles() {
   for (auto &[key, toggle] : toggles) {
     bool subToggles = alertVolumeControlKeys.find(key) != alertVolumeControlKeys.end() ||
                       customAlertsKeys.find(key) != customAlertsKeys.end();
-    toggle->setVisible(!subToggles);
-  }
 
-  toggles["AlertVolumeControl"]->setVisible(customizationLevel == 2);
+    toggle->setVisible(!subToggles && tuningLevel >= frogpilot_toggle_levels[key].toDouble());
+  }
 
   setUpdatesEnabled(true);
   update();

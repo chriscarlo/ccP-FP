@@ -104,7 +104,7 @@ typedef struct UIScene {
   QPolygonF road_edge_vertices[2];
 
   // lead
-  QPointF lead_vertices[6];
+  QPointF lead_vertices[7];
 
   // DMoji state
   float driver_pose_vals[3];
@@ -134,6 +134,8 @@ typedef struct UIScene {
 
   QPolygonF track_adjacent_vertices[6];
   QPolygonF track_edge_vertices;
+
+  QString model_name;
 
   bool acceleration_path;
   bool adjacent_path;
@@ -257,7 +259,6 @@ typedef struct UIScene {
   float steer;
   float unconfirmed_speed_limit;
   float upcoming_speed_limit;
-  float v_cruise_diff;
   float vtsc_speed;
 
   int bearing_deg;
@@ -311,6 +312,8 @@ public:
   QTransform car_space_transform;
 
   // FrogPilot variables
+  Params params_memory{"/dev/shm/params"};
+
   WifiManager *wifi = nullptr;
 
 signals:
@@ -330,9 +333,6 @@ private:
   QTimer *timer;
   bool started_prev = false;
   PrimeType prime_type = PrimeType::UNKNOWN;
-
-  // FrogPilot variables
-  Params paramsMemory{"/dev/shm/params"};
 };
 
 UIState *uiState();
