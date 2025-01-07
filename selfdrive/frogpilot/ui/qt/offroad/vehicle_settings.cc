@@ -139,9 +139,10 @@ FrogPilotVehiclesPanel::FrogPilotVehiclesPanel(FrogPilotSettingsWindow *parent) 
     {"LongPitch", tr("Uphill/Downhill Smoothing"), tr("Smoothens the gas and brake response when driving on slopes."), ""},
     {"NewLongAPIGM", tr("Use comma's New Longitudinal API"), tr("Enables comma's new control system that has shown great improvement with acceleration and braking, but has a few issues on some GM vehicles."), ""},
 
-    {"NewLongAPI", tr("Use comma's New Longitudinal API"), tr("Enables comma's new control system that has shown great improvement with acceleration and braking, but has a few issues on Hyundai/Kia/Genesis."), ""},
-
-    {"CrosstrekTorque", tr("Subaru Crosstrek Torque Increase"), tr("Increases the maximum allowed torque for the Subaru Crosstrek."), ""},
+    {"NewLongAPI", tr("Use comma's New Longitudinal API"), tr("Enable comma's new control system that has shown great improvement with acceleration and braking, but has issues on some Hyundai/Kia/Genesis vehicles."), ""},
+    {"HyundaiRadarTracks", tr("Enable Radar Tracks"), tr("Enables the cars radar tracks along with OPLong for Hyundai/Kia/Genesis vehicles, which shows vast improvement in long control."), ""},
+    {"HKGtuning", tr("Chubbs' Custom Tuning"), tr("Chubbs' Custom tuning for Hyundai/Kia/Genesis vehicles, which smoothes acceleration and braking to help achieve a 'limo' stop."), ""},
+    {"CrosstrekTorque", tr("Subaru Crosstrek Torque Increase"), tr("Increase the maximum allowed torque for the 'Subaru Crosstrek'."), ""},
 
     {"ToyotaDoors", tr("Automatically Lock/Unlock Doors"), tr("Automatically locks the doors when in drive and unlocks when in park."), ""},
     {"ClusterOffset", tr("Cluster Speed Offset"), tr("Sets the cluster offset openpilot uses to try and match the speed displayed on the dash."), ""},
@@ -175,14 +176,7 @@ FrogPilotVehiclesPanel::FrogPilotVehiclesPanel(FrogPilotSettingsWindow *parent) 
     });
   }
 
-  FrogPilotParamValueButtonControl *clusterOffsetToggle = static_cast<FrogPilotParamValueButtonControl*>(toggles["ClusterOffset"]);
-  QObject::connect(clusterOffsetToggle, &FrogPilotParamValueButtonControl::buttonClicked, [=]() {
-    params.putFloat("ClusterOffset", 1.015);
-    clusterOffsetToggle->refresh();
-    updateFrogPilotToggles();
-  });
-
-  std::set<QString> rebootKeys = {"CrosstrekTorque", "ExperimentalGMTune", "FrogsGoMoosTweak", "NewLongAPI", "NewLongAPIGM"};
+  std::set<QString> rebootKeys = {"CrosstrekTorque", "ExperimentalGMTune", "FrogsGoMoosTweak", "HyundaiRadarTracks", "HKGtuning",  "NewLongAPI", "NewLongAPIGM"};
   for (const QString &key : rebootKeys) {
     QObject::connect(static_cast<ToggleControl*>(toggles[key]), &ToggleControl::toggleFlipped, [this]() {
       if (started) {
