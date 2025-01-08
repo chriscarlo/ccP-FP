@@ -109,7 +109,7 @@ class CarInterface(CarInterfaceBase):
     ret.longitudinalTuning.kiBP = [0.0]
 
     # HKG tuning without hat trick
-    if hkg_tuning and not hat_trick:
+    if hkg_tuning:
       ret.longitudinalTuning.kiV = [0.0]
       ret.vEgoStopping = 0.10
       ret.vEgoStarting = 0.15

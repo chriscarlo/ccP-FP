@@ -184,13 +184,13 @@ class Controls:
     # FrogPilot variables
     self.frogpilot_toggles = get_frogpilot_toggles()
 
+    self.accel_pressed = False
     self.always_on_lateral_active = False
     self.always_on_lateral_active_previously = False
+    self.decel_pressed = False
     self.fcw_event_triggered = False
     self.no_entry_alert_triggered = False
     self.onroad_distance_pressed = False
-    self.resume_pressed = False
-    self.resume_previously_pressed = False
     self.steer_saturated_event_triggered = False
 
     self.radarless_model = self.frogpilot_toggles.radarless_model
@@ -233,8 +233,8 @@ class Controls:
       return
 
     # Block resume if cruise never previously enabled
-    self.resume_pressed = any(be.type in (ButtonType.accelCruise, ButtonType.resumeCruise) for be in CS.buttonEvents)
-    if not self.CP.pcmCruise and not self.v_cruise_helper.v_cruise_initialized and self.resume_pressed:
+    resume_pressed = any(be.type in (ButtonType.accelCruise, ButtonType.resumeCruise) for be in CS.buttonEvents)
+    if not self.CP.pcmCruise and not self.v_cruise_helper.v_cruise_initialized and resume_pressed:
       self.events.add(EventName.resumeBlocked)
 
     if not self.CP.notCar:
@@ -747,14 +747,18 @@ class Controls:
           self.experimental_mode = not self.experimental_mode
           self.params.put_bool_nonblocking("ExperimentalMode", self.experimental_mode)
 
-    if self.sm.frame * DT_CTRL % DT_MDL == 0 or self.resume_pressed:
-      self.resume_previously_pressed = self.resume_pressed
+    if self.sm.updated['frogpilotPlan'] or any(be.type in (ButtonType.accelCruise, ButtonType.resumeCruise) for be in CS.buttonEvents):
+      self.accel_pressed = any(be.type in (ButtonType.accelCruise, ButtonType.resumeCruise) for be in CS.buttonEvents)
+
+    if self.sm.updated['frogpilotPlan'] or any(be.type == ButtonType.decelCruise for be in CS.buttonEvents):
+      self.decel_pressed = any(be.type == ButtonType.decelCruise for be in CS.buttonEvents)
 
     FPCC = custom.FrogPilotCarControl.new_message()
     FPCC.alwaysOnLateralActive = self.always_on_lateral_active
+    FPCC.accelPressed = self.accel_pressed
+    FPCC.decelPressed = self.decel_pressed
     FPCC.fcwEventTriggered = self.fcw_event_triggered
     FPCC.noEntryEventTriggered = self.no_entry_alert_triggered
-    FPCC.resumePressed = self.resume_previously_pressed
     FPCC.steerSaturatedEventTriggered = self.steer_saturated_event_triggered
 
     return FPCC
