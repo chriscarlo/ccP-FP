@@ -14,8 +14,8 @@
 
 OnroadWindow::OnroadWindow(QWidget *parent) : QWidget(parent) {
   // Initialize blinker params to off
-  params.put("LeftBlinker", "0");
-  params.put("RightBlinker", "0");
+  paramsMain.put("LeftBlinker", "0");
+  paramsMain.put("RightBlinker", "0");
 
   QVBoxLayout *main_layout  = new QVBoxLayout(this);
   main_layout->setMargin(UI_BORDER_SIZE);
@@ -176,7 +176,7 @@ void OnroadWindow::mousePressEvent(QMouseEvent* e) {
         int override_value = (scene.conditional_status >= 1 && scene.conditional_status <= 6) ? 0 : (scene.conditional_status >= 7 ? 5 : 6);
         paramsMemory.putInt("CEStatus", override_value);
       } else {
-        params.putBoolNonBlocking("ExperimentalMode", !params.getBool("ExperimentalMode"));
+        paramsMain.putBoolNonBlocking("ExperimentalMode", !paramsMain.getBool("ExperimentalMode"));
       }
 
     } else {
@@ -229,8 +229,8 @@ void OnroadWindow::offroadTransition(bool offroad) {
 
   // Reset blinker states when going offroad
   if (offroad) {
-    params.put("LeftBlinker", "0");
-    params.put("RightBlinker", "0");
+    paramsMain.put("LeftBlinker", "0");
+    paramsMain.put("RightBlinker", "0");
     leftBlinkerBtn->setVisible(false);
     rightBlinkerBtn->setVisible(false);
   } else {

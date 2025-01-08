@@ -151,7 +151,6 @@ typedef struct UIScene {
   bool brake_lights_on;
   bool brake_signal;
   bool cem_status_bar;
-  bool brake_signal;
   bool compass;
   bool conditional_experimental;
   bool cpu_metrics;
