@@ -3,6 +3,7 @@
 #include <QApplication>
 #include <QPainter>
 #include <QStackedLayout>
+#include <QPushButton>
 
 #ifdef ENABLE_MAPS
 #include "selfdrive/ui/qt/maps/map_helpers.h"
@@ -12,6 +13,10 @@
 #include "selfdrive/ui/qt/util.h"
 
 OnroadWindow::OnroadWindow(QWidget *parent) : QWidget(parent) {
+  // Initialize blinker params to off
+  params.put("LeftBlinker", "0");
+  params.put("RightBlinker", "0");
+
   QVBoxLayout *main_layout  = new QVBoxLayout(this);
   main_layout->setMargin(UI_BORDER_SIZE);
   QStackedLayout *stacked_layout = new QStackedLayout;
@@ -25,6 +30,41 @@ OnroadWindow::OnroadWindow(QWidget *parent) : QWidget(parent) {
   split->setContentsMargins(0, 0, 0, 0);
   split->setSpacing(0);
   split->addWidget(nvg);
+
+  // Initialize blinker test buttons
+  leftBlinkerBtn = new QPushButton("◀ Test Left Blinker", this);
+  rightBlinkerBtn = new QPushButton("Test Right Blinker ▶", this);
+
+  // Add blinker test buttons
+  QHBoxLayout *btnLayout = new QHBoxLayout();
+  btnLayout->setContentsMargins(50, 50, 50, 50);
+  btnLayout->setSpacing(20);
+
+  leftBlinkerBtn->setStyleSheet(R"(
+    QPushButton {
+      height: 120px;
+      width: 300px;
+      border-radius: 15px;
+      background-color: rgba(0, 0, 0, 0.7);
+      color: white;
+      font-size: 40px;
+      padding: 0 20px;
+    }
+    QPushButton:pressed {
+      background-color: rgba(100, 100, 100, 0.7);
+    }
+  )");
+  rightBlinkerBtn->setStyleSheet(leftBlinkerBtn->styleSheet());
+
+  btnLayout->addWidget(leftBlinkerBtn);
+  btnLayout->addWidget(rightBlinkerBtn);
+
+  QWidget *btnWidget = new QWidget(this);
+  btnWidget->setLayout(btnLayout);
+  stacked_layout->addWidget(btnWidget);
+
+  connect(leftBlinkerBtn, &QPushButton::clicked, this, &OnroadWindow::toggleLeftBlinker);
+  connect(rightBlinkerBtn, &QPushButton::clicked, this, &OnroadWindow::toggleRightBlinker);
 
   if (getenv("DUAL_CAMERA_VIEW")) {
     CameraWidget *arCam = new CameraWidget("camerad", VISION_STREAM_ROAD, true, this);
@@ -186,6 +226,18 @@ void OnroadWindow::offroadTransition(bool offroad) {
     }
   }
 #endif
+
+  // Reset blinker states when going offroad
+  if (offroad) {
+    params.put("LeftBlinker", "0");
+    params.put("RightBlinker", "0");
+    leftBlinkerBtn->setVisible(false);
+    rightBlinkerBtn->setVisible(false);
+  } else {
+    leftBlinkerBtn->setVisible(true);
+    rightBlinkerBtn->setVisible(true);
+  }
+
   alerts->clear();
 }
 
@@ -427,4 +479,16 @@ void OnroadWindow::paintEvent(QPaintEvent *event) {
 
     p.drawText(xPos, yPos, fpsDisplayString);
   }
+}
+
+void OnroadWindow::toggleLeftBlinker() {
+  Params params;
+  std::string cur_val = params.get("LeftBlinker");
+  params.put("LeftBlinker", cur_val == "1" ? "0" : "1");
+}
+
+void OnroadWindow::toggleRightBlinker() {
+  Params params;
+  std::string cur_val = params.get("RightBlinker");
+  params.put("RightBlinker", cur_val == "1" ? "0" : "1");
 }

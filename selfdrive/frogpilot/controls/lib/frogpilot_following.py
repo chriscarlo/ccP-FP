@@ -102,7 +102,7 @@ class FrogPilotFollowing:
           frogpilot_toggles.relaxed_jerk_speed,
           frogpilot_toggles.custom_personalities,
           controlsState.personality
-        )
+         )
       else:
         self.base_acceleration_jerk, self.base_danger_jerk, self.base_speed_jerk = get_jerk_factor(
           frogpilot_toggles.aggressive_jerk_deceleration,

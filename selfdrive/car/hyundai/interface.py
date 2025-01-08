@@ -27,6 +27,15 @@ BUTTONS_DICT = {Buttons.RES_ACCEL: ButtonType.accelCruise, Buttons.SET_DECEL: Bu
 
 
 class CarInterface(CarInterfaceBase):
+  def __init__(self, CP, CarController, CarState):
+    super().__init__(CP, CarController, CarState)
+    self.CS = CarState(CP)
+    self.cp = self.CS.get_can_parser(CP)
+    self.cp_cam = self.CS.get_cam_can_parser(CP)
+
+    self.lkas_button_alert = False
+    self.params = Params()
+
   @staticmethod
   def _get_params(ret, candidate, fingerprint, car_fw, disable_openpilot_long, experimental_long, docs):
     use_new_api = params.get_bool("NewLongAPI")
@@ -275,7 +284,13 @@ class CarInterface(CarInterfaceBase):
     else:
       ret.buttonEvents = create_button_events(self.CS.lkas_enabled, self.CS.lkas_previously_enabled, {1: FrogPilotButtonType.lkas})
 
+    # Read blinker test params and override CarState values
+    left_blinker = self.params.get("LeftBlinker", encoding='utf8')
+    right_blinker = self.params.get("RightBlinker", encoding='utf8')
 
+    if left_blinker is not None or right_blinker is not None:
+      ret.leftBlinker = left_blinker == "1"
+      ret.rightBlinker = right_blinker == "1"
 
     # On some newer model years, the CANCEL button acts as a pause/resume button based on the PCM state
     # To avoid re-engaging when openpilot cancels, check user engagement intention via buttons

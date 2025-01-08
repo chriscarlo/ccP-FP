@@ -91,3 +91,5 @@ selfdrive/frogpilot/controls/lib/zz_old/frogpilot_following.py
 selfdrive/frogpilot/controls/lib/old/follow.py
 selfdrive/frogpilot/controls/lib/chauffer_files/chauffeur_vcruise.py
 selfdrive/frogpilot/controls/lib/zz_old/frogpilot_vcruise.py
+car_and_hyundai_codebase_map.txt
+hyundai_codebase_map.txt
