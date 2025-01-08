@@ -45,7 +45,7 @@ class FrogPilotVCruise:
 
     self.override_force_stop |= not frogpilot_toggles.force_standstill and carState.standstill and self.frogpilot_planner.tracking_lead
     self.override_force_stop |= carState.gasPressed
-    self.override_force_stop |= frogpilotCarControl.resumePressed
+    self.override_force_stop |= frogpilotCarControl.accelPressed
     self.override_force_stop &= force_stop_enabled
 
     if self.override_force_stop:
