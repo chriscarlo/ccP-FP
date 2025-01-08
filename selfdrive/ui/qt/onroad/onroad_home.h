@@ -2,6 +2,7 @@
 
 #include "selfdrive/ui/qt/onroad/alerts.h"
 #include "selfdrive/ui/qt/onroad/annotated_camera.h"
+#include <QPushButton>
 
 class OnroadWindow : public QWidget {
   Q_OBJECT
@@ -23,6 +24,10 @@ private:
   QColor bg = bg_colors[STATUS_DISENGAGED];
   QWidget *map = nullptr;
   QHBoxLayout* split;
+
+  // Blinker test buttons
+  QPushButton *leftBlinkerBtn;
+  QPushButton *rightBlinkerBtn;
 
   // FrogPilot variables
   bool blindSpotLeft;
@@ -55,11 +60,15 @@ private:
 
   inline QColor redColor(int alpha = 255) { return QColor(201, 34, 49, alpha); }
 
-  Params params;
+  Params paramsMain;
   Params paramsMemory{"/dev/shm/params"};
+
+  QString modelName;
 
 private slots:
   void offroadTransition(bool offroad);
   void primeChanged(bool prime);
   void updateState(const UIState &s);
+  void toggleLeftBlinker();
+  void toggleRightBlinker();
 };

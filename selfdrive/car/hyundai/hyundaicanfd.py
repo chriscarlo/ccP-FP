@@ -267,15 +267,22 @@ def create_spas_messages(packer, CAN, frame, left_blink, right_blink):
   ret = []
 
   values = {
+    "CHECKSUM": 0,  # Will be calculated by packer
+    "COUNTER": frame % 0x100,
+    "NEW_SIGNAL_1": 0,
+    "NEW_SIGNAL_2": 0,
   }
   ret.append(packer.make_can_msg("SPAS1", CAN.ECAN, values))
 
+  # BLINKER_CONTROL is at bit 133
   blink = 0
   if left_blink:
     blink = 3
   elif right_blink:
     blink = 4
   values = {
+    "CHECKSUM": 0,  # Will be calculated by packer
+    "COUNTER": frame % 0x100,
     "BLINKER_CONTROL": blink,
   }
   ret.append(packer.make_can_msg("SPAS2", CAN.ECAN, values))
