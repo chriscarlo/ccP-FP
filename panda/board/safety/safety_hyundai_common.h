@@ -62,15 +62,6 @@ void hyundai_common_cruise_state_check(const bool cruise_engaged) {
     cruise_engaged_prev = cruise_engaged;
   }
 }
-void hyundai_lkas_button_check(const bool lkas_pressed) {
-   // Check LKAS button press
-  if (lkas_pressed && !lkas_pressed_prev) {
-    if (alternative_experience & ALT_EXP_ALWAYS_ON_LATERAL) {
-      aol_allowed = true;
-    }
-  }
-  lkas_pressed_prev = lkas_pressed;
-}
 
 void hyundai_lkas_button_check(const bool lkas_pressed) {
   // Check LKAS button press
