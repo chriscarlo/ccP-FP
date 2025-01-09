@@ -600,10 +600,18 @@ class Controls:
     actuators = CC.actuators
     actuators.longControlState = self.LoC.long_control_state
 
-    # Enable blinkers while lane changing
-    if model_v2.meta.laneChangeState != LaneChangeState.off:
-      CC.leftBlinker = model_v2.meta.laneChangeDirection == LaneChangeDirection.left
-      CC.rightBlinker = model_v2.meta.laneChangeDirection == LaneChangeDirection.right
+    # Set blinker states based on car state first
+    CC.leftBlinker = CS.leftBlinker
+    CC.rightBlinker = CS.rightBlinker
+
+    # Override with UI button states if set
+    params = Params()
+    left_on = params.get("LeftBlinker") == b"1"
+    right_on = params.get("RightBlinker") == b"1"
+    if left_on:
+      CC.leftBlinker = True
+    if right_on:
+      CC.rightBlinker = True
 
     if CS.leftBlinker or CS.rightBlinker:
       self.last_blinker_frame = self.sm.frame
