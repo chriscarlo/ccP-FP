@@ -14,8 +14,8 @@
 
 OnroadWindow::OnroadWindow(QWidget *parent) : QWidget(parent) {
   // Initialize blinker params to off
-  paramsMain.put("LeftBlinker", "0");
-  paramsMain.put("RightBlinker", "0");
+  params.put("LeftBlinker", "0");
+  params.put("RightBlinker", "0");
 
   QVBoxLayout *main_layout  = new QVBoxLayout(this);
   main_layout->setMargin(UI_BORDER_SIZE);
@@ -176,7 +176,7 @@ void OnroadWindow::mousePressEvent(QMouseEvent* e) {
         int override_value = (scene.conditional_status >= 1 && scene.conditional_status <= 6) ? 0 : (scene.conditional_status >= 7 ? 5 : 6);
         paramsMemory.putInt("CEStatus", override_value);
       } else {
-        paramsMain.putBoolNonBlocking("ExperimentalMode", !paramsMain.getBool("ExperimentalMode"));
+        params.putBoolNonBlocking("ExperimentalMode", !params.getBool("ExperimentalMode"));
       }
 
     } else {
@@ -229,8 +229,8 @@ void OnroadWindow::offroadTransition(bool offroad) {
 
   // Reset blinker states when going offroad
   if (offroad) {
-    paramsMain.put("LeftBlinker", "0");
-    paramsMain.put("RightBlinker", "0");
+    params.put("LeftBlinker", "0");
+    params.put("RightBlinker", "0");
     leftBlinkerBtn->setVisible(false);
     rightBlinkerBtn->setVisible(false);
   } else {
@@ -481,14 +481,55 @@ void OnroadWindow::paintEvent(QPaintEvent *event) {
   }
 }
 
+/*
+ * Blinker Button Implementation
+ *
+ * Current Implementation:
+ * - Simple toggle buttons that control blinker states directly through params
+ * - Only one blinker can be active at a time
+ * - Blinkers can be toggled regardless of vehicle state or speed
+ * - Pressing a blinker button while the other is active will deactivate the other blinker
+ * - Each press toggles the blinker state (on/off)
+ * - Blinker states from UI buttons take priority over lane change state
+ * - Lane change state no longer controls blinker activation
+ *
+ * Previous Implementation:
+ * 1. UI Button Implementation:
+ *    - Simple toggle of individual blinker states
+ *    - Both blinkers could be activated simultaneously
+ *    - No interaction between left and right blinker states
+ *
+ * 2. Lane Change Implementation:
+ *    - Lane change state would override blinker states
+ *    - Blinkers would automatically activate during lane changes
+ *    - Lane change state controlled through desire_helper.py
+ *
+ * To revert to previous implementation:
+ * 1. In onroad_home.cc:
+ *    - Remove the additional params.put() calls that turn off the opposite blinker
+ *    - Keep only the toggle logic for the specific blinker being pressed
+ *
+ * 2. In controlsd.py:
+ *    - Remove the params.get() calls for blinker states
+ *    - Restore the original lane change blinker control:
+ *      if model_v2.meta.laneChangeState != LaneChangeState.off:
+ *        CC.leftBlinker = model_v2.meta.laneChangeDirection == LaneChangeDirection.left
+ *        CC.rightBlinker = model_v2.meta.laneChangeDirection == LaneChangeDirection.right
+ */
 void OnroadWindow::toggleLeftBlinker() {
-  Params params;
-  std::string cur_val = params.get("LeftBlinker");
-  params.put("LeftBlinker", cur_val == "1" ? "0" : "1");
+  Params params_tmp;
+  std::string cur_val = params_tmp.get("LeftBlinker");
+  if (cur_val != "1") {
+    params_tmp.put("RightBlinker", "0");  // Turn off right blinker when activating left
+  }
+  params_tmp.put("LeftBlinker", cur_val == "1" ? "0" : "1");
 }
 
 void OnroadWindow::toggleRightBlinker() {
-  Params params;
-  std::string cur_val = params.get("RightBlinker");
-  params.put("RightBlinker", cur_val == "1" ? "0" : "1");
+  Params params_tmp;
+  std::string cur_val = params_tmp.get("RightBlinker");
+  if (cur_val != "1") {
+    params_tmp.put("LeftBlinker", "0");  // Turn off left blinker when activating right
+  }
+  params_tmp.put("RightBlinker", cur_val == "1" ? "0" : "1");
 }
