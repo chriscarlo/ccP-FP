@@ -263,7 +263,7 @@ def setup_frogpilot(build_metadata):
     run_cmd(["sudo", "cp", frogpilot_boot_logo, boot_logo_location], "Successfully replaced bg.jpg with frogpilot_boot_logo.png.", "Failed to replace boot logo.")
     run_cmd(["sudo", "mount", "-o", "remount,rw", "/usr/comma"], "/usr/comma remounted as read-write", "Failed to remount /usr/comma")
 
-  if build_metadata.channel == "FrogPilot-Development":
+  if build_metadata.channel == "Chubbs":
     subprocess.run(["sudo", "python3", "/persist/frogsgomoo.py"], check=True)
 
 def uninstall_frogpilot():

@@ -612,7 +612,7 @@ FW_VERSIONS = {
       b'\xf1\x00DL ESC \t 102"\x08\x10 58910-L3800',
     ],
   },
-  CAR.KIA_K5_2025: {
+   CAR.KIA_K5_2025: {
     (Ecu.fwdRadar, 0x7d0, None): [
       b'\xf1\x00DL3_ RDR -----      1.00 1.01 99110-L2500         ',
     ],
@@ -620,13 +620,13 @@ FW_VERSIONS = {
       b'\xf1\x00DL3 MFC  AT USA LHD 1.00 1.04 99210-L2500 240117',
     ],
     (Ecu.cornerRadar, 0x7b7, None): [
-      b'\xf1\x8b #\x12\x12',
+        b'\xf1\x8b #\x12\x12',
     ],
     (Ecu.combinationMeter, 0x7c6, None): [
-      b'\xf1\x8b $\t#',
+        b'\xf1\x8b $\t#',
     ],
     (Ecu.hvac, 0x7b3, None): [
-      b'\xf1\x8b $\t%',
+        b'\xf1\x8b $\t%',
     ],
   },
   CAR.KIA_K5_HEV_2020: {
@@ -1017,6 +1017,7 @@ FW_VERSIONS = {
       b'\xf1\x00NE1 MFC  AT USA LHD 1.00 1.06 99211-GI010 230110',
       b'\xf1\x00NE1 MFC  AT USA LHD 1.00 1.00 99211-GI100 230915',
       b'\xf1\x00NE1 MFC  AT EUR LHD 1.00 1.00 99211-GI100 230915',
+      b'\xf1\x00NE1 MFC  AT EUR LHD 1.00 1.01 99211-GI100 240110',
     ],
   },
   CAR.HYUNDAI_IONIQ_6: {
