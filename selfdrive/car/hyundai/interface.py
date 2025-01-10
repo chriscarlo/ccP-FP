@@ -103,17 +103,18 @@ class CarInterface(CarInterfaceBase):
 
     # Configure longitudinal tuning
     hkg_tuning = params.get_bool("HKGtuning")
+    hat_trick = params.get_bool("HatTrick")
     ret.longitudinalTuning.deadzoneBP = [0.0]
     ret.longitudinalTuning.deadzoneV = [0.0]
     ret.longitudinalTuning.kpBP = [0.0]
     ret.longitudinalTuning.kiBP = [0.0]
 
     # HKG tuning without hat trick
-    if hkg_tuning:
+    if hkg_tuning and not hat_trick:
       ret.longitudinalTuning.kiV = [0.0]
       ret.vEgoStopping = 0.10
       ret.vEgoStarting = 0.15
-      ret.longitudinalActuatorDelay = 0.2
+      ret.longitudinalActuatorDelay = 0.5
 
       if ret.flags & (HyundaiFlags.HYBRID | HyundaiFlags.EV):
           ret.startingState = False
@@ -122,11 +123,23 @@ class CarInterface(CarInterfaceBase):
           ret.startAccel = 1.6
 
       ret.longitudinalTuning.kpV = [0.4] if is_canfd_car else [0.1]
-      ret.stoppingDecelRate = 0.1
+      ret.stoppingDecelRate = 0.05 if (ret.flags & HyundaiFlags.MANDO_RADAR) else 0.2
+
+    # HKG tuning with hat trick or just hat trick
+    elif (hkg_tuning and hat_trick) or hat_trick:
+      ret.longitudinalTuning.kiV = [0.02]
+      ret.vEgoStopping = 0.10
+      ret.vEgoStarting = 0.15
+      ret.longitudinalActuatorDelay = 0.5
+      ret.startAccel = 2.0
+
+      ret.startingState = not bool(ret.flags & (HyundaiFlags.HYBRID | HyundaiFlags.EV))
+      ret.longitudinalTuning.kpV = [1.0] if is_canfd_car else [0.4]
+      ret.stoppingDecelRate = 0.15 if is_canfd_car else 0.1
 
     # Default tuning
     else:
-      ret.longitudinalTuning.kpV = [0.5] if is_canfd_car else [0.1]
+      ret.longitudinalTuning.kpV = [0.35] if is_canfd_car else [0.1]
       ret.longitudinalTuning.kiV = [0.0]
 
     # API-specific tuning
@@ -145,7 +158,7 @@ class CarInterface(CarInterfaceBase):
 
     # Configure radar settings
     if DBC[ret.carFingerprint]["radar"] is None and ret.fpFlags & HyundaiFlagsFP.FP_CAMERA_SCC_LEAD.value:
-        ret.radarTimeStep = 0.02
+        #ret.radarTimeStep = 0.02
         ret.radarUnavailable = False
 
     # *** feature detection ***

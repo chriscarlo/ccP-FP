@@ -176,13 +176,7 @@ FrogPilotVehiclesPanel::FrogPilotVehiclesPanel(FrogPilotSettingsWindow *parent) 
     });
   }
 
-  FrogPilotParamValueButtonControl *clusterOffsetToggle = static_cast<FrogPilotParamValueButtonControl*>(toggles["ClusterOffset"]);
-  QObject::connect(clusterOffsetToggle, &FrogPilotParamValueButtonControl::buttonClicked, [=]() {
-    params.putFloat("ClusterOffset", params_default.getFloat("ClusterOffset"));
-    clusterOffsetToggle->refresh();
-  });
-
-  std::set<QString> rebootKeys = {"CrosstrekTorque", "ExperimentalGMTune", "FrogsGoMoosTweak", "HyundaiRadarTracks", "HKGtuning", "NewLongAPI", "NewLongAPIGM"};
+  std::set<QString> rebootKeys = {"CrosstrekTorque", "ExperimentalGMTune", "FrogsGoMoosTweak", "HyundaiRadarTracks", "HKGtuning",  "NewLongAPI", "NewLongAPIGM"};
   for (const QString &key : rebootKeys) {
     QObject::connect(static_cast<ToggleControl*>(toggles[key]), &ToggleControl::toggleFlipped, [this]() {
       if (started) {

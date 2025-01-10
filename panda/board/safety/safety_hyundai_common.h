@@ -89,6 +89,11 @@ void hyundai_common_cruise_buttons_check(const int cruise_button, const bool mai
       aol_allowed = true;
       controls_allowed = false;
     }
+    acc_main_on = !acc_main_on;
+    if (acc_main_on && (alternative_experience & ALT_EXP_ALWAYS_ON_LATERAL)) {
+      aol_allowed = true;
+      controls_allowed = false;
+    }
   }
   cruise_main_prev = main_button;
   if ((cruise_button == HYUNDAI_BTN_RESUME) || (cruise_button == HYUNDAI_BTN_SET) || (cruise_button == HYUNDAI_BTN_CANCEL) || main_button) {

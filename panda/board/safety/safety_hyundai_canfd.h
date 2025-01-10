@@ -185,9 +185,10 @@ static void hyundai_canfd_rx_hook(const CANPacket_t *to_push) {
         lkas_button = GET_BIT(to_push, 39U);
       }
       hyundai_common_cruise_buttons_check(cruise_button, main_button);
+
       if (alternative_experience & ALT_EXP_ALWAYS_ON_LATERAL) {
-        hyundai_lkas_button_check(lkas_button);
-      }
+	        hyundai_lkas_button_check(lkas_button);
+	    }
     }
 
     // gas press, different for EV, hybrid, and ICE models
