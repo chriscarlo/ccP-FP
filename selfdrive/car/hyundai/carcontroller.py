@@ -226,11 +226,29 @@ class CarController(CarControllerBase):
             if self.cruise_button is not None:
               if self.frame % 2 == 0:
                 can_sends.append(hyundaicanfd.create_buttons(self.packer, self.CP, self.CAN, ((self.frame // 2) + 1) % 0x10, self.cruise_button))
-                if (self.frame - self.last_button_frame) * DT_CTRL > 0.1 * send_freq:
-                  # send 25 messages at a time to increases the likelihood of cruise buttons being accepted
-                  can_sends.extend([hyundaican.create_clu11(self.packer, self.frame, CS.clu11, self.cruise_button, self.CP)] * 25)
-                  if (self.frame - self.last_button_frame) * DT_CTRL >= 0.15 * send_freq:
-                    self.last_button_frame = self.frame
+    else:
+      can_sends.append(hyundaican.create_lkas11(self.packer, self.frame, self.CP, apply_steer, apply_steer_req,
+                                                torque_fault, CS.lkas11, sys_warning, sys_state, CC.enabled,
+                                                hud_control.leftLaneVisible, hud_control.rightLaneVisible,
+                                                left_lane_warning, right_lane_warning))
+
+      if not self.CP.openpilotLongitudinalControl:
+        can_sends.extend(self.create_button_messages(CC, CS, use_clu11=True))
+        if not (CC.cruiseControl.cancel or CC.cruiseControl.resume) and CS.out.cruiseState.enabled and not self.CP.pcmCruiseSpeed:
+          self.cruise_button = self.get_cruise_buttons(CS, CC.vCruise)
+          if self.cruise_button is not None:
+            if self.CP.carFingerprint in LEGACY_SAFETY_MODE_CAR:
+              send_freq = 1
+              # Use FrogPilot's planner states instead of internal states
+              if not (self.frogpilot_planner.vtscActive or
+                  self.frogpilot_planner.mtscActive > 1) and abs(self.target_speed - self.v_set_dis) <= 2:
+                send_freq = 5
+              # send resume at a max freq of 10Hz
+              if (self.frame - self.last_button_frame) * DT_CTRL > 0.1 * send_freq:
+                # send 25 messages at a time to increases the likelihood of cruise buttons being accepted
+                can_sends.extend([hyundaican.create_clu11(self.packer, self.frame, CS.clu11, self.cruise_button, self.CP)] * 25)
+                if (self.frame - self.last_button_frame) * DT_CTRL >= 0.15 * send_freq:
+                  self.last_button_frame = self.frame
             elif self.frame % 2 == 0:
               can_sends.extend([hyundaican.create_clu11(self.packer, (self.frame // 2) + 1, CS.clu11, self.cruise_button, self.CP)] * 25)
       if self.frame % 2 == 0 and self.CP.openpilotLongitudinalControl:
