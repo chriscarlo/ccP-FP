@@ -355,7 +355,8 @@ class CarInterfaceBase(ABC):
     ret.minSteerSpeed = 0.
     ret.wheelSpeedFactor = 1.0
 
-    ret.pcmCruise = True     # openpilot's state is tied to the PCM's cruise state on most cars
+    ret.pcmCruise = True # openpilot's state is tied to the PCM's cruise state on most cars
+    ret.pcmCruiseSpeed = True
     ret.minEnableSpeed = -1. # enable is done by stock ACC, so ignore this
     ret.steerRatioRear = 0.  # no rear steering, at least on the listed cars aboveA
     ret.openpilotLongitudinalControl = False
@@ -432,7 +433,6 @@ class CarInterfaceBase(ABC):
       self.CS.out = ret.as_reader()
 
     return ret, fp_ret
-
 
   def create_common_events(self, cs_out, extra_gears=None, pcm_enable=True, allow_enable=True,
                            enable_buttons=(ButtonType.accelCruise, ButtonType.decelCruise)):

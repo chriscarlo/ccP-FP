@@ -14,7 +14,6 @@ from openpilot.selfdrive.car.hyundai.values import HyundaiFlags, Buttons, CarCon
 from openpilot.selfdrive.car.interfaces import CarControllerBase
 
 from openpilot.selfdrive.frogpilot.controls.lib.frogpilot_acceleration import get_max_allowed_accel
-
 VisualAlert = car.CarControl.HUDControl.VisualAlert
 LongCtrlState = car.CarControl.Actuators.LongControlState
 
@@ -72,10 +71,22 @@ class CarController(CarControllerBase):
       self.sm = messaging.SubMaster(sub_services)
 
     self.param_s = Params()
+
+    self.timer = 0
+    self.custom_stock_planner_speed = self.param_s.get_bool("CustomStockLongPlanner")
     self.hkg_tuning = self.param_s.get_bool('HKGtuning')
     self.jerk_limiter = JerkLimiter()
 
+
   def update(self, CC, CS, now_nanos, frogpilot_toggles):
+    from openpilot.selfdrive.car.hyundai.Custom_Long_Planner import CustomStockLongitudinal
+    self.custom_stock_long = CustomStockLongitudinal()
+    if not self.CP.pcmCruiseSpeed or (self.CP.openpilotLongitudinalControl and self.frame % 5 == 0):
+      self.sm.update(0)
+
+    if self.frame % 200 == 0 and self.param_s.get_bool("CustomStockLong"):
+      self.custom_stock_planner_speed = self.param_s.get_bool("CustomStockLongPlanner")
+
     actuators = CC.actuators
     hud_control = CC.hudControl
     accel = actuators.accel
@@ -179,7 +190,13 @@ class CarController(CarControllerBase):
           self.accel_last = accel
       else:
         # button presses
-        can_sends.extend(self.create_button_messages(CC, CS, use_clu11=False))
+        can_sends.extend(self.custom_stock_long.update_custom_stock_long(
+                          self.car_fingerprint,
+                          self.frame,
+                          CS,
+                          self.packer,
+                          self.CP
+                        ))
     else:
       can_sends.append(hyundaican.create_lkas11(self.packer, self.frame, self.CP, apply_steer, apply_steer_req,
                                                 torque_fault, CS.lkas11, sys_warning, sys_state, CC.enabled,
@@ -187,8 +204,15 @@ class CarController(CarControllerBase):
                                                 left_lane_warning, right_lane_warning))
 
       if not self.CP.openpilotLongitudinalControl:
-        can_sends.extend(self.create_button_messages(CC, CS, use_clu11=True))
-
+        if not (CC.cruiseControl.cancel or CC.cruiseControl.resume) and CS.out.cruiseState.enabled and not self.CP.pcmCruiseSpeed:
+          # Use CustomStockLongitudinal for button control
+          can_sends.extend(self.custom_stock_long.update_custom_stock_long(
+            self.car_fingerprint,
+            self.frame,
+            CS,
+            self.packer,
+            self.CP
+          ))
 
       if self.frame % 2 == 0 and self.CP.openpilotLongitudinalControl:
         # TODO: unclear if this is needed
