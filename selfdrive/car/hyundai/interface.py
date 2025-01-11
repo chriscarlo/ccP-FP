@@ -284,13 +284,14 @@ class CarInterface(CarInterfaceBase):
     else:
       ret.buttonEvents = create_button_events(self.CS.lkas_enabled, self.CS.lkas_previously_enabled, {1: FrogPilotButtonType.lkas})
 
-    # Read blinker test params and override CarState values
-    left_blinker = self.params.get("LeftBlinker", encoding='utf8')
-    right_blinker = self.params.get("RightBlinker", encoding='utf8')
+    # Only override blinkers after car is initialized
+    if self.CS.main_enabled:
+      left_blinker = self.params.get("LeftBlinker", encoding='utf8')
+      right_blinker = self.params.get("RightBlinker", encoding='utf8')
 
-    if left_blinker is not None or right_blinker is not None:
-      ret.leftBlinker = left_blinker == "1"
-      ret.rightBlinker = right_blinker == "1"
+      if left_blinker is not None or right_blinker is not None:
+        ret.leftBlinker = left_blinker == "1"
+        ret.rightBlinker = right_blinker == "1"
 
     # On some newer model years, the CANCEL button acts as a pause/resume button based on the PCM state
     # To avoid re-engaging when openpilot cancels, check user engagement intention via buttons

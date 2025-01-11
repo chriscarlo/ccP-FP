@@ -604,14 +604,15 @@ class Controls:
     CC.leftBlinker = CS.leftBlinker
     CC.rightBlinker = CS.rightBlinker
 
-    # Override with UI button states if set
-    params = Params()
-    left_on = params.get("LeftBlinker") == b"1"
-    right_on = params.get("RightBlinker") == b"1"
-    if left_on:
-      CC.leftBlinker = True
-    if right_on:
-      CC.rightBlinker = True
+    # Only override with UI button states if car is initialized and enabled
+    if self.state_initialized and CS.main_enabled:
+      params = Params()
+      left_on = params.get("LeftBlinker") == b"1"
+      right_on = params.get("RightBlinker") == b"1"
+      if left_on:
+        CC.leftBlinker = True
+      if right_on:
+        CC.rightBlinker = True
 
     if CS.leftBlinker or CS.rightBlinker:
       self.last_blinker_frame = self.sm.frame
