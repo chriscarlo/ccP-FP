@@ -34,7 +34,6 @@ class CarInterface(CarInterfaceBase):
     self.cp_cam = self.CS.get_cam_can_parser(CP)
 
     self.lkas_button_alert = False
-    self.params = Params()
 
   @staticmethod
   def _get_params(ret, candidate, fingerprint, car_fw, disable_openpilot_long, experimental_long, docs):
