@@ -137,7 +137,7 @@ void FrogPilotSoundsPanel::showToggles(const std::set<QString> &keys) {
   setUpdatesEnabled(false);
 
   for (auto &[key, toggle] : toggles) {
-    toggle->setVisible(keys.find(key) != keys.end() && tuningLevel >= frogpilotToggleLevels[key].toDouble());
+    toggle->setVisible(keys.find(key) != keys.end());
   }
 
   setUpdatesEnabled(true);
@@ -151,7 +151,7 @@ void FrogPilotSoundsPanel::hideToggles() {
     bool subToggles = alertVolumeControlKeys.find(key) != alertVolumeControlKeys.end() ||
                       customAlertsKeys.find(key) != customAlertsKeys.end();
 
-    toggle->setVisible(!subToggles && tuningLevel >= frogpilotToggleLevels[key].toDouble());
+    toggle->setVisible(!subToggles);
   }
 
   setUpdatesEnabled(true);

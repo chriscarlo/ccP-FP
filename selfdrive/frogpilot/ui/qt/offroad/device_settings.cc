@@ -116,7 +116,7 @@ void FrogPilotDevicePanel::showToggles(const std::set<QString> &keys) {
   setUpdatesEnabled(false);
 
   for (auto &[key, toggle] : toggles) {
-    toggle->setVisible(keys.find(key) != keys.end() && tuningLevel >= frogpilotToggleLevels[key].toDouble());
+    toggle->setVisible(keys.find(key) != keys.end());
   }
 
   setUpdatesEnabled(true);
@@ -129,7 +129,8 @@ void FrogPilotDevicePanel::hideToggles() {
   for (auto &[key, toggle] : toggles) {
     bool subToggles = deviceManagementKeys.find(key) != deviceManagementKeys.end() ||
                       screenKeys.find(key) != screenKeys.end();
-    toggle->setVisible(!subToggles && tuningLevel >= frogpilotToggleLevels[key].toDouble());
+
+    toggle->setVisible(!subToggles);
   }
 
   setUpdatesEnabled(true);
