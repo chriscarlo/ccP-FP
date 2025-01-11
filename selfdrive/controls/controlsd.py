@@ -608,7 +608,7 @@ class Controls:
     CC.rightBlinker = CS.rightBlinker
 
     # Only override with UI button states if car is initialized and enabled
-    if self.state_initialized and CS.main_enabled:
+    if self.state_initialized and CS.cruiseState.available:
       params = Params()
       left_on = params.get("LeftBlinker") == b"1"
       right_on = params.get("RightBlinker") == b"1"
