@@ -10,7 +10,7 @@ from openpilot.selfdrive.controls.lib.longcontrol import LongControl
 from openpilot.selfdrive.car import apply_driver_steer_torque_limits, common_fault_avoidance, make_tester_present_msg
 from openpilot.selfdrive.car.hyundai import hyundaicanfd, hyundaican
 from openpilot.selfdrive.car.hyundai.hyundaicanfd import CanBus
-from openpilot.selfdrive.car.hyundai.values import HyundaiFlags, Buttons, CarControllerParams, CANFD_CAR, CAR, CAMERA_SCC_CAR, LEGACY_SAFETY_MODE_CAR
+from openpilot.selfdrive.car.hyundai.values import HyundaiFlags, Buttons, CarControllerParams, CANFD_CAR, CAR, CAMERA_SCC_CAR
 from openpilot.selfdrive.car.interfaces import CarControllerBase
 
 from openpilot.selfdrive.frogpilot.controls.lib.frogpilot_acceleration import get_max_allowed_accel
@@ -24,7 +24,6 @@ LongCtrlState = car.CarControl.Actuators.LongControlState
 MAX_ANGLE = 85
 MAX_ANGLE_FRAMES = 89
 MAX_ANGLE_CONSECUTIVE_FRAMES = 2
-ButtonType = car.CarState.ButtonEvent.Type
 
 
 def process_hud_alert(enabled, fingerprint, hud_control):
@@ -74,45 +73,10 @@ class CarController(CarControllerBase):
       self.sm = messaging.SubMaster(sub_services)
 
     self.param_s = Params()
-
-    self.timer = 0
-    self.final_speed_kph = 0
-    self.init_speed = 0
-    self.v_set_dis = 0
-    self.v_cruise_min = 0 if self.param_s.get_bool("CustomStockLong") else CRUISING_SPEED
-    self.button_type = 0
-    self.button_select = 0
-    self.button_count = 0
-    self.target_speed = 0
-    self.t_interval = 7
-    self.cruise_button = None
-    self.speed_diff = 0
-
-    self.frogpilot_planner = FrogPilotPlanner(error_log=error_log)
-    self.custom_stock_planner_speed = self.param_s.get_bool("CustomStockLongPlanner")
     self.hkg_tuning = self.param_s.get_bool('HKGtuning')
     self.jerk_limiter = JerkLimiter()
 
-  def get_custom_stock_long_state(self):
-      """Get the custom stock longitudinal state for FrogPilot"""
-      customStockLong = car.CarState.CustomStockLong.new_message()
-      customStockLong.cruiseButton = 0 if self.cruise_button is None else int(self.cruise_button)
-      customStockLong.finalSpeedKph = float(self.final_speed_kph)
-      customStockLong.targetSpeed = float(self.target_speed)
-      customStockLong.vSetDis = float(self.v_set_dis)
-      customStockLong.speedDiff = float(self.speed_diff)
-      customStockLong.buttonType = int(self.button_type)
-      return customStockLong
-
   def update(self, CC, CS, now_nanos, frogpilot_toggles):
-    if not self.CP.pcmCruiseSpeed or (self.CP.openpilotLongitudinalControl and self.frame % 5 == 0):
-      self.sm.update(0)
-
-    if self.frame % 200 == 0 and self.param_s.get_bool("CustomStockLong"):
-        self.custom_stock_planner_speed = self.param_s.get_bool("CustomStockLongPlanner")
-
-        # Let FrogPilot's planner handle speed/cruise state
-        self.frogpilot_planner.update(self.sm['frogpilotPlan'])
     actuators = CC.actuators
     hud_control = CC.hudControl
     accel = actuators.accel
@@ -217,15 +181,6 @@ class CarController(CarControllerBase):
       else:
         # button presses
         can_sends.extend(self.create_button_messages(CC, CS, use_clu11=False))
-        if not (CC.cruiseControl.cancel or CC.cruiseControl.resume) and CS.out.cruiseState.enabled and not self.CP.pcmCruiseSpeed:
-          if self.CP.flags & HyundaiFlags.CANFD_ALT_BUTTONS:
-            # TODO: resume for alt button cars
-            pass
-          else:
-            self.cruise_button = self.get_cruise_buttons(CS, CC.vCruise)
-            if self.cruise_button is not None:
-              if self.frame % 2 == 0:
-                can_sends.append(hyundaicanfd.create_buttons(self.packer, self.CP, self.CAN, ((self.frame // 2) + 1) % 0x10, self.cruise_button))
     else:
       can_sends.append(hyundaican.create_lkas11(self.packer, self.frame, self.CP, apply_steer, apply_steer_req,
                                                 torque_fault, CS.lkas11, sys_warning, sys_state, CC.enabled,
@@ -234,23 +189,8 @@ class CarController(CarControllerBase):
 
       if not self.CP.openpilotLongitudinalControl:
         can_sends.extend(self.create_button_messages(CC, CS, use_clu11=True))
-        if not (CC.cruiseControl.cancel or CC.cruiseControl.resume) and CS.out.cruiseState.enabled and not self.CP.pcmCruiseSpeed:
-          self.cruise_button = self.get_cruise_buttons(CS, CC.vCruise)
-          if self.cruise_button is not None:
-            if self.CP.carFingerprint in LEGACY_SAFETY_MODE_CAR:
-              send_freq = 1
-              # Use FrogPilot's planner states instead of internal states
-              if not (self.frogpilot_planner.vtscActive or
-                  self.frogpilot_planner.mtscActive > 1) and abs(self.target_speed - self.v_set_dis) <= 2:
-                send_freq = 5
-              # send resume at a max freq of 10Hz
-              if (self.frame - self.last_button_frame) * DT_CTRL > 0.1 * send_freq:
-                # send 25 messages at a time to increases the likelihood of cruise buttons being accepted
-                can_sends.extend([hyundaican.create_clu11(self.packer, self.frame, CS.clu11, self.cruise_button, self.CP)] * 25)
-                if (self.frame - self.last_button_frame) * DT_CTRL >= 0.15 * send_freq:
-                  self.last_button_frame = self.frame
-            elif self.frame % 2 == 0:
-              can_sends.extend([hyundaican.create_clu11(self.packer, (self.frame // 2) + 1, CS.clu11, self.cruise_button, self.CP)] * 25)
+
+
       if self.frame % 2 == 0 and self.CP.openpilotLongitudinalControl:
         # TODO: unclear if this is needed
         jerk = self.jerk_limiter.jerk_upper_limit if actuators.longControlState == LongCtrlState.pid else self.jerk_limiter.jerk_lower_limit

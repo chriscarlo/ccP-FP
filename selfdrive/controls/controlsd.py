@@ -163,8 +163,6 @@ class Controls:
 
     self.can_log_mono_time = 0
 
-    self.custom_stock_planner_speed = self.params.get_bool("CustomStockLongPlanner")
-
     if car_recognized and not self.CP.passive and self.CP.secOcRequired and not self.CP.secOcKeyAvailable:
       self.startup_event = EventName.startupNoSecOcKey
     else:
@@ -961,15 +959,11 @@ class Controls:
   def params_thread(self, evt):
     while not evt.is_set():
       self.is_metric = self.params.get_bool("IsMetric")
-      self.experimental_mode = self.params.get_bool("ExperimentalMode") and (self.CP.openpilotLongitudinalControl or
-                                                                             (not self.CP.pcmCruiseSpeed and self.custom_stock_planner_speed))
+      self.experimental_mode = self.params.get_bool("ExperimentalMode") and self.CP.openpilotLongitudinalControl
       self.personality = self.read_personality_param()
       if self.CP.notCar:
         self.joystick_mode = self.params.get_bool("JoystickDebugMode")
       time.sleep(0.1)
-
-      if self.sm.frame % int(2.5 / DT_CTRL) == 0:
-        self.custom_stock_planner_speed = self.params.get_bool("CustomStockLongPlanner")
 
       # Update FrogPilot parameters
       if self.sm['frogpilotPlan'].togglesUpdated:
