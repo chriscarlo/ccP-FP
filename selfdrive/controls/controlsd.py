@@ -18,7 +18,6 @@ from openpilot.common.params import Params
 from openpilot.common.realtime import config_realtime_process, Priority, Ratekeeper, DT_CTRL, DT_MDL
 from openpilot.common.swaglog import cloudlog
 
-from openpilot.selfdrive.car.car_helpers import get_car_interface, get_startup_event
 from openpilot.selfdrive.controls.lib.alertmanager import AlertManager, set_offroad_alert
 from openpilot.selfdrive.controls.lib.drive_helpers import VCruiseHelper, clip_curvature
 from openpilot.selfdrive.controls.lib.events import Events, ET
@@ -64,6 +63,7 @@ ENABLED_STATES = (State.preEnabled, *ACTIVE_STATES)
 
 class Controls:
   def __init__(self, CI=None):
+    from openpilot.selfdrive.car.car_helpers import get_car_interface, get_startup_event
     self.params = Params()
     self.state_initialized = False
     if CI is None:
