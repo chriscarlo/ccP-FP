@@ -67,6 +67,8 @@ const CanMsg HYUNDAI_CANFD_HDA1_TX_MSGS[] = {
   {.msg = {{0x175, (pt_bus), 24, .check_checksum = true, .max_counter = 0xffU, .frequency = 50U}, { 0 }, { 0 }}},  \
   {.msg = {{0xa0, (pt_bus), 24, .check_checksum = true, .max_counter = 0xffU, .frequency = 100U}, { 0 }, { 0 }}},   \
   {.msg = {{0xea, (pt_bus), 24, .check_checksum = true, .max_counter = 0xffU, .frequency = 100U}, { 0 }, { 0 }}},   \
+  {.msg = {{0x357, (pt_bus), 24, .check_checksum = true, .max_counter = 0xffU, .frequency = 50U}, { 0 }, { 0 }}},   \
+  {.msg = {{0x362, (pt_bus), 32, .check_checksum = true, .max_counter = 0xffU, .frequency = 50U}, { 0 }, { 0 }}},   \
 
 #define HYUNDAI_CANFD_BUTTONS_ADDR_CHECK(pt_bus)                                                                            \
   {.msg = {{0x1cf, (pt_bus), 8, .check_checksum = false, .max_counter = 0xfU, .frequency = 50U}, { 0 }, { 0 }}}, \
@@ -138,7 +140,7 @@ bool hyundai_canfd_hda2_alt_steering = false;
 
 
 int hyundai_canfd_hda2_get_lkas_addr(void) {
-  return hyundai_canfd_hda2_alt_steering ? 0x110 : 0x50;
+  return hyundai_canfd_hda2 ? 0x110 : 0x50;
 }
 
 static uint8_t hyundai_canfd_get_counter(const CANPacket_t *to_push) {

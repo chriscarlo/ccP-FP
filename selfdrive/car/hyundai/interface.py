@@ -34,10 +34,10 @@ class CarInterface(CarInterfaceBase):
     self.cp_cam = self.CS.get_cam_can_parser(CP)
 
     self.lkas_button_alert = False
-    self.params = Params()
 
   @staticmethod
   def _get_params(ret, candidate, fingerprint, car_fw, disable_openpilot_long, experimental_long, docs):
+    params = Params()
     use_new_api = params.get_bool("NewLongAPI")
 
     ret.carName = "hyundai"
@@ -132,7 +132,10 @@ class CarInterface(CarInterfaceBase):
           ret.startAccel = 1.6
 
       ret.longitudinalTuning.kpV = [0.4] if is_canfd_car else [0.1]
-      ret.stoppingDecelRate = 0.05 if (ret.flags & HyundaiFlags.MANDO_RADAR) else 0.2
+      if params.get_bool("HyundaiRadarTracksAvailable"):
+          ret.stoppingDecelRate = 0.02  # Lower decel rate when we have working Mando radar tracks
+      else:
+          ret.stoppingDecelRate = 0.22   # Default  decel rate
 
     # HKG tuning with hat trick or just hat trick
     elif (hkg_tuning and hat_trick) or hat_trick:
@@ -184,13 +187,14 @@ class CarInterface(CarInterfaceBase):
 
       if ret.flags & HyundaiFlags.MANDO_RADAR and ret.radarUnavailable:
         ret.fpFlags |= HyundaiFlagsFP.FP_RADAR_TRACKS.value
-        if Params().get_bool("HyundaiRadarTracksAvailable"):
+        if params.get_bool("HyundaiRadarTracksAvailable"):
           ret.radarUnavailable = False
 
     # *** panda safety config ***
     if candidate in CANFD_CAR:
       cfgs = [get_safety_config(car.CarParams.SafetyModel.hyundaiCanfd), ]
-      if CAN.ECAN >= 4:
+      # Only set noOutput after UDS query completes
+      if CAN.ECAN >= 4 and car_fw is not None:
         cfgs.insert(0, get_safety_config(car.CarParams.SafetyModel.noOutput))
       ret.safetyConfigs = cfgs
 
@@ -297,13 +301,14 @@ class CarInterface(CarInterfaceBase):
     else:
       ret.buttonEvents = create_button_events(self.CS.lkas_enabled, self.CS.lkas_previously_enabled, {1: FrogPilotButtonType.lkas})
 
-    # Read blinker test params and override CarState values
-    left_blinker = self.params.get("LeftBlinker", encoding='utf8')
-    right_blinker = self.params.get("RightBlinker", encoding='utf8')
+    # Only override blinkers after car is initialized
+    if self.CS.main_enabled:
+      left_blinker = self.params.get("LeftBlinker", encoding='utf8')
+      right_blinker = self.params.get("RightBlinker", encoding='utf8')
 
-    if left_blinker is not None or right_blinker is not None:
-      ret.leftBlinker = left_blinker == "1"
-      ret.rightBlinker = right_blinker == "1"
+      if left_blinker is not None or right_blinker is not None:
+        ret.leftBlinker = left_blinker == "1"
+        ret.rightBlinker = right_blinker == "1"
 
     # On some newer model years, the CANCEL button acts as a pause/resume button based on the PCM state
     # To avoid re-engaging when openpilot cancels, check user engagement intention via buttons

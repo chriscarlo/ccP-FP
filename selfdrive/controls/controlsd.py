@@ -18,7 +18,6 @@ from openpilot.common.params import Params
 from openpilot.common.realtime import config_realtime_process, Priority, Ratekeeper, DT_CTRL, DT_MDL
 from openpilot.common.swaglog import cloudlog
 
-from openpilot.selfdrive.car.car_helpers import get_car_interface, get_startup_event
 from openpilot.selfdrive.controls.lib.alertmanager import AlertManager, set_offroad_alert
 from openpilot.selfdrive.controls.lib.drive_helpers import VCruiseHelper, clip_curvature
 from openpilot.selfdrive.controls.lib.events import Events, ET
@@ -64,7 +63,9 @@ ENABLED_STATES = (State.preEnabled, *ACTIVE_STATES)
 
 class Controls:
   def __init__(self, CI=None):
+    from openpilot.selfdrive.car.car_helpers import get_car_interface, get_startup_event
     self.params = Params()
+    self.state_initialized = False
     if CI is None:
       cloudlog.info("controlsd is waiting for CarParams")
       with car.CarParams.from_bytes(self.params.get("CarParams", block=True)) as msg:
@@ -208,6 +209,8 @@ class Controls:
 
       if any(ps.controlsAllowed for ps in self.sm['pandaStates']):
         self.state = State.enabled
+
+    self.state_initialized = True
 
   def update_events(self, CS):
     """Compute onroadEvents from carState"""
@@ -604,14 +607,15 @@ class Controls:
     CC.leftBlinker = CS.leftBlinker
     CC.rightBlinker = CS.rightBlinker
 
-    # Override with UI button states if set
-    params = Params()
-    left_on = params.get("LeftBlinker") == b"1"
-    right_on = params.get("RightBlinker") == b"1"
-    if left_on:
-      CC.leftBlinker = True
-    if right_on:
-      CC.rightBlinker = True
+    # Only override with UI button states if car is initialized and enabled
+    if self.state_initialized and CS.cruiseState.available:
+      params = Params()
+      left_on = params.get("LeftBlinker") == b"1"
+      right_on = params.get("RightBlinker") == b"1"
+      if left_on:
+        CC.leftBlinker = True
+      if right_on:
+        CC.rightBlinker = True
 
     if CS.leftBlinker or CS.rightBlinker:
       self.last_blinker_frame = self.sm.frame

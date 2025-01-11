@@ -503,6 +503,7 @@ class CAR(Platforms):
     ],
     CarSpecs(mass=2185, wheelbase=2.90, steerRatio=15.35, tireStiffnessFactor=0.65),
     flags=HyundaiFlags.EV | HyundaiFlags.ENABLE_BLINKERS,
+    # flags=HyundaiFlags.EV | HyundaiFlags.ENABLE_BLINKERS | HyundaiFlags.CANFD_HDA2,
   )
   KIA_CARNIVAL_4TH_GEN = HyundaiCanFDPlatformConfig(
     [
@@ -725,30 +726,29 @@ DATE_FW_ECUS = [Ecu.fwdCamera]
 # are attempting to query ECUs. This currently does not seem to affect fingerprinting from the camera
 FW_QUERY_CONFIG = FwQueryConfig(
   requests=[
-    # TODO: add back whitelists
-    # CAN queries (OBD-II port)
-    Request(
-      [HYUNDAI_VERSION_REQUEST_LONG],
-      [HYUNDAI_VERSION_RESPONSE],
-    ),
-
-    # CAN & CAN-FD queries (from camera)
+    # Primary CAN queries (OBD-II port)
     Request(
       [HYUNDAI_VERSION_REQUEST_LONG],
       [HYUNDAI_VERSION_RESPONSE],
       bus=0,
-      auxiliary=True,
+      auxiliary=False,  # Make this a primary query
     ),
+    # Secondary CAN & CAN-FD queries (from camera)
     Request(
       [HYUNDAI_VERSION_REQUEST_LONG],
       [HYUNDAI_VERSION_RESPONSE],
       bus=1,
       auxiliary=True,
+    ),
+    # Query ADAS ECU specifically for HDA2 detection
+    Request(
+      [HYUNDAI_VERSION_REQUEST_LONG],
+      [HYUNDAI_VERSION_RESPONSE],
+      bus=1,
+      auxiliary=False,  # Make this a primary query for HDA2 detection
       obd_multiplexing=False,
     ),
-
-    # CAN & CAN FD query to understand the three digit date code
-    # HDA2 cars usually use 6 digit date codes, so skip bus 1
+    # Rest of the queries remain unchanged
     Request(
       [HYUNDAI_ECU_MANUFACTURING_DATE],
       [HYUNDAI_VERSION_RESPONSE],
@@ -756,8 +756,6 @@ FW_QUERY_CONFIG = FwQueryConfig(
       auxiliary=True,
       logging=True,
     ),
-
-    # CAN-FD alt request logging queries for hvac and parkingAdas
     Request(
       [HYUNDAI_VERSION_REQUEST_ALT],
       [HYUNDAI_VERSION_RESPONSE],

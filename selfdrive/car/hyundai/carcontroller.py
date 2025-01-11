@@ -14,7 +14,8 @@ from openpilot.selfdrive.car.hyundai.values import HyundaiFlags, Buttons, CarCon
 from openpilot.selfdrive.car.interfaces import CarControllerBase
 
 from openpilot.selfdrive.frogpilot.controls.lib.frogpilot_acceleration import get_max_allowed_accel
-
+from openpilot.selfdrive.frogpilot.controls.frogpilot_planner import FrogPilotPlanner
+from openpilot.selfdrive.frogpilot.frogpilot_variables import CRUISING_SPEED
 VisualAlert = car.CarControl.HUDControl.VisualAlert
 LongCtrlState = car.CarControl.Actuators.LongControlState
 
@@ -50,7 +51,7 @@ def process_hud_alert(enabled, fingerprint, hud_control):
 
 
 class CarController(CarControllerBase):
-  def __init__(self, dbc_name, CP, VM):
+  def __init__(self, dbc_name, CP, VM, error_log=None):
     self.CP = CP
     self.CAN = CanBus(CP)
     self.params = CarControllerParams(CP)
@@ -253,3 +254,89 @@ class CarController(CarControllerBase):
             self.last_button_frame = self.frame
 
     return can_sends
+
+  def get_cruise_buttons_status(self, CS):
+    if not CS.out.cruiseState.enabled or CS.cruise_buttons[-1] != Buttons.NONE:
+      self.timer = 40
+    elif self.timer:
+      self.timer -= 1
+    else:
+      return 1
+    return 0
+
+  def get_button_type(self, button_type):
+    self.type_status = "type_" + str(button_type)
+    self.button_picker = getattr(self, self.type_status, lambda: "default")
+    return self.button_picker()
+
+  def reset_button(self):
+    if self.button_type != 3:
+      self.button_type = 0
+
+  def type_default(self):
+    self.button_type = 0
+    return None
+
+  def type_0(self):
+    self.button_count = 0
+    self.target_speed = self.init_speed
+    self.speed_diff = self.target_speed - self.v_set_dis
+    if self.target_speed > self.v_set_dis:
+      self.button_type = 1
+    elif self.target_speed < self.v_set_dis and self.v_set_dis > self.v_cruise_min:
+      self.button_type = 2
+    return None
+
+  def type_1(self):
+    cruise_button = Buttons.RES_ACCEL
+    self.button_count += 1
+    # Transition to waiting state if target reached or max presses hit
+    if self.target_speed <= self.v_set_dis or self.button_count > 5:
+        self.button_count = 0
+        self.button_type = 3  # Transition to waiting state
+    return cruise_button
+
+  def type_2(self):
+    cruise_button = Buttons.SET_DECEL
+    self.button_count += 1
+    if self.target_speed >= self.v_set_dis or self.v_set_dis <= self.v_cruise_min or self.button_count > 5:
+        self.button_count = 0
+        self.button_type = 3  # Transition to waiting state
+    return cruise_button
+
+  def type_3(self):
+    cruise_button = None
+    self.button_count += 1
+    if self.button_count > self.t_interval:
+      self.button_type = 0
+    return cruise_button
+
+
+  def get_button_control(self, CS, final_speed, v_cruise_kph_prev):
+    # Convert speeds based on metric setting from FrogPilot
+    self.init_speed = round(min(final_speed, v_cruise_kph_prev) *
+                          (CV.KPH_TO_MPH if not CS.params_list.is_metric else 1))
+    self.v_set_dis = round(CS.out.cruiseState.speed *
+                          (CV.MS_TO_MPH if not CS.params_list.is_metric else CV.MS_TO_KPH))
+    cruise_button = self.get_button_type(self.button_type)
+    return cruise_button
+
+
+  def get_cruise_buttons(self, CS, v_cruise_kph_prev):
+    cruise_button = None
+    if not CS.out.cruiseState.enabled:
+      return None
+    if not self.get_cruise_buttons_status(CS):
+      return None
+    target_speed = self.frogpilot_planner.frogpilot_vcruise.update(
+        CS.out.vEgo,
+        self.frogpilot_planner.curveSpeedLimit,
+        self.frogpilot_planner.speedLimit,
+        v_cruise_kph_prev,
+        self.frogpilot_planner.vtscActive,
+        self.frogpilot_planner.mtscActive,
+        self.frogpilot_planner.slcActive
+    )
+    self.final_speed_kph = target_speed * CV.MS_TO_KPH
+    cruise_button = self.get_button_control(CS, self.final_speed_kph, v_cruise_kph_prev)  # MPH/KPH based button presses
+    return cruise_button

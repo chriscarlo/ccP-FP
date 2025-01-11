@@ -316,7 +316,7 @@ void FrogPilotVisualsPanel::showToggles(const std::set<QString> &keys) {
   setUpdatesEnabled(false);
 
   for (auto &[key, toggle] : toggles) {
-    toggle->setVisible(keys.find(key) != keys.end() && tuningLevel >= frogpilotToggleLevels[key].toDouble());
+    toggle->setVisible(keys.find(key) != keys.end());
   }
 
   setUpdatesEnabled(true);
@@ -334,7 +334,7 @@ void FrogPilotVisualsPanel::hideToggles() {
                       modelUIKeys.find(key) != modelUIKeys.end() ||
                       navigationUIKeys.find(key) != navigationUIKeys.end();
 
-    toggle->setVisible(!subToggles && tuningLevel >= frogpilotToggleLevels[key].toDouble());
+    toggle->setVisible(!subToggles);
   }
 
   toggles["QOLVisuals"]->setVisible(toggles["QOLVisuals"]->isVisible() || hasOpenpilotLongitudinal);

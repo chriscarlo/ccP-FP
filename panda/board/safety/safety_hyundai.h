@@ -34,6 +34,7 @@ const CanMsg HYUNDAI_TX_MSGS[] = {
   {0x340, 0, 8}, // LKAS11 Bus 0
   {0x4F1, 0, 4}, // CLU11 Bus 0
   {0x485, 0, 4}, // LFAHDA_MFC Bus 0
+  {0x16A, 0, 8}, // SPAS2 Bus 0 - for blinker control
 };
 
 const CanMsg HYUNDAI_LONG_TX_MSGS[] = {
@@ -48,12 +49,14 @@ const CanMsg HYUNDAI_LONG_TX_MSGS[] = {
   {0x38D, 0, 8}, // FCA11 Bus 0
   {0x483, 0, 8}, // FCA12 Bus 0
   {0x7D0, 0, 8}, // radar UDS TX addr Bus 0 (for radar disable)
+  {0x16A, 0, 8}, // SPAS2 Bus 0 - for blinker control
 };
 
 const CanMsg HYUNDAI_CAMERA_SCC_TX_MSGS[] = {
   {0x340, 0, 8}, // LKAS11 Bus 0
   {0x4F1, 2, 4}, // CLU11 Bus 2
   {0x485, 0, 4}, // LFAHDA_MFC Bus 0
+  {0x16A, 0, 8}, // SPAS2 Bus 0 - for blinker control
 };
 
 #define HYUNDAI_COMMON_RX_CHECKS(legacy)                                                                                              \
@@ -259,6 +262,15 @@ static bool hyundai_tx_hook(const CANPacket_t *to_send) {
 
   bool tx = true;
   int addr = GET_ADDR(to_send);
+
+  // SPAS2: Only allow valid blinker control values
+  if (addr == 0x16A) {
+    int blinker_control = (GET_BYTE(to_send, 16) >> 5) & 0x7;  // Get BLINKER_CONTROL signal
+    // Only allow values: 0 (off), 3 (left), 4 (right)
+    if (!(blinker_control == 0 || blinker_control == 3 || blinker_control == 4)) {
+      tx = false;
+    }
+  }
 
   // FCA11: Block any potential actuation
   if (addr == 0x38D) {

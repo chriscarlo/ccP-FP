@@ -354,16 +354,12 @@ void FrogPilotLateralPanel::updateMetric() {
   }
 }
 
-void FrogPilotLateralPanel::showToggles(const std::set<QString> & /*keys*/) {
+void FrogPilotLateralPanel::showToggles(const std::set<QString> &keys) {
   setUpdatesEnabled(false);
 
   for (auto &[key, toggle] : toggles) {
-    // Always show toggles
-    toggle->setVisible(true);
+    toggle->setVisible(keys.find(key) != keys.end());
   }
-
-  // Always show button
-  static_cast<FrogPilotParamManageControl*>(toggles["AlwaysOnLateral"])->setVisibleButton(true);
 
   setUpdatesEnabled(true);
   update();
@@ -373,12 +369,14 @@ void FrogPilotLateralPanel::hideToggles() {
   setUpdatesEnabled(false);
 
   for (auto &[key, toggle] : toggles) {
-    // Always show toggles
-    toggle->setVisible(true);
-  }
+    bool subToggles = advancedLateralTuneKeys.find(key) != advancedLateralTuneKeys.end() ||
+                      aolKeys.find(key) != aolKeys.end() ||
+                      laneChangeKeys.find(key) != laneChangeKeys.end() ||
+                      lateralTuneKeys.find(key) != lateralTuneKeys.end() ||
+                      qolKeys.find(key) != qolKeys.end();
 
-  // Always show button
-  static_cast<FrogPilotParamManageControl*>(toggles["AlwaysOnLateral"])->setVisibleButton(true);
+    toggle->setVisible(!subToggles);
+  }
 
   setUpdatesEnabled(true);
   update();

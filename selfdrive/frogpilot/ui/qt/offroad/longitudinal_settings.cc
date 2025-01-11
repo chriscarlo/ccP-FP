@@ -635,10 +635,10 @@ void FrogPilotLongitudinalPanel::showToggles(const std::set<QString> &keys) {
   setUpdatesEnabled(false);
 
   for (auto &[key, toggle] : toggles) {
-    toggle->setVisible(keys.find(key) != keys.end() && tuningLevel >= frogpilotToggleLevels[key].toDouble());
+    toggle->setVisible(keys.find(key) != keys.end());
   }
 
-  static_cast<FrogPilotParamManageControl*>(toggles["ConditionalExperimental"])->setVisibleButton(tuningLevel >= 1);
+  static_cast<FrogPilotParamManageControl*>(toggles["ConditionalExperimental"])->setVisibleButton(true);
 
   setUpdatesEnabled(true);
   update();
@@ -653,22 +653,18 @@ void FrogPilotLongitudinalPanel::hideToggles() {
   for (auto &[key, toggle] : toggles) {
     bool subToggles = aggressivePersonalityKeys.find(key) != aggressivePersonalityKeys.end() ||
                       conditionalExperimentalKeys.find(key) != conditionalExperimentalKeys.end() ||
-                      curveSpeedKeys.find(key) != curveSpeedKeys.end() ||
                       customDrivingPersonalityKeys.find(key) != customDrivingPersonalityKeys.end() ||
-                      experimentalModeActivationKeys.find(key) != experimentalModeActivationKeys.end() ||
                       longitudinalTuneKeys.find(key) != longitudinalTuneKeys.end() ||
                       qolKeys.find(key) != qolKeys.end() ||
                       relaxedPersonalityKeys.find(key) != relaxedPersonalityKeys.end() ||
                       speedLimitControllerKeys.find(key) != speedLimitControllerKeys.end() ||
-                      speedLimitControllerOffsetsKeys.find(key) != speedLimitControllerOffsetsKeys.end() ||
-                      speedLimitControllerQOLKeys.find(key) != speedLimitControllerQOLKeys.end() ||
                       standardPersonalityKeys.find(key) != standardPersonalityKeys.end() ||
                       trafficPersonalityKeys.find(key) != trafficPersonalityKeys.end();
 
-    toggle->setVisible(!subToggles && tuningLevel >= frogpilotToggleLevels[key].toDouble());
+    toggle->setVisible(!subToggles);
   }
 
-  static_cast<FrogPilotParamManageControl*>(toggles["ConditionalExperimental"])->setVisibleButton(tuningLevel >= 1);
+  static_cast<FrogPilotParamManageControl*>(toggles["ConditionalExperimental"])->setVisibleButton(true);
 
   setUpdatesEnabled(true);
   update();

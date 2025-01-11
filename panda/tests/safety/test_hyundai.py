@@ -44,7 +44,7 @@ def checksum(msg):
 
 
 class TestHyundaiSafety(HyundaiButtonBase, common.PandaCarSafetyTest, common.DriverTorqueSteeringSafetyTest, common.SteerRequestCutSafetyTest):
-  TX_MSGS = [[0x340, 0], [0x4F1, 0], [0x485, 0]]
+  TX_MSGS = [[0x340, 0], [0x4F1, 0], [0x485, 0], [0x16A, 0]]
   STANDSTILL_THRESHOLD = 12  # 0.375 kph
   RELAY_MALFUNCTION_ADDRS = {0: (0x340,)}  # LKAS11
   FWD_BLACKLISTED_ADDRS = {2: [0x340, 0x485]}
@@ -111,6 +111,23 @@ class TestHyundaiSafety(HyundaiButtonBase, common.PandaCarSafetyTest, common.Dri
   def _torque_cmd_msg(self, torque, steer_req=1):
     values = {"CR_Lkas_StrToqReq": torque, "CF_Lkas_ActToi": steer_req}
     return self.packer.make_can_msg_panda("LKAS11", 0, values)
+
+  def _blinker_msg(self, blinker_control):
+    values = {"BLINKER_CONTROL": blinker_control}
+    return self.packer.make_can_msg_panda("SPAS2", 0, values)
+
+  def test_blinker_safety(self):
+    # Test valid blinker values
+    self.assertTrue(self._tx(self._blinker_msg(0)))  # Off
+    self.assertTrue(self._tx(self._blinker_msg(3)))  # Left
+    self.assertTrue(self._tx(self._blinker_msg(4)))  # Right
+
+    # Test invalid blinker values
+    self.assertFalse(self._tx(self._blinker_msg(1)))
+    self.assertFalse(self._tx(self._blinker_msg(2)))
+    self.assertFalse(self._tx(self._blinker_msg(5)))
+    self.assertFalse(self._tx(self._blinker_msg(6)))
+    self.assertFalse(self._tx(self._blinker_msg(7)))
 
 
 class TestHyundaiSafetyAltLimits(TestHyundaiSafety):

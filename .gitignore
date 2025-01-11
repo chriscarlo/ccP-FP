@@ -93,3 +93,12 @@ selfdrive/frogpilot/controls/lib/chauffer_files/chauffeur_vcruise.py
 selfdrive/frogpilot/controls/lib/zz_old/frogpilot_vcruise.py
 car_and_hyundai_codebase_map.txt
 hyundai_codebase_map.txt
+.cursorrules
+troubleshoot_notes.md
+workspace_map.py
+workspace_map.txt
+troubleshoot_notes/kia_ev6_can_issues.txt
+reference_files/hyundai_canfd_known_good.txt
+reference_files/hyundai_canfd_known_good.txt
+reference_files/hyundai_canfd_frogpilot_base.txt
+reference_files/carstate_fp_base.txt

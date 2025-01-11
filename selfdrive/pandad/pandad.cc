@@ -107,7 +107,8 @@ bool safety_setter_thread(std::vector<Panda *> pandas) {
 
     if (p.getBool("ControlsReady")) {
       params = p.get("CarParams");
-      if (params.size() > 0) break;
+      std::string car_fw = p.get("CarFw");
+      if (params.size() > 0 && car_fw.size() > 0) break;
     }
     util::sleep_for(100);
   }

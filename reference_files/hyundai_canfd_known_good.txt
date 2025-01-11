@@ -146,7 +146,6 @@ BO_ 293 STEERING_SENSORS: 16 XXX
  SG_ COUNTER : 16|8@1+ (1,0) [0|255] "" XXX
  SG_ STEERING_RATE : 40|8@1+ (4,0) [0|1016] "deg/s" XXX
  SG_ STEERING_ANGLE : 24|16@1- (-0.1,0) [0|255] "deg" XXX
- SG_ STEERING_COL_TORQUE : 0|11@1- (1,-1024) [-1024|1023] "" XXX
 
 BO_ 298 LFA: 16 ADRV
  SG_ STEER_REQ : 52|1@1+ (1,0) [0|1] "" XXX
@@ -298,14 +297,6 @@ BO_ 426 CRUISE_BUTTONS_ALT: 16 XXX
  SG_ BYTE13 : 104|8@1+ (1,0) [0|255] "" XXX
  SG_ BYTE14 : 112|8@1+ (1,0) [0|255] "" XXX
  SG_ BYTE15 : 120|8@1+ (1,0) [0|255] "" XXX
- SG_ BYTE16 : 128|8@1+ (1,0) [0|255] "" XXX
- SG_ BYTE17 : 136|8@1+ (1,0) [0|255] "" XXX
- SG_ BYTE18 : 144|8@1+ (1,0) [0|255] "" XXX
- SG_ BYTE19 : 152|8@1+ (1,0) [0|255] "" XXX
- SG_ BYTE20 : 160|8@1+ (1,0) [0|255] "" XXX
- SG_ BYTE21 : 168|8@1+ (1,0) [0|255] "" XXX
- SG_ BYTE22 : 176|8@1+ (1,0) [0|255] "" XXX
- SG_ BYTE23 : 184|8@1+ (1,0) [0|255] "" XXX
 
 BO_ 438 CAM_0x1b6: 32 CAMERA
  SG_ CHECKSUM : 0|16@1+ (1,0) [0|65535] "" XXX
@@ -385,7 +376,6 @@ BO_ 507 CAM_0x1fb: 32 CAMERA
 BO_ 512 ADRV_0x200: 8 ADRV
  SG_ CHECKSUM : 0|16@1+ (1,0) [0|65535] "" XXX
  SG_ COUNTER : 16|8@1+ (1,0) [0|255] "" XXX
- SG_ TauGapSet : 19|3@1+ (1,0) [0|7] "" XXX
  SG_ SET_ME_E1 : 24|8@1+ (1,0) [0|255] "" XXX
  SG_ SET_ME_3A : 32|8@1+ (1,0) [0|255] "" XXX
 
@@ -821,9 +811,9 @@ VAL_ 304 GEAR 1 "P" 2 "R" 3 "N" 4 "D" ;
 VAL_ 352 AEB_SETTING 1 "off" 2 "warning only" 3 "active assist" ;
 VAL_ 362 BLINKER_CONTROL 1 "hazards" 2 "hazards button backlight" 3 "left blinkers" 4 "right blinkers";
 VAL_ 373 ACCEnable 0 "SCC ready" 1 "SCC temp fault" 2 "SCC permanent fault" 3 "SCC permanent fault, communication issue";
-VAL_ 416 ACCMode 0 "off" 1 "enabled" 2 "driver_override" 3 "off_maybe_fault" 4 "cancelled";
-VAL_ 426 CRUISE_BUTTONS 0 "none" 1 "res_accel" 2 "set_decel" 3 "gap_distance" 4 "pause_resume";
-VAL_ 463 CRUISE_BUTTONS 0 "none" 1 "res_accel" 2 "set_decel" 3 "gap_distance" 4 "pause_resume";
+VAL_ 416 ACCMode 0 "off" 1 "enabled" 2 "driver_override" 3 "off_maybe_fault" 4 "cancelled" ;
+VAL_ 426 CRUISE_BUTTONS 0 "none" 1 "res_accel" 2 "set_decel" 3 "gap_distance" 4 "pause_resume" ;
+VAL_ 463 CRUISE_BUTTONS 0 "none" 1 "res_accel" 2 "set_decel" 3 "gap_distance" 4 "pause_resume" ;
 VAL_ 463 RIGHT_PADDLE 0 "Not Pulled" 1 "Pulled";
 VAL_ 463 LEFT_PADDLE 0 "Not Pulled" 1 "Pulled";
 VAL_ 676 LEFT_LANE_LINE 0 "Not Detected" 1 "Low Confidence" 2 "Medium Confidence" 3 "High Confidence";
