@@ -37,8 +37,9 @@ class CarInterface(CarInterfaceBase):
 
   @staticmethod
   def _get_params(ret, candidate, fingerprint, car_fw, disable_openpilot_long, experimental_long, docs):
-    use_new_api = params.get_bool("NewLongAPI")
     params = Params()
+    use_new_api = params.get_bool("NewLongAPI")
+
     ret.carName = "hyundai"
     ret.radarUnavailable = RADAR_START_ADDR not in fingerprint[1] or DBC[ret.carFingerprint]["radar"] is None
     ret.customStockLongAvailable = True
@@ -133,7 +134,7 @@ class CarInterface(CarInterfaceBase):
           ret.startAccel = 1.6
 
       ret.longitudinalTuning.kpV = [0.4] if is_canfd_car else [0.1]
-      if Params().get_bool("HyundaiRadarTracksAvailable"):
+      if params.get_bool("HyundaiRadarTracksAvailable"):
           ret.stoppingDecelRate = 0.02  # Lower decel rate when we have working Mando radar tracks
       else:
           ret.stoppingDecelRate = 0.22   # Default  decel rate
@@ -188,7 +189,7 @@ class CarInterface(CarInterfaceBase):
 
       if ret.flags & HyundaiFlags.MANDO_RADAR and ret.radarUnavailable:
         ret.fpFlags |= HyundaiFlagsFP.FP_RADAR_TRACKS.value
-        if Params().get_bool("HyundaiRadarTracksAvailable"):
+        if params.get_bool("HyundaiRadarTracksAvailable"):
           ret.radarUnavailable = False
 
     # *** panda safety config ***
