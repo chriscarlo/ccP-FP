@@ -212,13 +212,14 @@ class CarState(CarStateBase):
       self.main_enabled = not self.main_enabled
 
     # FrogPilot CarState functions
-    fp_ret.brakeLights = bool(cp.vl["TCS13"]["BrakeLight"])
+    fp_ret.brakeLights = bool(cp.vl["TCS"]["DriverBraking"])
 
     if self.CP.fpFlags & HyundaiFlagsFP.FP_LKAS12 or self.CP.flags & HyundaiFlags.NAV_MSG:
       fp_ret.dashboardSpeedLimit = self.calculate_speed_limit(cp, cp_cam) * speed_conv
 
     self.prev_distance_button = self.distance_button
     self.distance_button = self.cruise_buttons[-1] == Buttons.GAP_DIST
+    fp_ret.distanceLongPressed = self.distance_button and self.prev_distance_button
 
     self.lkas_previously_enabled = self.lkas_enabled
     if self.CP.flags & HyundaiFlags.CAN_LFA_BTN:
@@ -320,12 +321,12 @@ class CarState(CarStateBase):
       self.msg_161 = copy.copy(cp_cam.vl["MSG_161"])
       self.msg_162 = copy.copy(cp_cam.vl["MSG_162"])
 
-
-    if self.CP.flags & HyundaiFlags.NAV_MSG or self.CP.fpFlags & HyundaiFlagsFP.FP_LKAS12:
+    if self.CP.flags & HyundaiFlags.NAV_MSG:
       fp_ret.dashboardSpeedLimit = self.calculate_speed_limit(cp, cp_cam) * speed_factor
 
     self.prev_distance_button = self.distance_button
     self.distance_button = self.cruise_buttons[-1] == Buttons.GAP_DIST
+    fp_ret.distanceLongPressed = self.distance_button and self.prev_distance_button
 
     drive_mode = cp.vl["DRIVE_MODE"]["DRIVE_MODE2"]
 
@@ -338,6 +339,11 @@ class CarState(CarStateBase):
 
     self.lkas_previously_enabled = self.lkas_enabled
     self.lkas_enabled = cp.vl[self.cruise_btns_msg_canfd]["LFA_BTN"]
+
+    # Default values for other required fields
+    fp_ret.alwaysOnLateralEnabled = True  # Can be customized based on user preferences
+    fp_ret.hasMenu = True  # Can be customized based on UI state
+    fp_ret.trafficModeActive = False  # Can be customized based on traffic conditions
 
     return ret, fp_ret
 
