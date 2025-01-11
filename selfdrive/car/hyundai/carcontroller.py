@@ -14,7 +14,6 @@ from openpilot.selfdrive.car.hyundai.values import HyundaiFlags, Buttons, CarCon
 from openpilot.selfdrive.car.interfaces import CarControllerBase
 
 from openpilot.selfdrive.frogpilot.controls.lib.frogpilot_acceleration import get_max_allowed_accel
-from openpilot.selfdrive.frogpilot.controls.lib.frogpilot_vcruise import FrogPilotVCruise
 from openpilot.selfdrive.frogpilot.controls.frogpilot_planner import FrogPilotPlanner
 from openpilot.selfdrive.frogpilot.frogpilot_variables import CRUISING_SPEED
 VisualAlert = car.CarControl.HUDControl.VisualAlert
@@ -88,8 +87,8 @@ class CarController(CarControllerBase):
     self.t_interval = 7
     self.cruise_button = None
     self.speed_diff = 0
+
     self.frogpilot_planner = FrogPilotPlanner(error_log=error_log)
-    self.frogpilot_vcruise = FrogPilotVCruise()
     self.custom_stock_planner_speed = self.param_s.get_bool("CustomStockLongPlanner")
     self.hkg_tuning = self.param_s.get_bool('HKGtuning')
     self.jerk_limiter = JerkLimiter()
@@ -371,7 +370,7 @@ class CarController(CarControllerBase):
       return None
     if not self.get_cruise_buttons_status(CS):
       return None
-    target_speed = self.frogpilot_vcruise.update(
+    target_speed = self.frogpilot_planner.frogpilot_vcruise.update(
         CS.out.vEgo,
         self.frogpilot_planner.curveSpeedLimit,
         self.frogpilot_planner.speedLimit,
