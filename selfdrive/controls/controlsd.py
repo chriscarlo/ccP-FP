@@ -65,6 +65,7 @@ ENABLED_STATES = (State.preEnabled, *ACTIVE_STATES)
 class Controls:
   def __init__(self, CI=None):
     self.params = Params()
+    self.state_initialized = False
     if CI is None:
       cloudlog.info("controlsd is waiting for CarParams")
       with car.CarParams.from_bytes(self.params.get("CarParams", block=True)) as msg:
@@ -208,6 +209,8 @@ class Controls:
 
       if any(ps.controlsAllowed for ps in self.sm['pandaStates']):
         self.state = State.enabled
+
+    self.state_initialized = True
 
   def update_events(self, CS):
     """Compute onroadEvents from carState"""
