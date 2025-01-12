@@ -1,8 +1,16 @@
 # PFEIFER - SLC - Modified by FrogAi for FrogPilot
 import json
+import math
 
 from openpilot.selfdrive.frogpilot.frogpilot_utilities import calculate_distance_to_point
 from openpilot.selfdrive.frogpilot.frogpilot_variables import TO_RADIANS, params, params_memory
+
+def logistic_transition(x, lower, upper, midpoint, scale=0.15):
+  """
+  Smoothly transitions from 'lower' to 'upper' around 'midpoint' with steepness 'scale'.
+  Used for smooth speed limit transitions.
+  """
+  return lower + (upper - lower) / (1.0 + math.exp(-scale * (x - midpoint)))
 
 class SpeedLimitController:
   def __init__(self):
@@ -13,6 +21,13 @@ class SpeedLimitController:
     self.speed_limit = 0
     self.upcoming_speed_limit = 0
 
+    # Add transition state tracking
+    self.transition_distance = 0  # Distance to next speed limit change
+    self.transition_start_distance = 0  # Distance where transition begins
+    self.is_transitioning = False
+    self.transition_start_speed = 0
+    self.transition_target_speed = 0
+
     self.source = "None"
 
     self.previous_speed_limit = params.get_float("PreviousSpeedLimit")
@@ -21,8 +36,36 @@ class SpeedLimitController:
     self.update_map_speed_limit(v_ego, frogpilot_toggles)
     max_speed_limit = v_cruise if enabled else 0
 
-    self.offset = self.get_offset(frogpilot_toggles)
-    self.speed_limit = self.get_speed_limit(dashboard_speed_limit, max_speed_limit, navigation_speed_limit, frogpilot_toggles)
+    raw_speed_limit = self.get_speed_limit(dashboard_speed_limit, max_speed_limit, navigation_speed_limit, frogpilot_toggles)
+
+    # Handle speed limit transitions
+    if self.upcoming_speed_limit > 1 and self.transition_distance > 0:
+      if not self.is_transitioning:
+        # Start transition when we're within the lookahead distance
+        if self.transition_distance < (self.transition_start_distance):
+          self.is_transitioning = True
+          self.transition_start_speed = raw_speed_limit
+          self.transition_target_speed = self.upcoming_speed_limit
+
+      if self.is_transitioning:
+        # Use logistic transition based on distance
+        # Scale distance to [0, 1] for the transition
+        progress = 1.0 - (self.transition_distance / self.transition_start_distance)
+        raw_speed_limit = logistic_transition(
+          x=progress,
+          lower=self.transition_start_speed,
+          upper=self.transition_target_speed,
+          midpoint=0.5,  # Transition midpoint (adjust as needed)
+          scale=6.0  # Adjust for sharper/smoother transition
+        )
+
+        # End transition if we're very close to target
+        if self.transition_distance < 1.0:  # Within 1 meter
+          self.is_transitioning = False
+          raw_speed_limit = self.transition_target_speed
+
+    self.speed_limit = raw_speed_limit
+    self.offset = self.get_offset(self.speed_limit, frogpilot_toggles)
     self.desired_speed_limit = self.get_desired_speed_limit()
 
     self.experimental_mode = frogpilot_toggles.slc_fallback_experimental_mode and self.speed_limit == 0
@@ -50,14 +93,19 @@ class SpeedLimitController:
       next_lat = next_map_speed_limit.get("latitude", 0)
       next_lon = next_map_speed_limit.get("longitude", 0)
 
-      distance = calculate_distance_to_point(latitude * TO_RADIANS, longitude * TO_RADIANS, next_lat * TO_RADIANS, next_lon * TO_RADIANS)
+      self.transition_distance = calculate_distance_to_point(
+        latitude * TO_RADIANS, longitude * TO_RADIANS,
+        next_lat * TO_RADIANS, next_lon * TO_RADIANS
+      )
 
+      # Set transition start distance based on speed difference
       if self.previous_speed_limit < self.upcoming_speed_limit:
-        max_distance = frogpilot_toggles.map_speed_lookahead_higher * v_ego
+        self.transition_start_distance = frogpilot_toggles.map_speed_lookahead_higher * v_ego
       else:
-        max_distance = frogpilot_toggles.map_speed_lookahead_lower * v_ego
+        self.transition_start_distance = frogpilot_toggles.map_speed_lookahead_lower * v_ego
 
-      if distance < max_distance:
+      # Update map speed limit only if we're very close
+      if self.transition_distance < 5.0:  # Within 5 meters
         self.map_speed_limit = self.upcoming_speed_limit
 
   def get_offset(self, speed_limit, frogpilot_toggles):
