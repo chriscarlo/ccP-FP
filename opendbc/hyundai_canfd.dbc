@@ -146,6 +146,7 @@ BO_ 293 STEERING_SENSORS: 8 XXX
  SG_ COUNTER : 16|8@1+ (1,0) [0|255] "" XXX
  SG_ STEERING_RATE : 24|12@1- (1,0) [-2047|2047] "deg/s" XXX
  SG_ STEERING_ANGLE : 40|16@1- (0.1,0) [-3276.8|3276.7] "deg" XXX
+ SG_ STEERING_COL_TORQUE : 0|11@1- (1,-1024) [-1024|1023] "" XXX
 
 BO_ 298 LFA: 16 ADRV
  SG_ STEER_REQ : 52|1@1+ (1,0) [0|1] "" XXX
@@ -181,15 +182,10 @@ BO_ 362 SPAS2: 32 APRK
  SG_ COUNTER : 16|8@1+ (1,0) [0|0] "" XXX
  SG_ BLINKER_CONTROL : 133|3@1+ (1,0) [0|0] "" XXX
 
-BO_ 373 TCS: 24 XXX
- SG_ CHECKSUM : 0|16@1+ (1,0) [0|65535] "" XXX
- SG_ COUNTER : 16|8@1+ (1,0) [0|255] "" XXX
- SG_ aBasis : 32|11@1+ (0.01,-10.23) [-10.23|10.24] "m/s^2" XXX
- SG_ ACC_REQ : 68|1@0+ (1,0) [0|1] "" XXX
- SG_ DriverBraking : 81|1@0+ (1,0) [0|1] "" XXX
- SG_ DriverBrakingLowSens : 84|1@1+ (1,0) [0|1] "" XXX
+BO_ 373 TCS: 8 XXX
  SG_ ACCEnable : 67|2@0+ (1,0) [0|3] "" XXX
- SG_ ACCEL_REF_ACC : 48|11@1- (1,0) [0|1023] "" XXX
+ SG_ BrakeLight : 20|1@0+ (1,0) [0|1] "" XXX
+ SG_ DriverBraking : 21|1@0+ (1,0) [0|1] "" XXX
 
 BO_ 352 ADRV_0x160: 16 ADRV
  SG_ CHECKSUM : 0|16@1+ (1,0) [0|65535] "" XXX
