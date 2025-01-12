@@ -376,6 +376,7 @@ BO_ 507 CAM_0x1fb: 32 CAMERA
 BO_ 512 ADRV_0x200: 8 ADRV
  SG_ CHECKSUM : 0|16@1+ (1,0) [0|65535] "" XXX
  SG_ COUNTER : 16|8@1+ (1,0) [0|255] "" XXX
+ SG_ TauGapSet : 19|3@1+ (1,0) [0|7] "" XXX
  SG_ SET_ME_E1 : 24|8@1+ (1,0) [0|255] "" XXX
  SG_ SET_ME_3A : 32|8@1+ (1,0) [0|255] "" XXX
 
