@@ -125,7 +125,7 @@ def frogpilot_thread():
   if error_log.is_file():
     error_log.unlink()
 
-  params_storage = Params("/persist/params")
+  params_storage = Params("/data/params")
 
   frogpilot_planner = FrogPilotPlanner(error_log)
   frogpilot_tracking = FrogPilotTracking()

@@ -36,7 +36,7 @@ def manager_init() -> None:
 
   # FrogPilot variables
   setup_frogpilot(build_metadata)
-  params_storage = Params("/persist/params")
+  params_storage = Params("/data/params")
   convert_params(params_storage)
 
   default_params: list[tuple[str, str | bytes]] = [
