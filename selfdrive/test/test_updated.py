@@ -53,7 +53,7 @@ class TestUpdated:
       f"cd {self.basedir} && scons -j{os.cpu_count()} cereal/ common/"
     ])
 
-    self.params = Params(os.path.join(self.basedir, "persist/params"))
+    self.params = Params(os.path.join(self.basedir, "data/sysparams"))
     self.params.clear_all()
     os.sync()
 

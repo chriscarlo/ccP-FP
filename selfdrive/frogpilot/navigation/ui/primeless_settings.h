@@ -30,7 +30,7 @@ private:
   LabelControl *ipLabel;
 
   Params params;
-  Params paramsStorage{"/persist/params"};
+  Params paramsStorage{"/data/sysparams"};
 
   bool mapboxPublicKeySet;
   bool mapboxSecretKeySet;

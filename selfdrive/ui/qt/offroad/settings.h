@@ -79,7 +79,7 @@ private:
   ButtonControl *pair_device;
 
   // FrogPilot variables
-  Params paramsStorage{"/persist/params"};
+  Params paramsStorage{"/data/sysparams"};
 };
 
 class TogglesPanel : public ListWidget {

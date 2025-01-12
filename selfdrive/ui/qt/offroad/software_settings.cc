@@ -91,7 +91,7 @@ SoftwarePanel::SoftwarePanel(QWidget* parent) : ListWidget(parent) {
     if (ConfirmationDialog::confirm(tr("Are you sure you want to uninstall?"), tr("Uninstall"), this)) {
       if (FrogPilotConfirmationDialog::yesorno(tr("Do you want to delete deep storage FrogPilot assets? This includes your toggle settings for quick reinstalls."), this)) {
         if (FrogPilotConfirmationDialog::yesorno(tr("Are you sure? This is 100% unrecoverable and if you reinstall FrogPilot you'll lose all your previous settings!"), this)) {
-          std::system("rm -rf /persist/params");
+          std::system("rm -rf /data/sysparams");
         }
       }
       params.putBool("DoUninstall", true);

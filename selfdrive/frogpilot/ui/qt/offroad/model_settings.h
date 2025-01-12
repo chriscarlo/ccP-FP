@@ -34,7 +34,7 @@ private:
   Params params;
   Params params_default{"/data/params_default"};
   Params params_memory{"/dev/shm/params"};
-  Params params_storage{"/persist/params"};
+  Params params_storage{"/data/sysparams"};
 
   QDir modelDir{"/data/models/"};
 

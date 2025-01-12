@@ -53,7 +53,7 @@ x_pi = 3.14159265358979324 * 3000.0 / 180.0
 a = 6378245.0
 ee = 0.00669342162296594323
 
-params_storage = Params("/data/params")
+params_storage = Params("/data/sysparams")
 
 PRESERVE_ATTR_NAME = 'user.preserve'
 PRESERVE_ATTR_VALUE = b'1'
