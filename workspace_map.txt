@@ -1,0 +1,3860 @@
+Workspace Directory Map
+=====================
+Root: C:\Users\Chris\Documents\GitHub\openpilot
+=====================
+
+└── openpilot
+    ├── Dockerfile.openpilot
+    ├── Dockerfile.openpilot_base
+    ├── Jenkinsfile
+    ├── LICENSE
+    ├── README.md
+    ├── RELEASES.md
+    ├── SConstruct
+    ├── SECURITY.md
+    ├── body
+    │   ├── Dockerfile
+    │   ├── LICENSE
+    │   ├── README.md
+    │   ├── SConstruct
+    │   ├── STL
+    │   │   ├── device_holder.stl
+    │   │   └── training_stand.stl
+    │   ├── board
+    │   │   ├── SConscript
+    │   │   ├── bldc
+    │   │   │   ├── BLDC_controller.c
+    │   │   │   ├── BLDC_controller.h
+    │   │   │   ├── BLDC_controller_data.c
+    │   │   │   ├── bldc.c
+    │   │   │   └── rtwtypes.h
+    │   │   ├── boards.h
+    │   │   ├── bootstub.c
+    │   │   ├── canloader.py
+    │   │   ├── comms.h
+    │   │   ├── config.h
+    │   │   ├── defines.h
+    │   │   ├── drivers
+    │   │   │   ├── angle_sensor.h
+    │   │   │   ├── clock.h
+    │   │   │   ├── i2c_soft.h
+    │   │   │   ├── llbxcan.h
+    │   │   │   └── llflash.h
+    │   │   ├── early_init.h
+    │   │   ├── flash_base.sh
+    │   │   ├── flash_knee.sh
+    │   │   ├── flasher.h
+    │   │   ├── inc
+    │   │   │   ├── STM32F4xx_HAL_Driver
+    │   │   │   │   ├── Inc
+    │   │   │   │   │   ├── Legacy
+    │   │   │   │   │   │   ├── stm32_hal_legacy.h
+    │   │   │   │   │   │   └── stm32f4xx_hal_can_legacy.h
+    │   │   │   │   │   ├── stm32_assert_template.h
+    │   │   │   │   │   ├── stm32f4xx_hal.h
+    │   │   │   │   │   ├── stm32f4xx_hal_adc.h
+    │   │   │   │   │   ├── stm32f4xx_hal_adc_ex.h
+    │   │   │   │   │   ├── stm32f4xx_hal_can.h
+    │   │   │   │   │   ├── stm32f4xx_hal_cec.h
+    │   │   │   │   │   ├── stm32f4xx_hal_conf_template.h
+    │   │   │   │   │   ├── stm32f4xx_hal_cortex.h
+    │   │   │   │   │   ├── stm32f4xx_hal_crc.h
+    │   │   │   │   │   ├── stm32f4xx_hal_cryp.h
+    │   │   │   │   │   ├── stm32f4xx_hal_cryp_ex.h
+    │   │   │   │   │   ├── stm32f4xx_hal_dac.h
+    │   │   │   │   │   ├── stm32f4xx_hal_dac_ex.h
+    │   │   │   │   │   ├── stm32f4xx_hal_dcmi.h
+    │   │   │   │   │   ├── stm32f4xx_hal_dcmi_ex.h
+    │   │   │   │   │   ├── stm32f4xx_hal_def.h
+    │   │   │   │   │   ├── stm32f4xx_hal_dfsdm.h
+    │   │   │   │   │   ├── stm32f4xx_hal_dma.h
+    │   │   │   │   │   ├── stm32f4xx_hal_dma2d.h
+    │   │   │   │   │   ├── stm32f4xx_hal_dma_ex.h
+    │   │   │   │   │   ├── stm32f4xx_hal_dsi.h
+    │   │   │   │   │   ├── stm32f4xx_hal_eth.h
+    │   │   │   │   │   ├── stm32f4xx_hal_exti.h
+    │   │   │   │   │   ├── stm32f4xx_hal_flash.h
+    │   │   │   │   │   ├── stm32f4xx_hal_flash_ex.h
+    │   │   │   │   │   ├── stm32f4xx_hal_flash_ramfunc.h
+    │   │   │   │   │   ├── stm32f4xx_hal_fmpi2c.h
+    │   │   │   │   │   ├── stm32f4xx_hal_fmpi2c_ex.h
+    │   │   │   │   │   ├── stm32f4xx_hal_fmpsmbus.h
+    │   │   │   │   │   ├── stm32f4xx_hal_fmpsmbus_ex.h
+    │   │   │   │   │   ├── stm32f4xx_hal_gpio.h
+    │   │   │   │   │   ├── stm32f4xx_hal_gpio_ex.h
+    │   │   │   │   │   ├── stm32f4xx_hal_hash.h
+    │   │   │   │   │   ├── stm32f4xx_hal_hash_ex.h
+    │   │   │   │   │   ├── stm32f4xx_hal_hcd.h
+    │   │   │   │   │   ├── stm32f4xx_hal_i2c.h
+    │   │   │   │   │   ├── stm32f4xx_hal_i2c_ex.h
+    │   │   │   │   │   ├── stm32f4xx_hal_i2s.h
+    │   │   │   │   │   ├── stm32f4xx_hal_i2s_ex.h
+    │   │   │   │   │   ├── stm32f4xx_hal_irda.h
+    │   │   │   │   │   ├── stm32f4xx_hal_iwdg.h
+    │   │   │   │   │   ├── stm32f4xx_hal_lptim.h
+    │   │   │   │   │   ├── stm32f4xx_hal_ltdc.h
+    │   │   │   │   │   ├── stm32f4xx_hal_ltdc_ex.h
+    │   │   │   │   │   ├── stm32f4xx_hal_mmc.h
+    │   │   │   │   │   ├── stm32f4xx_hal_nand.h
+    │   │   │   │   │   ├── stm32f4xx_hal_nor.h
+    │   │   │   │   │   ├── stm32f4xx_hal_pccard.h
+    │   │   │   │   │   ├── stm32f4xx_hal_pcd.h
+    │   │   │   │   │   ├── stm32f4xx_hal_pcd_ex.h
+    │   │   │   │   │   ├── stm32f4xx_hal_pwr.h
+    │   │   │   │   │   ├── stm32f4xx_hal_pwr_ex.h
+    │   │   │   │   │   ├── stm32f4xx_hal_qspi.h
+    │   │   │   │   │   ├── stm32f4xx_hal_rcc.h
+    │   │   │   │   │   ├── stm32f4xx_hal_rcc_ex.h
+    │   │   │   │   │   ├── stm32f4xx_hal_rng.h
+    │   │   │   │   │   ├── stm32f4xx_hal_rtc.h
+    │   │   │   │   │   ├── stm32f4xx_hal_rtc_ex.h
+    │   │   │   │   │   ├── stm32f4xx_hal_sai.h
+    │   │   │   │   │   ├── stm32f4xx_hal_sai_ex.h
+    │   │   │   │   │   ├── stm32f4xx_hal_sd.h
+    │   │   │   │   │   ├── stm32f4xx_hal_sdram.h
+    │   │   │   │   │   ├── stm32f4xx_hal_smartcard.h
+    │   │   │   │   │   ├── stm32f4xx_hal_smbus.h
+    │   │   │   │   │   ├── stm32f4xx_hal_spdifrx.h
+    │   │   │   │   │   ├── stm32f4xx_hal_spi.h
+    │   │   │   │   │   ├── stm32f4xx_hal_sram.h
+    │   │   │   │   │   ├── stm32f4xx_hal_tim.h
+    │   │   │   │   │   ├── stm32f4xx_hal_tim_ex.h
+    │   │   │   │   │   ├── stm32f4xx_hal_uart.h
+    │   │   │   │   │   ├── stm32f4xx_hal_usart.h
+    │   │   │   │   │   ├── stm32f4xx_hal_wwdg.h
+    │   │   │   │   │   ├── stm32f4xx_ll_adc.h
+    │   │   │   │   │   ├── stm32f4xx_ll_bus.h
+    │   │   │   │   │   ├── stm32f4xx_ll_cortex.h
+    │   │   │   │   │   ├── stm32f4xx_ll_crc.h
+    │   │   │   │   │   ├── stm32f4xx_ll_dac.h
+    │   │   │   │   │   ├── stm32f4xx_ll_dma.h
+    │   │   │   │   │   ├── stm32f4xx_ll_dma2d.h
+    │   │   │   │   │   ├── stm32f4xx_ll_exti.h
+    │   │   │   │   │   ├── stm32f4xx_ll_fmc.h
+    │   │   │   │   │   ├── stm32f4xx_ll_fmpi2c.h
+    │   │   │   │   │   ├── stm32f4xx_ll_fsmc.h
+    │   │   │   │   │   ├── stm32f4xx_ll_gpio.h
+    │   │   │   │   │   ├── stm32f4xx_ll_i2c.h
+    │   │   │   │   │   ├── stm32f4xx_ll_iwdg.h
+    │   │   │   │   │   ├── stm32f4xx_ll_lptim.h
+    │   │   │   │   │   ├── stm32f4xx_ll_pwr.h
+    │   │   │   │   │   ├── stm32f4xx_ll_rcc.h
+    │   │   │   │   │   ├── stm32f4xx_ll_rng.h
+    │   │   │   │   │   ├── stm32f4xx_ll_rtc.h
+    │   │   │   │   │   ├── stm32f4xx_ll_sdmmc.h
+    │   │   │   │   │   ├── stm32f4xx_ll_spi.h
+    │   │   │   │   │   ├── stm32f4xx_ll_system.h
+    │   │   │   │   │   ├── stm32f4xx_ll_tim.h
+    │   │   │   │   │   ├── stm32f4xx_ll_usart.h
+    │   │   │   │   │   ├── stm32f4xx_ll_usb.h
+    │   │   │   │   │   ├── stm32f4xx_ll_utils.h
+    │   │   │   │   │   └── stm32f4xx_ll_wwdg.h
+    │   │   │   │   └── Src
+    │   │   │   │       ├── Legacy
+    │   │   │   │       │   └── stm32f4xx_hal_can.c
+    │   │   │   │       ├── stm32f4xx_hal.c
+    │   │   │   │       ├── stm32f4xx_hal_adc.c
+    │   │   │   │       ├── stm32f4xx_hal_adc_ex.c
+    │   │   │   │       ├── stm32f4xx_hal_can.c
+    │   │   │   │       ├── stm32f4xx_hal_cec.c
+    │   │   │   │       ├── stm32f4xx_hal_cortex.c
+    │   │   │   │       ├── stm32f4xx_hal_crc.c
+    │   │   │   │       ├── stm32f4xx_hal_cryp.c
+    │   │   │   │       ├── stm32f4xx_hal_cryp_ex.c
+    │   │   │   │       ├── stm32f4xx_hal_dac.c
+    │   │   │   │       ├── stm32f4xx_hal_dac_ex.c
+    │   │   │   │       ├── stm32f4xx_hal_dcmi.c
+    │   │   │   │       ├── stm32f4xx_hal_dcmi_ex.c
+    │   │   │   │       ├── stm32f4xx_hal_dfsdm.c
+    │   │   │   │       ├── stm32f4xx_hal_dma.c
+    │   │   │   │       ├── stm32f4xx_hal_dma2d.c
+    │   │   │   │       ├── stm32f4xx_hal_dma_ex.c
+    │   │   │   │       ├── stm32f4xx_hal_dsi.c
+    │   │   │   │       ├── stm32f4xx_hal_eth.c
+    │   │   │   │       ├── stm32f4xx_hal_exti.c
+    │   │   │   │       ├── stm32f4xx_hal_flash.c
+    │   │   │   │       ├── stm32f4xx_hal_flash_ex.c
+    │   │   │   │       ├── stm32f4xx_hal_flash_ramfunc.c
+    │   │   │   │       ├── stm32f4xx_hal_fmpi2c.c
+    │   │   │   │       ├── stm32f4xx_hal_fmpi2c_ex.c
+    │   │   │   │       ├── stm32f4xx_hal_fmpsmbus.c
+    │   │   │   │       ├── stm32f4xx_hal_fmpsmbus_ex.c
+    │   │   │   │       ├── stm32f4xx_hal_gpio.c
+    │   │   │   │       ├── stm32f4xx_hal_hash.c
+    │   │   │   │       ├── stm32f4xx_hal_hash_ex.c
+    │   │   │   │       ├── stm32f4xx_hal_hcd.c
+    │   │   │   │       ├── stm32f4xx_hal_i2c.c
+    │   │   │   │       ├── stm32f4xx_hal_i2c_ex.c
+    │   │   │   │       ├── stm32f4xx_hal_i2s.c
+    │   │   │   │       ├── stm32f4xx_hal_i2s_ex.c
+    │   │   │   │       ├── stm32f4xx_hal_irda.c
+    │   │   │   │       ├── stm32f4xx_hal_iwdg.c
+    │   │   │   │       ├── stm32f4xx_hal_lptim.c
+    │   │   │   │       ├── stm32f4xx_hal_ltdc.c
+    │   │   │   │       ├── stm32f4xx_hal_ltdc_ex.c
+    │   │   │   │       ├── stm32f4xx_hal_mmc.c
+    │   │   │   │       ├── stm32f4xx_hal_msp_template.c
+    │   │   │   │       ├── stm32f4xx_hal_nand.c
+    │   │   │   │       ├── stm32f4xx_hal_nor.c
+    │   │   │   │       ├── stm32f4xx_hal_pccard.c
+    │   │   │   │       ├── stm32f4xx_hal_pcd.c
+    │   │   │   │       ├── stm32f4xx_hal_pcd_ex.c
+    │   │   │   │       ├── stm32f4xx_hal_pwr.c
+    │   │   │   │       ├── stm32f4xx_hal_pwr_ex.c
+    │   │   │   │       ├── stm32f4xx_hal_qspi.c
+    │   │   │   │       ├── stm32f4xx_hal_rcc.c
+    │   │   │   │       ├── stm32f4xx_hal_rcc_ex.c
+    │   │   │   │       ├── stm32f4xx_hal_rng.c
+    │   │   │   │       ├── stm32f4xx_hal_rtc.c
+    │   │   │   │       ├── stm32f4xx_hal_rtc_ex.c
+    │   │   │   │       ├── stm32f4xx_hal_sai.c
+    │   │   │   │       ├── stm32f4xx_hal_sai_ex.c
+    │   │   │   │       ├── stm32f4xx_hal_sd.c
+    │   │   │   │       ├── stm32f4xx_hal_sdram.c
+    │   │   │   │       ├── stm32f4xx_hal_smartcard.c
+    │   │   │   │       ├── stm32f4xx_hal_smbus.c
+    │   │   │   │       ├── stm32f4xx_hal_spdifrx.c
+    │   │   │   │       ├── stm32f4xx_hal_spi.c
+    │   │   │   │       ├── stm32f4xx_hal_sram.c
+    │   │   │   │       ├── stm32f4xx_hal_tim.c
+    │   │   │   │       ├── stm32f4xx_hal_tim_ex.c
+    │   │   │   │       ├── stm32f4xx_hal_timebase_rtc_alarm_template.c
+    │   │   │   │       ├── stm32f4xx_hal_timebase_rtc_wakeup_template.c
+    │   │   │   │       ├── stm32f4xx_hal_timebase_tim_template.c
+    │   │   │   │       ├── stm32f4xx_hal_uart.c
+    │   │   │   │       ├── stm32f4xx_hal_usart.c
+    │   │   │   │       ├── stm32f4xx_hal_wwdg.c
+    │   │   │   │       ├── stm32f4xx_ll_adc.c
+    │   │   │   │       ├── stm32f4xx_ll_crc.c
+    │   │   │   │       ├── stm32f4xx_ll_dac.c
+    │   │   │   │       ├── stm32f4xx_ll_dma.c
+    │   │   │   │       ├── stm32f4xx_ll_dma2d.c
+    │   │   │   │       ├── stm32f4xx_ll_exti.c
+    │   │   │   │       ├── stm32f4xx_ll_fmc.c
+    │   │   │   │       ├── stm32f4xx_ll_fmpi2c.c
+    │   │   │   │       ├── stm32f4xx_ll_fsmc.c
+    │   │   │   │       ├── stm32f4xx_ll_gpio.c
+    │   │   │   │       ├── stm32f4xx_ll_i2c.c
+    │   │   │   │       ├── stm32f4xx_ll_lptim.c
+    │   │   │   │       ├── stm32f4xx_ll_pwr.c
+    │   │   │   │       ├── stm32f4xx_ll_rcc.c
+    │   │   │   │       ├── stm32f4xx_ll_rng.c
+    │   │   │   │       ├── stm32f4xx_ll_rtc.c
+    │   │   │   │       ├── stm32f4xx_ll_sdmmc.c
+    │   │   │   │       ├── stm32f4xx_ll_spi.c
+    │   │   │   │       ├── stm32f4xx_ll_tim.c
+    │   │   │   │       ├── stm32f4xx_ll_usart.c
+    │   │   │   │       ├── stm32f4xx_ll_usb.c
+    │   │   │   │       └── stm32f4xx_ll_utils.c
+    │   │   │   ├── arm_common_tables.h
+    │   │   │   ├── arm_const_structs.h
+    │   │   │   ├── arm_math.h
+    │   │   │   ├── cmsis_armcc.h
+    │   │   │   ├── cmsis_armcc_V6.h
+    │   │   │   ├── cmsis_armclang.h
+    │   │   │   ├── cmsis_compiler.h
+    │   │   │   ├── cmsis_gcc.h
+    │   │   │   ├── cmsis_iccarm.h
+    │   │   │   ├── cmsis_version.h
+    │   │   │   ├── core_armv8mbl.h
+    │   │   │   ├── core_armv8mml.h
+    │   │   │   ├── core_cm0plus.h
+    │   │   │   ├── core_cm4.h
+    │   │   │   ├── core_cmFunc.h
+    │   │   │   ├── core_cmInstr.h
+    │   │   │   ├── core_cmSimd.h
+    │   │   │   ├── mpu_armv7.h
+    │   │   │   ├── mpu_armv8.h
+    │   │   │   ├── stm32f413xx.h
+    │   │   │   ├── stm32f4xx.h
+    │   │   │   ├── stm32f4xx_hal_conf.h
+    │   │   │   ├── stm32f4xx_it.c
+    │   │   │   ├── stm32f4xx_it.h
+    │   │   │   ├── system_stm32f4xx.c
+    │   │   │   ├── system_stm32f4xx.h
+    │   │   │   └── tz_context.h
+    │   │   ├── libc.h
+    │   │   ├── main.c
+    │   │   ├── obj
+    │   │   ├── provision.h
+    │   │   ├── recover.sh
+    │   │   ├── setup.h
+    │   │   ├── startup_stm32f413xx.s
+    │   │   ├── stm32fx_flash.ld
+    │   │   ├── uds.h
+    │   │   ├── util.c
+    │   │   ├── util.h
+    │   │   └── version.h
+    │   ├── certs
+    │   │   ├── debug
+    │   │   ├── debug.pub
+    │   │   └── release.pub
+    │   ├── crypto
+    │   │   ├── hash-internal.h
+    │   │   ├── rsa.c
+    │   │   ├── rsa.h
+    │   │   ├── sha.c
+    │   │   ├── sha.h
+    │   │   ├── sign.py
+    │   │   └── stdint.h
+    │   ├── pyproject.toml
+    │   └── requirements.txt
+    ├── cereal
+    │   ├── README.md
+    │   ├── SConscript
+    │   ├── __init__.py
+    │   ├── car.capnp
+    │   ├── custom.capnp
+    │   ├── include
+    │   │   └── c++.capnp
+    │   ├── legacy.capnp
+    │   ├── log.capnp
+    │   ├── maptile.capnp
+    │   ├── messaging
+    │   │   ├── __init__.py
+    │   │   ├── bridge.cc
+    │   │   ├── messaging.h
+    │   │   ├── socketmaster.cc
+    │   │   └── tests
+    │   │       ├── __init__.py
+    │   │       ├── test_messaging.py
+    │   │       ├── test_pub_sub_master.py
+    │   │       └── test_services.py
+    │   └── services.py
+    ├── codecov.yml
+    ├── common
+    │   ├── SConscript
+    │   ├── __init__.py
+    │   ├── api
+    │   │   └── __init__.py
+    │   ├── basedir.py
+    │   ├── clutil.cc
+    │   ├── clutil.h
+    │   ├── conversions.py
+    │   ├── dict_helpers.py
+    │   ├── ffi_wrapper.py
+    │   ├── file_helpers.py
+    │   ├── filter_simple.py
+    │   ├── git.py
+    │   ├── gpio.cc
+    │   ├── gpio.h
+    │   ├── gpio.py
+    │   ├── i2c.cc
+    │   ├── i2c.h
+    │   ├── logging_extra.py
+    │   ├── markdown.py
+    │   ├── mat.h
+    │   ├── mock
+    │   │   ├── __init__.py
+    │   │   └── generators.py
+    │   ├── numpy_fast.py
+    │   ├── params.cc
+    │   ├── params.h
+    │   ├── params.py
+    │   ├── params_pyx.pyx
+    │   ├── prefix.h
+    │   ├── prefix.py
+    │   ├── queue.h
+    │   ├── ratekeeper.cc
+    │   ├── ratekeeper.h
+    │   ├── realtime.py
+    │   ├── retry.py
+    │   ├── run.py
+    │   ├── simple_kalman.py
+    │   ├── spinner.py
+    │   ├── stat_live.py
+    │   ├── swaglog.cc
+    │   ├── swaglog.h
+    │   ├── swaglog.py
+    │   ├── tests
+    │   │   ├── __init__.py
+    │   │   ├── test_file_helpers.py
+    │   │   ├── test_markdown.py
+    │   │   ├── test_numpy_fast.py
+    │   │   ├── test_params.cc
+    │   │   ├── test_params.py
+    │   │   ├── test_runner.cc
+    │   │   ├── test_simple_kalman.py
+    │   │   ├── test_swaglog.cc
+    │   │   └── test_util.cc
+    │   ├── text_window.py
+    │   ├── time.py
+    │   ├── timeout.py
+    │   ├── timing.h
+    │   ├── transformations
+    │   │   ├── README.md
+    │   │   ├── SConscript
+    │   │   ├── __init__.py
+    │   │   ├── camera.py
+    │   │   ├── coordinates.cc
+    │   │   ├── coordinates.hpp
+    │   │   ├── coordinates.py
+    │   │   ├── model.py
+    │   │   ├── orientation.cc
+    │   │   ├── orientation.hpp
+    │   │   ├── orientation.py
+    │   │   ├── tests
+    │   │   │   ├── __init__.py
+    │   │   │   ├── test_coordinates.py
+    │   │   │   └── test_orientation.py
+    │   │   ├── transformations.pxd
+    │   │   └── transformations.pyx
+    │   ├── util.cc
+    │   ├── util.h
+    │   ├── utils.py
+    │   ├── version.h
+    │   ├── watchdog.cc
+    │   └── watchdog.h
+    ├── conftest.py
+    ├── docs
+    │   ├── BOUNTIES.md
+    │   ├── CARS.md
+    │   ├── CONTRIBUTING.md
+    │   ├── INTEGRATION.md
+    │   ├── LIMITATIONS.md
+    │   ├── Makefile
+    │   ├── README.md
+    │   ├── SAFETY.md
+    │   ├── WORKFLOW.md
+    │   ├── _static
+    │   │   ├── favicon.ico
+    │   │   ├── logo.png
+    │   │   └── robots.txt
+    │   ├── assets
+    │   │   ├── icon-star-empty.svg
+    │   │   ├── icon-star-full.svg
+    │   │   ├── icon-star-half.svg
+    │   │   └── icon-youtube.svg
+    │   ├── c_docs.rst
+    │   ├── conf.py
+    │   ├── index.md
+    │   └── overview.rst
+    ├── launch_chffrplus.sh
+    ├── launch_env.sh
+    ├── launch_openpilot.sh
+    ├── msgq
+    ├── msgq_repo
+    │   ├── Dockerfile
+    │   ├── README.md
+    │   ├── SConscript
+    │   ├── SConstruct
+    │   ├── codecov.yml
+    │   ├── msgq
+    │   │   ├── __init__.py
+    │   │   ├── event.cc
+    │   │   ├── event.h
+    │   │   ├── impl_fake.cc
+    │   │   ├── impl_fake.h
+    │   │   ├── impl_msgq.cc
+    │   │   ├── impl_msgq.h
+    │   │   ├── impl_zmq.cc
+    │   │   ├── impl_zmq.h
+    │   │   ├── ipc.cc
+    │   │   ├── ipc.h
+    │   │   ├── ipc.pxd
+    │   │   ├── ipc_pyx.pyx
+    │   │   ├── logger
+    │   │   │   └── logger.h
+    │   │   ├── msgq.cc
+    │   │   ├── msgq.h
+    │   │   ├── msgq_tests.cc
+    │   │   ├── test_runner.cc
+    │   │   ├── tests
+    │   │   │   ├── __init__.py
+    │   │   │   ├── test_fake.py
+    │   │   │   ├── test_messaging.py
+    │   │   │   └── test_poller.py
+    │   │   └── visionipc
+    │   │       ├── __init__.py
+    │   │       ├── test_runner.cc
+    │   │       ├── tests
+    │   │       │   ├── __init__.py
+    │   │       │   └── test_visionipc.py
+    │   │       ├── visionbuf.cc
+    │   │       ├── visionbuf.h
+    │   │       ├── visionbuf_cl.cc
+    │   │       ├── visionbuf_ion.cc
+    │   │       ├── visionipc.cc
+    │   │       ├── visionipc.h
+    │   │       ├── visionipc.pxd
+    │   │       ├── visionipc_client.cc
+    │   │       ├── visionipc_client.h
+    │   │       ├── visionipc_pyx.pxd
+    │   │       ├── visionipc_pyx.pyx
+    │   │       ├── visionipc_server.cc
+    │   │       ├── visionipc_server.h
+    │   │       └── visionipc_tests.cc
+    │   ├── pyproject.toml
+    │   └── site_scons
+    │       └── site_tools
+    │           └── cython.py
+    ├── opendbc
+    │   ├── Dockerfile
+    │   ├── ESR.dbc
+    │   ├── FORD_CADS.dbc
+    │   ├── LICENSE
+    │   ├── README.md
+    │   ├── SConstruct
+    │   ├── __init__.py
+    │   ├── acura_ilx_2016_can_generated.dbc
+    │   ├── acura_ilx_2016_nidec.dbc
+    │   ├── acura_rdx_2018_can_generated.dbc
+    │   ├── acura_rdx_2020_can_generated.dbc
+    │   ├── bmw_e9x_e8x.dbc
+    │   ├── cadillac_ct6_chassis.dbc
+    │   ├── cadillac_ct6_object.dbc
+    │   ├── cadillac_ct6_powertrain.dbc
+    │   ├── can
+    │   │   ├── SConscript
+    │   │   ├── __init__.py
+    │   │   ├── can_define.py
+    │   │   ├── common.cc
+    │   │   ├── common.h
+    │   │   ├── common.pxd
+    │   │   ├── common_dbc.h
+    │   │   ├── dbc.cc
+    │   │   ├── logger.h
+    │   │   ├── packer.cc
+    │   │   ├── packer.py
+    │   │   ├── packer_pyx.pyx
+    │   │   ├── parser.cc
+    │   │   ├── parser.py
+    │   │   ├── parser_pyx.pyx
+    │   │   └── tests
+    │   │       ├── __init__.py
+    │   │       ├── test.dbc
+    │   │       ├── test_checksums.py
+    │   │       ├── test_dbc_exceptions.py
+    │   │       ├── test_dbc_parser.py
+    │   │       ├── test_define.py
+    │   │       ├── test_packer_parser.py
+    │   │       └── test_parser_performance.py
+    │   ├── chrysler_cusw.dbc
+    │   ├── chrysler_pacifica_2017_hybrid_generated.dbc
+    │   ├── chrysler_pacifica_2017_hybrid_private_fusion.dbc
+    │   ├── chrysler_ram_dt_generated.dbc
+    │   ├── chrysler_ram_hd_generated.dbc
+    │   ├── comma_body.dbc
+    │   ├── ford_cgea1_2_bodycan_2011.dbc
+    │   ├── ford_cgea1_2_ptcan_2011.dbc
+    │   ├── ford_fusion_2018_adas.dbc
+    │   ├── ford_fusion_2018_pt.dbc
+    │   ├── ford_lincoln_base_pt.dbc
+    │   ├── generator
+    │   │   ├── chrysler
+    │   │   │   ├── _stellantis_common.dbc
+    │   │   │   ├── _stellantis_common_ram.py
+    │   │   │   ├── chrysler_pacifica_2017_hybrid.dbc
+    │   │   │   ├── chrysler_ram_dt.dbc
+    │   │   │   └── chrysler_ram_hd.dbc
+    │   │   ├── generator.py
+    │   │   ├── gm
+    │   │   │   ├── _community.dbc
+    │   │   │   └── gm_global_a_powertrain.dbc
+    │   │   ├── honda
+    │   │   │   ├── _bosch_2018.dbc
+    │   │   │   ├── _bosch_adas_2018.dbc
+    │   │   │   ├── _community.dbc
+    │   │   │   ├── _honda_common.dbc
+    │   │   │   ├── _nidec_common.dbc
+    │   │   │   ├── _steering_sensors_a.dbc
+    │   │   │   ├── _steering_sensors_b.dbc
+    │   │   │   ├── acura_ilx_2016_can.dbc
+    │   │   │   ├── acura_rdx_2018_can.dbc
+    │   │   │   ├── acura_rdx_2020_can.dbc
+    │   │   │   ├── honda_accord_2018_can.dbc
+    │   │   │   ├── honda_civic_ex_2022_can.dbc
+    │   │   │   ├── honda_civic_hatchback_ex_2017_can.dbc
+    │   │   │   ├── honda_civic_touring_2016_can.dbc
+    │   │   │   ├── honda_clarity_hybrid_2018_can.dbc
+    │   │   │   ├── honda_crv_ex_2017_body.dbc
+    │   │   │   ├── honda_crv_ex_2017_can.dbc
+    │   │   │   ├── honda_crv_executive_2016_can.dbc
+    │   │   │   ├── honda_crv_touring_2016_can.dbc
+    │   │   │   ├── honda_fit_ex_2018_can.dbc
+    │   │   │   ├── honda_fit_hybrid_2018_can.dbc
+    │   │   │   ├── honda_insight_ex_2019_can.dbc
+    │   │   │   ├── honda_odyssey_exl_2018.dbc
+    │   │   │   ├── honda_odyssey_extreme_edition_2018_china_can.dbc
+    │   │   │   └── honda_pilot_2023_can.dbc
+    │   │   ├── hyundai
+    │   │   │   ├── hyundai_kia_mando_corner_radar.py
+    │   │   │   └── hyundai_kia_mando_front_radar.py
+    │   │   ├── nissan
+    │   │   │   ├── _nissan_common.dbc
+    │   │   │   ├── nissan_leaf_2018.dbc
+    │   │   │   └── nissan_x_trail_2017.dbc
+    │   │   ├── subaru
+    │   │   │   ├── _subaru_global.dbc
+    │   │   │   ├── _subaru_preglobal_2015.dbc
+    │   │   │   ├── subaru_forester_2017.dbc
+    │   │   │   ├── subaru_global_2017.dbc
+    │   │   │   ├── subaru_global_2020_hybrid.dbc
+    │   │   │   ├── subaru_outback_2015.dbc
+    │   │   │   └── subaru_outback_2019.dbc
+    │   │   ├── tesla
+    │   │   │   ├── radar_common.py
+    │   │   │   ├── tesla_radar_bosch.py
+    │   │   │   └── tesla_radar_continental.py
+    │   │   ├── test_generator.py
+    │   │   └── toyota
+    │   │       ├── _community.dbc
+    │   │       ├── _toyota_2017.dbc
+    │   │       ├── toyota_new_mc_pt.dbc
+    │   │       ├── toyota_nodsu_pt.dbc
+    │   │       └── toyota_tnga_k_pt.dbc
+    │   ├── gm_global_a_chassis.dbc
+    │   ├── gm_global_a_high_voltage_management.dbc
+    │   ├── gm_global_a_lowspeed.dbc
+    │   ├── gm_global_a_lowspeed_1818125.dbc
+    │   ├── gm_global_a_object.dbc
+    │   ├── gm_global_a_powertrain_expansion.dbc
+    │   ├── gm_global_a_powertrain_generated.dbc
+    │   ├── gm_global_a_powertrain_volt.dbc
+    │   ├── honda_accord_2018_can_generated.dbc
+    │   ├── honda_civic_ex_2022_can_generated.dbc
+    │   ├── honda_civic_hatchback_ex_2017_can_generated.dbc
+    │   ├── honda_civic_touring_2016_can_generated.dbc
+    │   ├── honda_clarity_hybrid_2018_can_generated.dbc
+    │   ├── honda_crv_ex_2017_body_generated.dbc
+    │   ├── honda_crv_ex_2017_can_generated.dbc
+    │   ├── honda_crv_executive_2016_can_generated.dbc
+    │   ├── honda_crv_touring_2016_can_generated.dbc
+    │   ├── honda_fit_ex_2018_can_generated.dbc
+    │   ├── honda_fit_hybrid_2018_can_generated.dbc
+    │   ├── honda_insight_ex_2019_can_generated.dbc
+    │   ├── honda_odyssey_exl_2018_generated.dbc
+    │   ├── honda_odyssey_extreme_edition_2018_china_can_generated.dbc
+    │   ├── honda_pilot_2023_can_generated.dbc
+    │   ├── hyundai_2015_ccan.dbc
+    │   ├── hyundai_2015_mcan.dbc
+    │   ├── hyundai_canfd.dbc
+    │   ├── hyundai_i30_2014.dbc
+    │   ├── hyundai_kia_generic.dbc
+    │   ├── hyundai_kia_mando_corner_radar_generated.dbc
+    │   ├── hyundai_kia_mando_front_radar_generated.dbc
+    │   ├── hyundai_santafe_2007.dbc
+    │   ├── luxgen_s5_2015.dbc
+    │   ├── mazda_2017.dbc
+    │   ├── mazda_3_2019.dbc
+    │   ├── mazda_radar.dbc
+    │   ├── mazda_rx8.dbc
+    │   ├── mercedes_benz_e350_2010.dbc
+    │   ├── nissan_leaf_2018_generated.dbc
+    │   ├── nissan_x_trail_2017_generated.dbc
+    │   ├── nissan_xterra_2011.dbc
+    │   ├── opel_omega_2001.dbc
+    │   ├── pyproject.toml
+    │   ├── requirements.txt
+    │   ├── site_scons
+    │   │   └── site_tools
+    │   │       └── cython.py
+    │   ├── subaru_forester_2017_generated.dbc
+    │   ├── subaru_global_2017_generated.dbc
+    │   ├── subaru_global_2020_hybrid_generated.dbc
+    │   ├── subaru_outback_2015_generated.dbc
+    │   ├── subaru_outback_2019_generated.dbc
+    │   ├── tesla_can.dbc
+    │   ├── tesla_model3_party.dbc
+    │   ├── tesla_model3_vehicle.dbc
+    │   ├── tesla_powertrain.dbc
+    │   ├── tesla_radar_bosch_generated.dbc
+    │   ├── tesla_radar_continental_generated.dbc
+    │   ├── toyota_2017_ref_pt.dbc
+    │   ├── toyota_adas.dbc
+    │   ├── toyota_iQ_2009_can.dbc
+    │   ├── toyota_new_mc_pt_generated.dbc
+    │   ├── toyota_nodsu_pt_generated.dbc
+    │   ├── toyota_prius_2010_pt.dbc
+    │   ├── toyota_radar_dsu_tssp.dbc
+    │   ├── toyota_rav4_prime_generated.dbc
+    │   ├── toyota_tnga_k_pt_generated.dbc
+    │   ├── toyota_tss2_adas.dbc
+    │   ├── volvo_v40_2017_pt.dbc
+    │   ├── volvo_v60_2015_pt.dbc
+    │   ├── vw_golf_mk4.dbc
+    │   └── vw_mqb_2010.dbc
+    ├── openpilot
+    │   ├── __init__.py
+    │   ├── common
+    │   ├── selfdrive
+    │   ├── system
+    │   ├── third_party
+    │   └── tools
+    ├── panda
+    │   ├── Dockerfile
+    │   ├── Jenkinsfile
+    │   ├── LICENSE
+    │   ├── README.md
+    │   ├── SConscript
+    │   ├── SConstruct
+    │   ├── __init__.py
+    │   ├── board
+    │   │   ├── README.md
+    │   │   ├── SConscript
+    │   │   ├── __init__.py
+    │   │   ├── boards
+    │   │   │   ├── black.h
+    │   │   │   ├── board_declarations.h
+    │   │   │   ├── cuatro.h
+    │   │   │   ├── dos.h
+    │   │   │   ├── grey.h
+    │   │   │   ├── red.h
+    │   │   │   ├── red_chiplet.h
+    │   │   │   ├── tres.h
+    │   │   │   ├── uno.h
+    │   │   │   ├── unused_funcs.h
+    │   │   │   └── white.h
+    │   │   ├── bootstub.c
+    │   │   ├── bootstub_declarations.h
+    │   │   ├── can_comms.h
+    │   │   ├── can_definitions.h
+    │   │   ├── comms_definitions.h
+    │   │   ├── config.h
+    │   │   ├── crc.h
+    │   │   ├── critical.h
+    │   │   ├── debug
+    │   │   │   ├── README.md
+    │   │   │   └── debug_h7.sh
+    │   │   ├── dfu_util_f4.sh
+    │   │   ├── dfu_util_h7.sh
+    │   │   ├── drivers
+    │   │   │   ├── bootkick.h
+    │   │   │   ├── bxcan.h
+    │   │   │   ├── can_common.h
+    │   │   │   ├── clock_source.h
+    │   │   │   ├── fake_siren.h
+    │   │   │   ├── fan.h
+    │   │   │   ├── fdcan.h
+    │   │   │   ├── gpio.h
+    │   │   │   ├── harness.h
+    │   │   │   ├── interrupts.h
+    │   │   │   ├── pwm.h
+    │   │   │   ├── registers.h
+    │   │   │   ├── simple_watchdog.h
+    │   │   │   ├── spi.h
+    │   │   │   ├── timers.h
+    │   │   │   ├── uart.h
+    │   │   │   ├── usb.h
+    │   │   │   └── watchdog.h
+    │   │   ├── early_init.h
+    │   │   ├── fake_stm.h
+    │   │   ├── faults.h
+    │   │   ├── flash.py
+    │   │   ├── flasher.h
+    │   │   ├── health.h
+    │   │   ├── jungle
+    │   │   │   ├── README.md
+    │   │   │   ├── SConscript
+    │   │   │   ├── __init__.py
+    │   │   │   ├── boards
+    │   │   │   │   ├── board_declarations.h
+    │   │   │   │   ├── board_v1.h
+    │   │   │   │   └── board_v2.h
+    │   │   │   ├── flash.py
+    │   │   │   ├── jungle_health.h
+    │   │   │   ├── main.c
+    │   │   │   ├── main_comms.h
+    │   │   │   ├── recover.py
+    │   │   │   ├── scripts
+    │   │   │   │   ├── can_health.py
+    │   │   │   │   ├── can_printer.py
+    │   │   │   │   ├── debug_console.py
+    │   │   │   │   ├── echo_loopback_test.py
+    │   │   │   │   ├── get_version.py
+    │   │   │   │   ├── health_test.py
+    │   │   │   │   ├── loopback_test.py
+    │   │   │   │   ├── panda_identification_test.py
+    │   │   │   │   └── start.py
+    │   │   │   ├── stm32f4
+    │   │   │   │   └── board.h
+    │   │   │   └── stm32h7
+    │   │   │       ├── board.h
+    │   │   │       └── lladc.h
+    │   │   ├── libc.h
+    │   │   ├── main.c
+    │   │   ├── main_comms.h
+    │   │   ├── main_declarations.h
+    │   │   ├── obj
+    │   │   ├── power_saving.h
+    │   │   ├── provision.h
+    │   │   ├── recover.py
+    │   │   ├── safety
+    │   │   │   ├── safety_body.h
+    │   │   │   ├── safety_chrysler.h
+    │   │   │   ├── safety_defaults.h
+    │   │   │   ├── safety_elm327.h
+    │   │   │   ├── safety_ford.h
+    │   │   │   ├── safety_gm.h
+    │   │   │   ├── safety_honda.h
+    │   │   │   ├── safety_hyundai.h
+    │   │   │   ├── safety_hyundai_canfd.h
+    │   │   │   ├── safety_hyundai_common.h
+    │   │   │   ├── safety_mazda.h
+    │   │   │   ├── safety_nissan.h
+    │   │   │   ├── safety_subaru.h
+    │   │   │   ├── safety_subaru_preglobal.h
+    │   │   │   ├── safety_tesla.h
+    │   │   │   ├── safety_toyota.h
+    │   │   │   ├── safety_volkswagen_common.h
+    │   │   │   ├── safety_volkswagen_mqb.h
+    │   │   │   └── safety_volkswagen_pq.h
+    │   │   ├── safety.h
+    │   │   ├── safety_declarations.h
+    │   │   ├── stm32f4
+    │   │   │   ├── board.h
+    │   │   │   ├── clock.h
+    │   │   │   ├── inc
+    │   │   │   │   ├── cmsis_compiler.h
+    │   │   │   │   ├── cmsis_gcc.h
+    │   │   │   │   ├── cmsis_version.h
+    │   │   │   │   ├── core_cm4.h
+    │   │   │   │   ├── mpu_armv7.h
+    │   │   │   │   ├── stm32f413xx.h
+    │   │   │   │   ├── stm32f4xx.h
+    │   │   │   │   ├── stm32f4xx_hal_def.h
+    │   │   │   │   ├── stm32f4xx_hal_gpio_ex.h
+    │   │   │   │   └── system_stm32f4xx.h
+    │   │   │   ├── interrupt_handlers.h
+    │   │   │   ├── lladc.h
+    │   │   │   ├── llbxcan.h
+    │   │   │   ├── llfan.h
+    │   │   │   ├── llflash.h
+    │   │   │   ├── llspi.h
+    │   │   │   ├── lluart.h
+    │   │   │   ├── llusb.h
+    │   │   │   ├── peripherals.h
+    │   │   │   ├── startup_stm32f413xx.s
+    │   │   │   ├── stm32f4_config.h
+    │   │   │   └── stm32f4_flash.ld
+    │   │   ├── stm32h7
+    │   │   │   ├── board.h
+    │   │   │   ├── clock.h
+    │   │   │   ├── inc
+    │   │   │   │   ├── cmsis_compiler.h
+    │   │   │   │   ├── cmsis_gcc.h
+    │   │   │   │   ├── cmsis_version.h
+    │   │   │   │   ├── core_cm7.h
+    │   │   │   │   ├── mpu_armv7.h
+    │   │   │   │   ├── stm32h725xx.h
+    │   │   │   │   ├── stm32h735xx.h
+    │   │   │   │   ├── stm32h7xx.h
+    │   │   │   │   ├── stm32h7xx_hal_def.h
+    │   │   │   │   ├── stm32h7xx_hal_gpio_ex.h
+    │   │   │   │   └── system_stm32h7xx.h
+    │   │   │   ├── interrupt_handlers.h
+    │   │   │   ├── lladc.h
+    │   │   │   ├── lldac.h
+    │   │   │   ├── llfan.h
+    │   │   │   ├── llfdcan.h
+    │   │   │   ├── llflash.h
+    │   │   │   ├── lli2c.h
+    │   │   │   ├── llspi.h
+    │   │   │   ├── lluart.h
+    │   │   │   ├── llusb.h
+    │   │   │   ├── peripherals.h
+    │   │   │   ├── startup_stm32h7x5xx.s
+    │   │   │   ├── stm32h7_config.h
+    │   │   │   └── stm32h7x5_flash.ld
+    │   │   └── utils.h
+    │   ├── certs
+    │   │   ├── debug
+    │   │   ├── debug.pub
+    │   │   └── release.pub
+    │   ├── crypto
+    │   │   ├── hash-internal.h
+    │   │   ├── rsa.c
+    │   │   ├── rsa.h
+    │   │   ├── sha.c
+    │   │   ├── sha.h
+    │   │   └── sign.py
+    │   ├── docs
+    │   │   ├── CANPacket_structure.png
+    │   │   └── USB_packet_structure.png
+    │   ├── drivers
+    │   │   ├── linux
+    │   │   │   ├── Makefile
+    │   │   │   ├── README.md
+    │   │   │   ├── dkms.conf
+    │   │   │   ├── panda.c
+    │   │   │   └── test
+    │   │   │       ├── Makefile
+    │   │   │       ├── main.c
+    │   │   │       └── run.sh
+    │   │   └── spi
+    │   │       ├── Makefile
+    │   │       ├── load.sh
+    │   │       ├── patch
+    │   │       ├── pull-src.sh
+    │   │       ├── spi_panda.h
+    │   │       └── spidev_panda.c
+    │   ├── examples
+    │   │   ├── __init__.py
+    │   │   ├── can_bit_transition.md
+    │   │   ├── can_bit_transition.py
+    │   │   ├── can_logger.py
+    │   │   ├── can_unique.md
+    │   │   ├── can_unique.py
+    │   │   ├── query_fw_versions.py
+    │   │   ├── query_vin_and_stats.py
+    │   │   └── tesla_tester.py
+    │   ├── mypy.ini
+    │   ├── panda.png
+    │   ├── pyproject.toml
+    │   ├── python
+    │   │   ├── __init__.py
+    │   │   ├── base.py
+    │   │   ├── canhandle.py
+    │   │   ├── ccp.py
+    │   │   ├── constants.py
+    │   │   ├── dfu.py
+    │   │   ├── isotp.py
+    │   │   ├── serial.py
+    │   │   ├── spi.py
+    │   │   ├── uds.py
+    │   │   ├── usb.py
+    │   │   └── xcp.py
+    │   ├── release
+    │   │   └── make_release.sh
+    │   ├── requirements.txt
+    │   ├── setup.cfg
+    │   ├── setup.py
+    │   └── tests
+    │       ├── __init__.py
+    │       ├── benchmark.py
+    │       ├── black_white_loopback_test.py
+    │       ├── black_white_relay_endurance.py
+    │       ├── black_white_relay_test.py
+    │       ├── bulk_write_test.py
+    │       ├── can_printer.py
+    │       ├── canfd
+    │       │   └── test_canfd.py
+    │       ├── check_fw_size.py
+    │       ├── ci_shell.sh
+    │       ├── debug_console.py
+    │       ├── development
+    │       │   └── register_hashmap_spread.py
+    │       ├── echo.py
+    │       ├── elm_car_simulator.py
+    │       ├── elm_throughput.py
+    │       ├── fan
+    │       │   ├── fan_test.py
+    │       │   └── fan_tuning.py
+    │       ├── get_version.py
+    │       ├── health_test.py
+    │       ├── hitl
+    │       │   ├── 1_program.py
+    │       │   ├── 2_health.py
+    │       │   ├── 3_usb_to_can.py
+    │       │   ├── 4_can_loopback.py
+    │       │   ├── 5_spi.py
+    │       │   ├── 6_safety.py
+    │       │   ├── 7_internal.py
+    │       │   ├── 8_misc.py
+    │       │   ├── 9_harness.py
+    │       │   ├── __init__.py
+    │       │   ├── conftest.py
+    │       │   ├── helpers.py
+    │       │   ├── known_bootstub
+    │       │   │   ├── bootstub.panda_h7.bin
+    │       │   │   ├── bootstub_f4_first_dos_production.panda.bin
+    │       │   │   └── bootstub_f4_only_bcd.panda.bin
+    │       │   ├── reset_jungles.py
+    │       │   ├── run_parallel_tests.sh
+    │       │   └── run_serial_tests.sh
+    │       ├── ir_test.py
+    │       ├── libpanda
+    │       │   ├── SConscript
+    │       │   ├── libpanda_py.py
+    │       │   ├── panda.c
+    │       │   ├── safety_helpers.h
+    │       │   └── safety_helpers.py
+    │       ├── libs
+    │       │   └── resetter.py
+    │       ├── loopback_test.py
+    │       ├── message_drop_test.py
+    │       ├── misra
+    │       │   ├── checkers.txt
+    │       │   ├── coverage_table
+    │       │   ├── install.sh
+    │       │   ├── suppressions.txt
+    │       │   ├── test_misra.sh
+    │       │   └── test_mutation.py
+    │       ├── read_flash_spi.py
+    │       ├── read_st_flash.sh
+    │       ├── read_winusb_descriptors.py
+    │       ├── reflash_internal_panda.py
+    │       ├── relay_test.py
+    │       ├── restore_flash_spi.py
+    │       ├── safety
+    │       │   ├── __init__.py
+    │       │   ├── common.py
+    │       │   ├── hyundai_common.py
+    │       │   ├── test.sh
+    │       │   ├── test_body.py
+    │       │   ├── test_chrysler.py
+    │       │   ├── test_defaults.py
+    │       │   ├── test_elm327.py
+    │       │   ├── test_ford.py
+    │       │   ├── test_gm.py
+    │       │   ├── test_honda.py
+    │       │   ├── test_hyundai.py
+    │       │   ├── test_hyundai_canfd.py
+    │       │   ├── test_mazda.py
+    │       │   ├── test_nissan.py
+    │       │   ├── test_subaru.py
+    │       │   ├── test_subaru_preglobal.py
+    │       │   ├── test_tesla.py
+    │       │   ├── test_toyota.py
+    │       │   ├── test_volkswagen_mqb.py
+    │       │   └── test_volkswagen_pq.py
+    │       ├── safety_replay
+    │       │   ├── __init__.py
+    │       │   ├── helpers.py
+    │       │   └── replay_drive.py
+    │       ├── setup_device_ci.sh
+    │       ├── som
+    │       │   ├── on-device.py
+    │       │   └── test_bootkick.py
+    │       ├── som_debug.sh
+    │       ├── spam_can.py
+    │       ├── standalone_test.py
+    │       ├── test_rsa.c
+    │       └── usbprotocol
+    │           ├── test.sh
+    │           ├── test_comms.py
+    │           └── test_pandalib.py
+    ├── poetry.lock
+    ├── pyproject.toml
+    ├── rednose
+    ├── rednose_repo
+    │   ├── Dockerfile
+    │   ├── LICENSE
+    │   ├── README.md
+    │   ├── SConstruct
+    │   ├── examples
+    │   │   ├── SConscript
+    │   │   ├── __init__.py
+    │   │   ├── kinematic_kf.png
+    │   │   ├── kinematic_kf.py
+    │   │   ├── live_kf.py
+    │   │   ├── test_compare.py
+    │   │   └── test_kinematic_kf.py
+    │   ├── pyproject.toml
+    │   ├── rednose
+    │   │   ├── SConscript
+    │   │   ├── __init__.py
+    │   │   ├── helpers
+    │   │   │   ├── __init__.py
+    │   │   │   ├── chi2_lookup.py
+    │   │   │   ├── chi2_lookup_table.npy
+    │   │   │   ├── ekf.h
+    │   │   │   ├── ekf_load.cc
+    │   │   │   ├── ekf_load.h
+    │   │   │   ├── ekf_sym.cc
+    │   │   │   ├── ekf_sym.h
+    │   │   │   ├── ekf_sym.py
+    │   │   │   ├── ekf_sym_pyx.pyx
+    │   │   │   ├── kalmanfilter.py
+    │   │   │   └── sympy_helpers.py
+    │   │   ├── logger
+    │   │   │   └── logger.h
+    │   │   └── templates
+    │   │       ├── compute_pos.c
+    │   │       ├── ekf_c.c
+    │   │       └── feature_handler.c
+    │   ├── requirements.txt
+    │   ├── setup.py
+    │   └── site_scons
+    │       └── site_tools
+    │           ├── cython.py
+    │           └── rednose_filter.py
+    ├── reference_files
+    │   ├── carstate_known_good.txt
+    │   └── hyundai_canfd_known_good.txt
+    ├── release
+    │   ├── check-dirty.sh
+    │   ├── check-submodules.sh
+    │   ├── identity.sh
+    │   └── release_files.py
+    ├── scripts
+    │   ├── __init__.py
+    │   ├── apply-pr.sh
+    │   ├── cell.sh
+    │   ├── checkout-pr.sh
+    │   ├── code_stats.py
+    │   ├── count_cars.py
+    │   ├── disable-powersave.py
+    │   ├── launch_corolla.sh
+    │   ├── pyqt_demo.py
+    │   ├── pyupgrade.sh
+    │   ├── retry.sh
+    │   ├── stop_updater.sh
+    │   ├── update_now.sh
+    │   ├── waste.c
+    │   └── waste.py
+    ├── selfdrive
+    │   ├── SConscript
+    │   ├── __init__.py
+    │   ├── assets
+    │   │   ├── assets.qrc
+    │   │   ├── body
+    │   │   │   ├── awake.gif
+    │   │   │   └── sleep.gif
+    │   │   ├── compress-images.sh
+    │   │   ├── fonts
+    │   │   │   ├── Inter-Black.ttf
+    │   │   │   ├── Inter-Bold.ttf
+    │   │   │   ├── Inter-ExtraBold.ttf
+    │   │   │   ├── Inter-ExtraLight.ttf
+    │   │   │   ├── Inter-Light.ttf
+    │   │   │   ├── Inter-Medium.ttf
+    │   │   │   ├── Inter-Regular.ttf
+    │   │   │   ├── Inter-SemiBold.ttf
+    │   │   │   ├── Inter-Thin.ttf
+    │   │   │   └── JetBrainsMono-Medium.ttf
+    │   │   ├── icons
+    │   │   │   └── close.svg
+    │   │   ├── images
+    │   │   │   ├── button_flag.png
+    │   │   │   ├── button_home.png
+    │   │   │   ├── button_settings.png
+    │   │   │   └── triangle.svg
+    │   │   ├── img_chffr_wheel.png
+    │   │   ├── img_circled_check.svg
+    │   │   ├── img_circled_slash.svg
+    │   │   ├── img_continue_triangle.svg
+    │   │   ├── img_couch.svg
+    │   │   ├── img_driver_face.png
+    │   │   ├── img_driver_face_static.png
+    │   │   ├── img_experimental.svg
+    │   │   ├── img_experimental_grey.svg
+    │   │   ├── img_experimental_white.svg
+    │   │   ├── img_eye_closed.svg
+    │   │   ├── img_eye_open.svg
+    │   │   ├── img_map.png
+    │   │   ├── img_spinner_comma.png
+    │   │   ├── img_spinner_track.png
+    │   │   ├── navigation
+    │   │   │   ├── default_marker.svg
+    │   │   │   ├── direction_arrive.png
+    │   │   │   ├── direction_arrive_left.png
+    │   │   │   ├── direction_arrive_right.png
+    │   │   │   ├── direction_arrive_straight.png
+    │   │   │   ├── direction_close.png
+    │   │   │   ├── direction_continue.png
+    │   │   │   ├── direction_continue_left.png
+    │   │   │   ├── direction_continue_right.png
+    │   │   │   ├── direction_continue_slight_left.png
+    │   │   │   ├── direction_continue_slight_right.png
+    │   │   │   ├── direction_continue_straight.png
+    │   │   │   ├── direction_continue_uturn.png
+    │   │   │   ├── direction_depart.png
+    │   │   │   ├── direction_depart_left.png
+    │   │   │   ├── direction_depart_right.png
+    │   │   │   ├── direction_depart_straight.png
+    │   │   │   ├── direction_end_of_road_left.png
+    │   │   │   ├── direction_end_of_road_right.png
+    │   │   │   ├── direction_flag.png
+    │   │   │   ├── direction_fork.png
+    │   │   │   ├── direction_fork_left.png
+    │   │   │   ├── direction_fork_right.png
+    │   │   │   ├── direction_fork_slight_left.png
+    │   │   │   ├── direction_fork_slight_right.png
+    │   │   │   ├── direction_fork_straight.png
+    │   │   │   ├── direction_invalid.png
+    │   │   │   ├── direction_invalid_left.png
+    │   │   │   ├── direction_invalid_right.png
+    │   │   │   ├── direction_invalid_slight_left.png
+    │   │   │   ├── direction_invalid_slight_right.png
+    │   │   │   ├── direction_invalid_straight.png
+    │   │   │   ├── direction_invalid_uturn.png
+    │   │   │   ├── direction_merge_left.png
+    │   │   │   ├── direction_merge_right.png
+    │   │   │   ├── direction_merge_slight_left.png
+    │   │   │   ├── direction_merge_slight_right.png
+    │   │   │   ├── direction_merge_straight.png
+    │   │   │   ├── direction_new_name_left.png
+    │   │   │   ├── direction_new_name_right.png
+    │   │   │   ├── direction_new_name_sharp_left.png
+    │   │   │   ├── direction_new_name_sharp_right.png
+    │   │   │   ├── direction_new_name_slight_left.png
+    │   │   │   ├── direction_new_name_slight_right.png
+    │   │   │   ├── direction_new_name_straight.png
+    │   │   │   ├── direction_notification_left.png
+    │   │   │   ├── direction_notification_right.png
+    │   │   │   ├── direction_notification_sharp_left.png
+    │   │   │   ├── direction_notification_sharp_right.png
+    │   │   │   ├── direction_notification_slight_left.png
+    │   │   │   ├── direction_notification_slight_right.png
+    │   │   │   ├── direction_notification_straight.png
+    │   │   │   ├── direction_off_ramp_left.png
+    │   │   │   ├── direction_off_ramp_right.png
+    │   │   │   ├── direction_off_ramp_slight_left.png
+    │   │   │   ├── direction_off_ramp_slight_right.png
+    │   │   │   ├── direction_on_ramp_left.png
+    │   │   │   ├── direction_on_ramp_right.png
+    │   │   │   ├── direction_on_ramp_sharp_left.png
+    │   │   │   ├── direction_on_ramp_sharp_right.png
+    │   │   │   ├── direction_on_ramp_slight_left.png
+    │   │   │   ├── direction_on_ramp_slight_right.png
+    │   │   │   ├── direction_on_ramp_straight.png
+    │   │   │   ├── direction_rotary.png
+    │   │   │   ├── direction_rotary_left.png
+    │   │   │   ├── direction_rotary_right.png
+    │   │   │   ├── direction_rotary_sharp_left.png
+    │   │   │   ├── direction_rotary_sharp_right.png
+    │   │   │   ├── direction_rotary_slight_left.png
+    │   │   │   ├── direction_rotary_slight_right.png
+    │   │   │   ├── direction_rotary_straight.png
+    │   │   │   ├── direction_roundabout.png
+    │   │   │   ├── direction_roundabout_left.png
+    │   │   │   ├── direction_roundabout_right.png
+    │   │   │   ├── direction_roundabout_sharp_left.png
+    │   │   │   ├── direction_roundabout_sharp_right.png
+    │   │   │   ├── direction_roundabout_slight_left.png
+    │   │   │   ├── direction_roundabout_slight_right.png
+    │   │   │   ├── direction_roundabout_straight.png
+    │   │   │   ├── direction_turn_left.png
+    │   │   │   ├── direction_turn_left_inactive.png
+    │   │   │   ├── direction_turn_right.png
+    │   │   │   ├── direction_turn_right_inactive.png
+    │   │   │   ├── direction_turn_sharp_left.png
+    │   │   │   ├── direction_turn_sharp_right.png
+    │   │   │   ├── direction_turn_slight_left.png
+    │   │   │   ├── direction_turn_slight_left_inactive.png
+    │   │   │   ├── direction_turn_slight_right.png
+    │   │   │   ├── direction_turn_slight_right_inactive.png
+    │   │   │   ├── direction_turn_straight.png
+    │   │   │   ├── direction_turn_straight_inactive.png
+    │   │   │   ├── direction_turn_uturn.png
+    │   │   │   ├── direction_updown.png
+    │   │   │   ├── home.png
+    │   │   │   ├── home.svg
+    │   │   │   ├── home_inactive.png
+    │   │   │   ├── icon_directions.svg
+    │   │   │   ├── icon_directions_outlined.svg
+    │   │   │   ├── icon_favorite.svg
+    │   │   │   ├── icon_home.svg
+    │   │   │   ├── icon_recent.svg
+    │   │   │   ├── icon_settings.svg
+    │   │   │   ├── icon_work.svg
+    │   │   │   ├── work.png
+    │   │   │   ├── work.svg
+    │   │   │   └── work_inactive.png
+    │   │   ├── offroad
+    │   │   │   ├── fcc.html
+    │   │   │   ├── icon_calibration.png
+    │   │   │   ├── icon_checkmark.svg
+    │   │   │   ├── icon_chevron_right.png
+    │   │   │   ├── icon_close.svg
+    │   │   │   ├── icon_disengage_on_accelerator.svg
+    │   │   │   ├── icon_lock_closed.svg
+    │   │   │   ├── icon_map.png
+    │   │   │   ├── icon_map_speed.png
+    │   │   │   ├── icon_menu.png
+    │   │   │   ├── icon_metric.png
+    │   │   │   ├── icon_minus.png
+    │   │   │   ├── icon_monitoring.png
+    │   │   │   ├── icon_network.png
+    │   │   │   ├── icon_openpilot.png
+    │   │   │   ├── icon_plus.png
+    │   │   │   ├── icon_road.png
+    │   │   │   ├── icon_settings.png
+    │   │   │   ├── icon_shell.png
+    │   │   │   ├── icon_speed_limit.png
+    │   │   │   ├── icon_warning.png
+    │   │   │   ├── icon_wifi_strength_full.svg
+    │   │   │   ├── icon_wifi_strength_high.svg
+    │   │   │   ├── icon_wifi_strength_low.svg
+    │   │   │   ├── icon_wifi_strength_medium.svg
+    │   │   │   ├── icon_wifi_uploading.svg
+    │   │   │   └── tc.html
+    │   │   ├── sounds
+    │   │   │   ├── disengage.wav
+    │   │   │   ├── engage.wav
+    │   │   │   ├── prompt.wav
+    │   │   │   ├── refuse.wav
+    │   │   │   ├── warning_immediate.wav
+    │   │   │   └── warning_soft.wav
+    │   │   ├── strip-svg-metadata.sh
+    │   │   └── training
+    │   │       ├── step0.png
+    │   │       ├── step1.png
+    │   │       ├── step10.png
+    │   │       ├── step11.png
+    │   │       ├── step12.png
+    │   │       ├── step13.png
+    │   │       ├── step14.png
+    │   │       ├── step15.png
+    │   │       ├── step16.png
+    │   │       ├── step17.png
+    │   │       ├── step18.png
+    │   │       ├── step2.png
+    │   │       ├── step3.png
+    │   │       ├── step4.png
+    │   │       ├── step5.png
+    │   │       ├── step6.png
+    │   │       ├── step7.png
+    │   │       ├── step8.png
+    │   │       └── step9.png
+    │   ├── car
+    │   │   ├── CARS_template.md
+    │   │   ├── README.md
+    │   │   ├── __init__.py
+    │   │   ├── body
+    │   │   │   ├── __init__.py
+    │   │   │   ├── bodycan.py
+    │   │   │   ├── carcontroller.py
+    │   │   │   ├── carstate.py
+    │   │   │   ├── fingerprints.py
+    │   │   │   ├── interface.py
+    │   │   │   ├── radar_interface.py
+    │   │   │   └── values.py
+    │   │   ├── car_helpers.py
+    │   │   ├── card.py
+    │   │   ├── chrysler
+    │   │   │   ├── __init__.py
+    │   │   │   ├── carcontroller.py
+    │   │   │   ├── carstate.py
+    │   │   │   ├── chryslercan.py
+    │   │   │   ├── fingerprints.py
+    │   │   │   ├── interface.py
+    │   │   │   ├── radar_interface.py
+    │   │   │   └── values.py
+    │   │   ├── disable_ecu.py
+    │   │   ├── docs.py
+    │   │   ├── docs_definitions.py
+    │   │   ├── ecu_addrs.py
+    │   │   ├── fingerprints.py
+    │   │   ├── ford
+    │   │   │   ├── __init__.py
+    │   │   │   ├── carcontroller.py
+    │   │   │   ├── carstate.py
+    │   │   │   ├── fingerprints.py
+    │   │   │   ├── fordcan.py
+    │   │   │   ├── interface.py
+    │   │   │   ├── radar_interface.py
+    │   │   │   ├── tests
+    │   │   │   │   ├── __init__.py
+    │   │   │   │   ├── print_platform_codes.py
+    │   │   │   │   └── test_ford.py
+    │   │   │   └── values.py
+    │   │   ├── fw_query_definitions.py
+    │   │   ├── fw_versions.py
+    │   │   ├── gm
+    │   │   │   ├── __init__.py
+    │   │   │   ├── carcontroller.py
+    │   │   │   ├── carstate.py
+    │   │   │   ├── fingerprints.py
+    │   │   │   ├── gmcan.py
+    │   │   │   ├── interface.py
+    │   │   │   ├── radar_interface.py
+    │   │   │   ├── tests
+    │   │   │   │   ├── __init__.py
+    │   │   │   │   └── test_gm.py
+    │   │   │   └── values.py
+    │   │   ├── honda
+    │   │   │   ├── __init__.py
+    │   │   │   ├── carcontroller.py
+    │   │   │   ├── carstate.py
+    │   │   │   ├── fingerprints.py
+    │   │   │   ├── hondacan.py
+    │   │   │   ├── interface.py
+    │   │   │   ├── radar_interface.py
+    │   │   │   ├── tests
+    │   │   │   │   ├── __init__.py
+    │   │   │   │   └── test_honda.py
+    │   │   │   └── values.py
+    │   │   ├── hyundai
+    │   │   │   ├── __init__.py
+    │   │   │   ├── carcontroller.py
+    │   │   │   ├── carstate.py
+    │   │   │   ├── enable_radar_tracks.py
+    │   │   │   ├── fingerprinting.py
+    │   │   │   ├── fingerprints.py
+    │   │   │   ├── hkg_additions.py
+    │   │   │   ├── hyundaican.py
+    │   │   │   ├── hyundaicanfd.py
+    │   │   │   ├── interface.py
+    │   │   │   ├── radar_interface.py
+    │   │   │   ├── tests
+    │   │   │   │   ├── __init__.py
+    │   │   │   │   ├── print_platform_codes.py
+    │   │   │   │   └── test_hyundai.py
+    │   │   │   └── values.py
+    │   │   ├── interfaces.py
+    │   │   ├── isotp_parallel_query.py
+    │   │   ├── mazda
+    │   │   │   ├── __init__.py
+    │   │   │   ├── carcontroller.py
+    │   │   │   ├── carstate.py
+    │   │   │   ├── fingerprints.py
+    │   │   │   ├── interface.py
+    │   │   │   ├── mazdacan.py
+    │   │   │   ├── radar_interface.py
+    │   │   │   └── values.py
+    │   │   ├── mock
+    │   │   │   ├── __init__.py
+    │   │   │   ├── carcontroller.py
+    │   │   │   ├── carstate.py
+    │   │   │   ├── interface.py
+    │   │   │   ├── radar_interface.py
+    │   │   │   └── values.py
+    │   │   ├── nissan
+    │   │   │   ├── __init__.py
+    │   │   │   ├── carcontroller.py
+    │   │   │   ├── carstate.py
+    │   │   │   ├── fingerprints.py
+    │   │   │   ├── interface.py
+    │   │   │   ├── nissancan.py
+    │   │   │   ├── radar_interface.py
+    │   │   │   └── values.py
+    │   │   ├── secoc.py
+    │   │   ├── subaru
+    │   │   │   ├── __init__.py
+    │   │   │   ├── carcontroller.py
+    │   │   │   ├── carstate.py
+    │   │   │   ├── fingerprints.py
+    │   │   │   ├── interface.py
+    │   │   │   ├── radar_interface.py
+    │   │   │   ├── subarucan.py
+    │   │   │   ├── tests
+    │   │   │   │   └── test_subaru.py
+    │   │   │   └── values.py
+    │   │   ├── tesla
+    │   │   │   ├── __init__.py
+    │   │   │   ├── carcontroller.py
+    │   │   │   ├── carstate.py
+    │   │   │   ├── fingerprints.py
+    │   │   │   ├── interface.py
+    │   │   │   ├── radar_interface.py
+    │   │   │   ├── teslacan.py
+    │   │   │   └── values.py
+    │   │   ├── tests
+    │   │   │   ├── __init__.py
+    │   │   │   ├── big_cars_test.sh
+    │   │   │   ├── routes.py
+    │   │   │   ├── test_can_fingerprint.py
+    │   │   │   ├── test_car_interfaces.py
+    │   │   │   ├── test_docs.py
+    │   │   │   ├── test_fw_fingerprint.py
+    │   │   │   ├── test_lateral_limits.py
+    │   │   │   ├── test_models.py
+    │   │   │   ├── test_models_segs.txt
+    │   │   │   └── test_platform_configs.py
+    │   │   ├── torque_data
+    │   │   │   ├── lat_models
+    │   │   │   │   ├── ACURA_RDX_3G.json
+    │   │   │   │   ├── AUDI_A3_MK3.json
+    │   │   │   │   ├── AUDI_Q3_MK2.json
+    │   │   │   │   ├── BUICK_LACROSSE.json
+    │   │   │   │   ├── CHEVROLET_EQUINOX.json
+    │   │   │   │   ├── CHEVROLET_EQUINOX_CC.json
+    │   │   │   │   ├── CHEVROLET_SILVERADO.json
+    │   │   │   │   ├── CHEVROLET_SUBURBAN.json
+    │   │   │   │   ├── CHEVROLET_SUBURBAN_CC.json
+    │   │   │   │   ├── CHEVROLET_TRAILBLAZER.json
+    │   │   │   │   ├── CHEVROLET_VOLT.json
+    │   │   │   │   ├── CHRYSLER_PACIFICA_2017_HYBRID.json
+    │   │   │   │   ├── CHRYSLER_PACIFICA_2018_HYBRID.json
+    │   │   │   │   ├── CHRYSLER_PACIFICA_2019_HYBRID.json
+    │   │   │   │   ├── CHRYSLER_PACIFICA_2020.json
+    │   │   │   │   ├── GENESIS_G70.json
+    │   │   │   │   ├── GENESIS_GV60_EV_1ST_GEN.json
+    │   │   │   │   ├── GENESIS_GV70_1ST_GEN.json
+    │   │   │   │   ├── GMC_ACADIA.json
+    │   │   │   │   ├── HONDA_ACCORD.json
+    │   │   │   │   ├── HONDA_CIVIC.json
+    │   │   │   │   ├── HONDA_CIVIC_2022.json
+    │   │   │   │   ├── HONDA_CIVIC_BOSCH.json
+    │   │   │   │   ├── HONDA_CLARITY.json
+    │   │   │   │   ├── HONDA_CRV_5G.json
+    │   │   │   │   ├── HONDA_CRV_HYBRID.json
+    │   │   │   │   ├── HONDA_HRV.json
+    │   │   │   │   ├── HONDA_INSIGHT.json
+    │   │   │   │   ├── HONDA_ODYSSEY.json
+    │   │   │   │   ├── HONDA_PILOT.json
+    │   │   │   │   ├── HONDA_RIDGELINE.json
+    │   │   │   │   ├── HYUNDAI_ELANTRA_2021.json
+    │   │   │   │   ├── HYUNDAI_ELANTRA_HEV_2021.json
+    │   │   │   │   ├── HYUNDAI_GENESIS.json
+    │   │   │   │   ├── HYUNDAI_IONIQ_5.json
+    │   │   │   │   ├── HYUNDAI_IONIQ_EV_LTD.json
+    │   │   │   │   ├── HYUNDAI_IONIQ_PHEV.json
+    │   │   │   │   ├── HYUNDAI_KONA_EV.json
+    │   │   │   │   ├── HYUNDAI_KONA_EV_2022.json
+    │   │   │   │   ├── HYUNDAI_KONA_HEV.json
+    │   │   │   │   ├── HYUNDAI_PALISADE.json
+    │   │   │   │   ├── HYUNDAI_SANTA_FE.json
+    │   │   │   │   ├── HYUNDAI_SANTA_FE_2022.json
+    │   │   │   │   ├── HYUNDAI_SANTA_FE_HEV_2022.json
+    │   │   │   │   ├── HYUNDAI_SANTA_FE_PHEV_2022.json
+    │   │   │   │   ├── HYUNDAI_SONATA.json
+    │   │   │   │   ├── HYUNDAI_SONATA_HYBRID.json
+    │   │   │   │   ├── HYUNDAI_SONATA_LF.json
+    │   │   │   │   ├── HYUNDAI_TUCSON_4TH_GEN.json
+    │   │   │   │   ├── JEEP_GRAND_CHEROKEE.json
+    │   │   │   │   ├── JEEP_GRAND_CHEROKEE_2019.json
+    │   │   │   │   ├── KIA_CEED.json
+    │   │   │   │   ├── KIA_EV6.json
+    │   │   │   │   ├── KIA_K5_2021.json
+    │   │   │   │   ├── KIA_NIRO_EV.json
+    │   │   │   │   ├── KIA_NIRO_HEV_2021.json
+    │   │   │   │   ├── KIA_NIRO_HEV_2ND_GEN.json
+    │   │   │   │   ├── KIA_OPTIMA_G4_FL.json
+    │   │   │   │   ├── KIA_SELTOS.json
+    │   │   │   │   ├── KIA_SORENTO.json
+    │   │   │   │   ├── KIA_SORENTO_4TH_GEN.json
+    │   │   │   │   ├── KIA_SORENTO_HEV_4TH_GEN.json
+    │   │   │   │   ├── KIA_SPORTAGE_5TH_GEN.json
+    │   │   │   │   ├── KIA_STINGER.json
+    │   │   │   │   ├── KIA_STINGER_2022.json
+    │   │   │   │   ├── LEXUS_ES_TSS2.json
+    │   │   │   │   ├── LEXUS_IS.json
+    │   │   │   │   ├── LEXUS_NX.json
+    │   │   │   │   ├── LEXUS_NX_TSS2.json
+    │   │   │   │   ├── LEXUS_RX.json
+    │   │   │   │   ├── LEXUS_RX_TSS2.json
+    │   │   │   │   ├── MAZDA_3.json
+    │   │   │   │   ├── MAZDA_CX5_2022.json
+    │   │   │   │   ├── MAZDA_CX9 2021.json
+    │   │   │   │   ├── MAZDA_CX9.json
+    │   │   │   │   ├── RAM_1500_5TH_GEN.json
+    │   │   │   │   ├── RAM_HD_5TH_GEN.json
+    │   │   │   │   ├── SKODA_KAROQ_MK1.json
+    │   │   │   │   ├── SKODA_KODIAQ_MK1.json
+    │   │   │   │   ├── SKODA_OCTAVIA_MK3.json
+    │   │   │   │   ├── SKODA_SUPERB_MK3.json
+    │   │   │   │   ├── SUBARU_ASCENT.json
+    │   │   │   │   ├── SUBARU_FORESTER.json
+    │   │   │   │   ├── SUBARU_IMPREZA.json
+    │   │   │   │   ├── SUBARU_IMPREZA_2020.json
+    │   │   │   │   ├── SUBARU_LEGACY.json
+    │   │   │   │   ├── SUBARU_LEGACY_PREGLOBAL.json
+    │   │   │   │   ├── SUBARU_OUTBACK.json
+    │   │   │   │   ├── SUBARU_OUTBACK_PREGLOBAL.json
+    │   │   │   │   ├── TOYOTA_AVALON.json
+    │   │   │   │   ├── TOYOTA_AVALON_2019.json
+    │   │   │   │   ├── TOYOTA_AVALON_TSS2.json
+    │   │   │   │   ├── TOYOTA_CAMRY.json
+    │   │   │   │   ├── TOYOTA_CAMRY_TSS2.json
+    │   │   │   │   ├── TOYOTA_CHR.json
+    │   │   │   │   ├── TOYOTA_CHR_TSS2.json
+    │   │   │   │   ├── TOYOTA_COROLLA.json
+    │   │   │   │   ├── TOYOTA_COROLLA_TSS2.json
+    │   │   │   │   ├── TOYOTA_HIGHLANDER.json
+    │   │   │   │   ├── TOYOTA_HIGHLANDER_TSS2.json
+    │   │   │   │   ├── TOYOTA_MIRAI.json
+    │   │   │   │   ├── TOYOTA_PRIUS.json
+    │   │   │   │   ├── TOYOTA_PRIUS_2017_b'8965B47070x00x00x00x00x00x00'.json
+    │   │   │   │   ├── TOYOTA_PRIUS_TSS2.json
+    │   │   │   │   ├── TOYOTA_PRIUS_V.json
+    │   │   │   │   ├── TOYOTA_RAV4.json
+    │   │   │   │   ├── TOYOTA_RAV4H.json
+    │   │   │   │   ├── TOYOTA_RAV4_TSS2.json
+    │   │   │   │   ├── TOYOTA_RAV4_TSS2_2022.json
+    │   │   │   │   ├── TOYOTA_SIENNA.json
+    │   │   │   │   ├── VOLKSWAGEN_ARTEON_MK1.json
+    │   │   │   │   ├── VOLKSWAGEN_ATLAS_MK1.json
+    │   │   │   │   ├── VOLKSWAGEN_GOLF_MK7.json
+    │   │   │   │   ├── VOLKSWAGEN_JETTA_MK7.json
+    │   │   │   │   ├── VOLKSWAGEN_PASSAT_MK8.json
+    │   │   │   │   ├── VOLKSWAGEN_PASSAT_NMS.json
+    │   │   │   │   └── VOLKSWAGEN_TIGUAN_MK2.json
+    │   │   │   ├── neural_ff_weights.json
+    │   │   │   ├── override.toml
+    │   │   │   ├── params.toml
+    │   │   │   └── substitute.toml
+    │   │   ├── toyota
+    │   │   │   ├── __init__.py
+    │   │   │   ├── carcontroller.py
+    │   │   │   ├── carstate.py
+    │   │   │   ├── fingerprints.py
+    │   │   │   ├── interface.py
+    │   │   │   ├── radar_interface.py
+    │   │   │   ├── tests
+    │   │   │   │   ├── __init__.py
+    │   │   │   │   ├── print_platform_codes.py
+    │   │   │   │   └── test_toyota.py
+    │   │   │   ├── toyotacan.py
+    │   │   │   └── values.py
+    │   │   ├── values.py
+    │   │   ├── vin.py
+    │   │   └── volkswagen
+    │   │       ├── __init__.py
+    │   │       ├── carcontroller.py
+    │   │       ├── carstate.py
+    │   │       ├── fingerprints.py
+    │   │       ├── interface.py
+    │   │       ├── mqbcan.py
+    │   │       ├── pqcan.py
+    │   │       ├── radar_interface.py
+    │   │       ├── tests
+    │   │       │   └── test_volkswagen.py
+    │   │       └── values.py
+    │   ├── classic_modeld
+    │   │   ├── SConscript
+    │   │   ├── __init__.py
+    │   │   ├── classic_modeld
+    │   │   ├── classic_modeld.py
+    │   │   ├── constants.py
+    │   │   ├── dmonitoringmodeld.py
+    │   │   ├── fill_model_msg.py
+    │   │   ├── get_model_metadata.py
+    │   │   ├── libthneed.so
+    │   │   ├── models
+    │   │   │   ├── README.md
+    │   │   │   ├── __init__.py
+    │   │   │   ├── commonmodel.pxd
+    │   │   │   ├── commonmodel_pyx.cpp
+    │   │   │   ├── commonmodel_pyx.pxd
+    │   │   │   ├── commonmodel_pyx.pyx
+    │   │   │   ├── commonmodel_pyx.so
+    │   │   │   ├── dmonitoring_model.current
+    │   │   │   ├── dmonitoring_model_q.dlc
+    │   │   │   ├── navmodel_q.dlc
+    │   │   │   ├── supercombo.thneed
+    │   │   │   └── supercombo_metadata.pkl
+    │   │   ├── navmodeld.py
+    │   │   ├── parse_model_outputs.py
+    │   │   ├── runners
+    │   │   │   ├── __init__.py
+    │   │   │   ├── onnxmodel.py
+    │   │   │   ├── runmodel.pxd
+    │   │   │   ├── runmodel_pyx.cpp
+    │   │   │   ├── runmodel_pyx.pxd
+    │   │   │   ├── runmodel_pyx.pyx
+    │   │   │   ├── runmodel_pyx.so
+    │   │   │   ├── snpemodel.pxd
+    │   │   │   ├── snpemodel_pyx.cpp
+    │   │   │   ├── snpemodel_pyx.pyx
+    │   │   │   ├── snpemodel_pyx.so
+    │   │   │   ├── thneedmodel.pxd
+    │   │   │   ├── thneedmodel_pyx.cpp
+    │   │   │   ├── thneedmodel_pyx.pyx
+    │   │   │   └── thneedmodel_pyx.so
+    │   │   ├── thneed
+    │   │   │   └── __init__.py
+    │   │   └── transforms
+    │   │       ├── loadyuv.cl
+    │   │       ├── transform.cc
+    │   │       └── transform.cl
+    │   ├── controls
+    │   │   ├── __init__.py
+    │   │   ├── controlsd.py
+    │   │   ├── lib
+    │   │   │   ├── __init__.py
+    │   │   │   ├── alertmanager.py
+    │   │   │   ├── alerts_offroad.json
+    │   │   │   ├── desire_helper.py
+    │   │   │   ├── drive_helpers.py
+    │   │   │   ├── events.py
+    │   │   │   ├── latcontrol.py
+    │   │   │   ├── latcontrol_angle.py
+    │   │   │   ├── latcontrol_pid.py
+    │   │   │   ├── latcontrol_torque.py
+    │   │   │   ├── lateral_mpc_lib
+    │   │   │   │   ├── SConscript
+    │   │   │   │   ├── __init__.py
+    │   │   │   │   └── lat_mpc.py
+    │   │   │   ├── longcontrol.py
+    │   │   │   ├── longitudinal_mpc_lib
+    │   │   │   │   ├── SConscript
+    │   │   │   │   ├── __init__.py
+    │   │   │   │   └── long_mpc.py
+    │   │   │   ├── longitudinal_planner.py
+    │   │   │   ├── pid.py
+    │   │   │   ├── tests
+    │   │   │   │   ├── __init__.py
+    │   │   │   │   ├── test_alertmanager.py
+    │   │   │   │   ├── test_latcontrol.py
+    │   │   │   │   └── test_vehicle_model.py
+    │   │   │   └── vehicle_model.py
+    │   │   ├── plannerd.py
+    │   │   ├── radard.py
+    │   │   └── tests
+    │   │       ├── __init__.py
+    │   │       ├── test_alerts.py
+    │   │       ├── test_cruise_speed.py
+    │   │       ├── test_lateral_mpc.py
+    │   │       ├── test_leads.py
+    │   │       ├── test_startup.py
+    │   │       └── test_state_machine.py
+    │   ├── debug
+    │   │   ├── README.md
+    │   │   ├── __init__.py
+    │   │   ├── adb.sh
+    │   │   ├── can_print_changes.py
+    │   │   ├── can_printer.py
+    │   │   ├── can_table.py
+    │   │   ├── check_can_parser_performance.py
+    │   │   ├── check_freq.py
+    │   │   ├── check_lag.py
+    │   │   ├── check_timings.py
+    │   │   ├── clear_dtc.py
+    │   │   ├── count_events.py
+    │   │   ├── cpu_usage_stat.py
+    │   │   ├── cycle_alerts.py
+    │   │   ├── debug_fw_fingerprinting_offline.py
+    │   │   ├── dump.py
+    │   │   ├── dump_car_docs.py
+    │   │   ├── filter_log_message.py
+    │   │   ├── fingerprint_from_route.py
+    │   │   ├── format_fingerprints.py
+    │   │   ├── get_fingerprint.py
+    │   │   ├── hyundai_enable_radar_points.py
+    │   │   ├── internal
+    │   │   │   ├── __init__.py
+    │   │   │   ├── fuzz_fw_fingerprint.py
+    │   │   │   ├── measure_modeld_packet_drop.py
+    │   │   │   ├── measure_torque_time_to_max.py
+    │   │   │   └── qlog_size.py
+    │   │   ├── live_cpu_and_temp.py
+    │   │   ├── print_docs_diff.py
+    │   │   ├── print_flags.py
+    │   │   ├── read_dtc_status.py
+    │   │   ├── run_process_on_route.py
+    │   │   ├── set_car_params.py
+    │   │   ├── show_matching_cars.py
+    │   │   ├── test_fw_query_on_routes.py
+    │   │   ├── toyota_eps_factor.py
+    │   │   ├── uiview.py
+    │   │   └── vw_mqb_config.py
+    │   ├── frogpilot
+    │   │   ├── assets
+    │   │   │   ├── download_functions.py
+    │   │   │   ├── holiday_themes
+    │   │   │   │   ├── april_fools
+    │   │   │   │   │   ├── icons
+    │   │   │   │   │   │   ├── button_flag.png
+    │   │   │   │   │   │   ├── button_home.png
+    │   │   │   │   │   │   └── button_settings.png
+    │   │   │   │   │   └── sounds
+    │   │   │   │   │       ├── disengage.wav
+    │   │   │   │   │       ├── engage.wav
+    │   │   │   │   │       └── prompt.wav
+    │   │   │   │   ├── christmas_week
+    │   │   │   │   │   ├── colors
+    │   │   │   │   │   │   └── colors.json
+    │   │   │   │   │   ├── icons
+    │   │   │   │   │   │   ├── button_flag.png
+    │   │   │   │   │   │   ├── button_home.png
+    │   │   │   │   │   │   └── button_settings.png
+    │   │   │   │   │   ├── signals
+    │   │   │   │   │   │   ├── traditional_100
+    │   │   │   │   │   │   ├── turn_signal_1.png
+    │   │   │   │   │   │   ├── turn_signal_2.png
+    │   │   │   │   │   │   ├── turn_signal_3.png
+    │   │   │   │   │   │   ├── turn_signal_4.png
+    │   │   │   │   │   │   ├── turn_signal_5.png
+    │   │   │   │   │   │   ├── turn_signal_6.png
+    │   │   │   │   │   │   └── turn_signal_blindspot.png
+    │   │   │   │   │   ├── sounds
+    │   │   │   │   │   │   ├── disengage.wav
+    │   │   │   │   │   │   ├── engage.wav
+    │   │   │   │   │   │   └── startup.wav
+    │   │   │   │   │   └── steering_wheel
+    │   │   │   │   │       └── wheel.png
+    │   │   │   │   ├── cinco_de_mayo
+    │   │   │   │   │   ├── icons
+    │   │   │   │   │   │   ├── button_flag.png
+    │   │   │   │   │   │   ├── button_home.png
+    │   │   │   │   │   │   └── button_settings.png
+    │   │   │   │   │   └── sounds
+    │   │   │   │   │       └── engage.wav
+    │   │   │   │   ├── easter_week
+    │   │   │   │   │   ├── icons
+    │   │   │   │   │   │   ├── button_flag.png
+    │   │   │   │   │   │   ├── button_home.png
+    │   │   │   │   │   │   └── button_settings.png
+    │   │   │   │   │   ├── signals
+    │   │   │   │   │   │   ├── turn_signal_1.png
+    │   │   │   │   │   │   ├── turn_signal_1_red.png
+    │   │   │   │   │   │   ├── turn_signal_2.png
+    │   │   │   │   │   │   ├── turn_signal_3.png
+    │   │   │   │   │   │   └── turn_signal_4.png
+    │   │   │   │   │   └── sounds
+    │   │   │   │   │       ├── disengage.wav
+    │   │   │   │   │       └── engage.wav
+    │   │   │   │   ├── fourth_of_july
+    │   │   │   │   │   ├── icons
+    │   │   │   │   │   │   ├── button_flag.png
+    │   │   │   │   │   │   ├── button_home.png
+    │   │   │   │   │   │   └── button_settings.png
+    │   │   │   │   │   ├── signals
+    │   │   │   │   │   │   ├── turn_signal_1.png
+    │   │   │   │   │   │   ├── turn_signal_1_red.png
+    │   │   │   │   │   │   ├── turn_signal_2.png
+    │   │   │   │   │   │   ├── turn_signal_3.png
+    │   │   │   │   │   │   └── turn_signal_4.png
+    │   │   │   │   │   └── sounds
+    │   │   │   │   │       ├── disengage.wav
+    │   │   │   │   │       └── engage.wav
+    │   │   │   │   ├── halloween_week
+    │   │   │   │   │   ├── colors
+    │   │   │   │   │   │   └── colors.json
+    │   │   │   │   │   ├── icons
+    │   │   │   │   │   │   ├── button_flag.gif
+    │   │   │   │   │   │   ├── button_home.gif
+    │   │   │   │   │   │   └── button_settings.png
+    │   │   │   │   │   ├── signals
+    │   │   │   │   │   │   ├── traditional_25
+    │   │   │   │   │   │   └── turn_signal.gif
+    │   │   │   │   │   ├── sounds
+    │   │   │   │   │   │   ├── disengage.wav
+    │   │   │   │   │   │   ├── engage.wav
+    │   │   │   │   │   │   └── prompt_repeat.wav
+    │   │   │   │   │   └── steering_wheel
+    │   │   │   │   │       └── wheel.gif
+    │   │   │   │   ├── may_the_fourth
+    │   │   │   │   │   ├── icons
+    │   │   │   │   │   │   ├── aggressive.gif
+    │   │   │   │   │   │   ├── button_flag.png
+    │   │   │   │   │   │   ├── button_home.gif
+    │   │   │   │   │   │   ├── button_settings.png
+    │   │   │   │   │   │   ├── relaxed.gif
+    │   │   │   │   │   │   ├── standard.gif
+    │   │   │   │   │   │   ├── steering_wheel
+    │   │   │   │   │   │   │   └── frog.png
+    │   │   │   │   │   │   └── traffic.gif
+    │   │   │   │   │   ├── signals
+    │   │   │   │   │   │   ├── turn_signal_1.png
+    │   │   │   │   │   │   ├── turn_signal_1_red.png
+    │   │   │   │   │   │   ├── turn_signal_2.png
+    │   │   │   │   │   │   ├── turn_signal_3.png
+    │   │   │   │   │   │   └── turn_signal_4.png
+    │   │   │   │   │   └── sounds
+    │   │   │   │   │       ├── disengage.wav
+    │   │   │   │   │       └── engage.wav
+    │   │   │   │   ├── new_years
+    │   │   │   │   │   ├── icons
+    │   │   │   │   │   │   ├── button_flag.png
+    │   │   │   │   │   │   ├── button_home.png
+    │   │   │   │   │   │   └── button_settings.png
+    │   │   │   │   │   └── sounds
+    │   │   │   │   │       ├── disengage.wav
+    │   │   │   │   │       └── engage.wav
+    │   │   │   │   ├── st_patricks
+    │   │   │   │   │   ├── icons
+    │   │   │   │   │   │   ├── button_flag.png
+    │   │   │   │   │   │   ├── button_home.png
+    │   │   │   │   │   │   └── button_settings.png
+    │   │   │   │   │   └── sounds
+    │   │   │   │   │       ├── disengage.wav
+    │   │   │   │   │       └── engage.wav
+    │   │   │   │   ├── thanksgiving_week
+    │   │   │   │   │   ├── colors
+    │   │   │   │   │   │   └── colors.json
+    │   │   │   │   │   ├── icons
+    │   │   │   │   │   │   ├── button_flag.gif
+    │   │   │   │   │   │   ├── button_home.gif
+    │   │   │   │   │   │   └── button_settings.png
+    │   │   │   │   │   ├── sounds
+    │   │   │   │   │   │   ├── disengage.wav
+    │   │   │   │   │   │   └── engage.wav
+    │   │   │   │   │   └── steering_wheel
+    │   │   │   │   │       └── wheel.png
+    │   │   │   │   ├── valentines
+    │   │   │   │   │   ├── icons
+    │   │   │   │   │   │   ├── button_flag.png
+    │   │   │   │   │   │   ├── button_home.png
+    │   │   │   │   │   │   └── button_settings.png
+    │   │   │   │   │   └── sounds
+    │   │   │   │   │       ├── disengage.wav
+    │   │   │   │   │       └── engage.wav
+    │   │   │   │   └── world_frog_day
+    │   │   │   │       ├── colors
+    │   │   │   │       │   └── colors.json
+    │   │   │   │       ├── icons
+    │   │   │   │       │   ├── button_flag.png
+    │   │   │   │       │   ├── button_home.gif
+    │   │   │   │       │   └── button_settings.png
+    │   │   │   │       ├── signals
+    │   │   │   │       │   ├── traditional_100
+    │   │   │   │       │   ├── turn_signal_1.png
+    │   │   │   │       │   ├── turn_signal_2.png
+    │   │   │   │       │   ├── turn_signal_3.png
+    │   │   │   │       │   ├── turn_signal_4.png
+    │   │   │   │       │   ├── turn_signal_5.png
+    │   │   │   │       │   ├── turn_signal_6.png
+    │   │   │   │       │   └── turn_signal_blindspot.png
+    │   │   │   │       ├── sounds
+    │   │   │   │       │   ├── disengage.wav
+    │   │   │   │       │   └── engage.wav
+    │   │   │   │       └── steering_wheel
+    │   │   │   │           └── wheel.png
+    │   │   │   ├── model_manager.py
+    │   │   │   ├── other_images
+    │   │   │   │   ├── brake_pedal.png
+    │   │   │   │   ├── compass_inner.png
+    │   │   │   │   ├── curve_speed_left.png
+    │   │   │   │   ├── curve_speed_right.png
+    │   │   │   │   ├── dashboard_icon.png
+    │   │   │   │   ├── frogpilot_boot_logo.jpg
+    │   │   │   │   ├── frogpilot_boot_logo.png
+    │   │   │   │   ├── gas_pedal.png
+    │   │   │   │   ├── icon_wifi_uploading_disabled.svg
+    │   │   │   │   ├── navigation_icon.png
+    │   │   │   │   ├── offline_maps_icon.png
+    │   │   │   │   ├── original_bg.jpg
+    │   │   │   │   ├── stop_sign.png
+    │   │   │   │   └── upcoming_maps_icon.png
+    │   │   │   ├── random_events
+    │   │   │   │   ├── icons
+    │   │   │   │   │   └── button_home.gif
+    │   │   │   │   ├── sounds
+    │   │   │   │   │   ├── angry.wav
+    │   │   │   │   │   ├── continued.wav
+    │   │   │   │   │   ├── dejaVu.wav
+    │   │   │   │   │   ├── doc.wav
+    │   │   │   │   │   ├── fart.wav
+    │   │   │   │   │   ├── firefox.wav
+    │   │   │   │   │   ├── goat.wav
+    │   │   │   │   │   ├── hal9000.wav
+    │   │   │   │   │   ├── mail.wav
+    │   │   │   │   │   ├── nessie.wav
+    │   │   │   │   │   ├── noice.wav
+    │   │   │   │   │   ├── this_is_fine.wav
+    │   │   │   │   │   └── uwu.wav
+    │   │   │   │   └── steering_wheels
+    │   │   │   │       ├── firefox.gif
+    │   │   │   │       ├── goat.gif
+    │   │   │   │       ├── great_scott.gif
+    │   │   │   │       ├── this_is_fine.gif
+    │   │   │   │       ├── tree_fiddy.gif
+    │   │   │   │       └── weeb_wheel.gif
+    │   │   │   ├── stock_theme
+    │   │   │   │   ├── icons
+    │   │   │   │   │   ├── button_flag.png
+    │   │   │   │   │   ├── button_home.png
+    │   │   │   │   │   └── button_settings.png
+    │   │   │   │   └── steering_wheel
+    │   │   │   │       └── wheel.png
+    │   │   │   ├── theme_manager.py
+    │   │   │   └── toggle_icons
+    │   │   │       ├── frog.png
+    │   │   │       ├── icon_accessibility.png
+    │   │   │       ├── icon_advanced_device.png
+    │   │   │       ├── icon_advanced_lateral_tune.png
+    │   │   │       ├── icon_always_on_lateral.png
+    │   │   │       ├── icon_brake.png
+    │   │   │       ├── icon_calendar.png
+    │   │   │       ├── icon_conditional.png
+    │   │   │       ├── icon_customization.png
+    │   │   │       ├── icon_device.png
+    │   │   │       ├── icon_display.png
+    │   │   │       ├── icon_green_light.png
+    │   │   │       ├── icon_lane.png
+    │   │   │       ├── icon_lateral_tune.png
+    │   │   │       ├── icon_light.png
+    │   │   │       ├── icon_longitudinal_tune.png
+    │   │   │       ├── icon_map.png
+    │   │   │       ├── icon_message.png
+    │   │   │       ├── icon_model.png
+    │   │   │       ├── icon_mute.png
+    │   │   │       ├── icon_personality.png
+    │   │   │       ├── icon_rainbow.png
+    │   │   │       ├── icon_random.png
+    │   │   │       ├── icon_sound.png
+    │   │   │       ├── icon_speed_map.png
+    │   │   │       ├── icon_steering.png
+    │   │   │       ├── icon_system.png
+    │   │   │       ├── icon_vehicle.png
+    │   │   │       ├── icon_vtc.png
+    │   │   │       └── quality_of_life.png
+    │   │   ├── controls
+    │   │   │   ├── frogpilot_planner.py
+    │   │   │   └── lib
+    │   │   │       ├── conditional_experimental_mode.py
+    │   │   │       ├── frogpilot_acceleration.py
+    │   │   │       ├── frogpilot_events.py
+    │   │   │       ├── frogpilot_following.py
+    │   │   │       ├── frogpilot_tracking.py
+    │   │   │       ├── frogpilot_vcruise.py
+    │   │   │       ├── map_turn_speed_controller.py
+    │   │   │       └── speed_limit_controller.py
+    │   │   ├── fleetmanager
+    │   │   │   ├── README.md
+    │   │   │   ├── fleet_manager.py
+    │   │   │   ├── helpers.py
+    │   │   │   ├── static
+    │   │   │   │   ├── favicon.ico
+    │   │   │   │   └── frog.png
+    │   │   │   └── templates
+    │   │   │       ├── about.html
+    │   │   │       ├── addr.html
+    │   │   │       ├── addr_input.html
+    │   │   │       ├── amap_addr_input.html
+    │   │   │       ├── amap_key_input.html
+    │   │   │       ├── app_token_input.html
+    │   │   │       ├── error.html
+    │   │   │       ├── error_log.html
+    │   │   │       ├── error_logs.html
+    │   │   │       ├── footage.html
+    │   │   │       ├── gmap_key_input.html
+    │   │   │       ├── index.html
+    │   │   │       ├── layout.html
+    │   │   │       ├── nav_confirmation.html
+    │   │   │       ├── nav_directions.html
+    │   │   │       ├── nonprime.html
+    │   │   │       ├── preserved.html
+    │   │   │       ├── prime.html
+    │   │   │       ├── public_token_input.html
+    │   │   │       ├── route.html
+    │   │   │       ├── screenrecords.html
+    │   │   │       └── tools.html
+    │   │   ├── frogpilot_functions.py
+    │   │   ├── frogpilot_process.py
+    │   │   ├── frogpilot_utilities.py
+    │   │   ├── frogpilot_variables.py
+    │   │   ├── navigation
+    │   │   │   ├── mapd.py
+    │   │   │   ├── navigation_training
+    │   │   │   │   ├── both_keys_set.png
+    │   │   │   │   ├── no_keys_set.png
+    │   │   │   │   ├── public_key_set.png
+    │   │   │   │   └── setup_completed.png
+    │   │   │   └── ui
+    │   │   │       ├── maps_settings.cc
+    │   │   │       ├── maps_settings.h
+    │   │   │       ├── navigation_functions.cc
+    │   │   │       ├── navigation_functions.h
+    │   │   │       ├── primeless_settings.cc
+    │   │   │       └── primeless_settings.h
+    │   │   ├── params
+    │   │   ├── screenrecorder
+    │   │   │   ├── blocking_queue.h
+    │   │   │   ├── omx_encoder.cc
+    │   │   │   ├── omx_encoder.h
+    │   │   │   ├── openmax
+    │   │   │   │   └── include
+    │   │   │   │       ├── OMX_Audio.h
+    │   │   │   │       ├── OMX_Component.h
+    │   │   │   │       ├── OMX_ContentPipe.h
+    │   │   │   │       ├── OMX_Core.h
+    │   │   │   │       ├── OMX_CoreExt.h
+    │   │   │   │       ├── OMX_IVCommon.h
+    │   │   │   │       ├── OMX_Image.h
+    │   │   │   │       ├── OMX_Index.h
+    │   │   │   │       ├── OMX_IndexExt.h
+    │   │   │   │       ├── OMX_Other.h
+    │   │   │   │       ├── OMX_QCOMExtns.h
+    │   │   │   │       ├── OMX_Skype_VideoExtensions.h
+    │   │   │   │       ├── OMX_Types.h
+    │   │   │   │       ├── OMX_Video.h
+    │   │   │   │       └── OMX_VideoExt.h
+    │   │   │   ├── screenrecorder.cc
+    │   │   │   └── screenrecorder.h
+    │   │   └── ui
+    │   │       └── qt
+    │   │           ├── offroad
+    │   │           │   ├── data_settings.cc
+    │   │           │   ├── data_settings.h
+    │   │           │   ├── device_settings.cc
+    │   │           │   ├── device_settings.h
+    │   │           │   ├── frogpilot_settings.cc
+    │   │           │   ├── frogpilot_settings.h
+    │   │           │   ├── lateral_settings.cc
+    │   │           │   ├── lateral_settings.h
+    │   │           │   ├── longitudinal_settings.cc
+    │   │           │   ├── longitudinal_settings.h
+    │   │           │   ├── model_settings.cc
+    │   │           │   ├── model_settings.h
+    │   │           │   ├── sounds_settings.cc
+    │   │           │   ├── sounds_settings.h
+    │   │           │   ├── theme_settings.cc
+    │   │           │   ├── theme_settings.h
+    │   │           │   ├── utilities.cc
+    │   │           │   ├── utilities.h
+    │   │           │   ├── vehicle_settings.cc
+    │   │           │   ├── vehicle_settings.h
+    │   │           │   ├── visual_settings.cc
+    │   │           │   └── visual_settings.h
+    │   │           └── widgets
+    │   │               ├── drive_stats.cc
+    │   │               ├── drive_stats.h
+    │   │               ├── frogpilot_controls.cc
+    │   │               ├── frogpilot_controls.h
+    │   │               ├── model_reviewer.cc
+    │   │               └── model_reviewer.h
+    │   ├── locationd
+    │   │   ├── SConscript
+    │   │   ├── __init__.py
+    │   │   ├── calibrationd.py
+    │   │   ├── helpers.py
+    │   │   ├── locationd.cc
+    │   │   ├── locationd.h
+    │   │   ├── models
+    │   │   │   ├── __init__.py
+    │   │   │   ├── car_kf.py
+    │   │   │   ├── constants.py
+    │   │   │   ├── live_kf.cc
+    │   │   │   ├── live_kf.h
+    │   │   │   └── live_kf.py
+    │   │   ├── paramsd.py
+    │   │   ├── test
+    │   │   │   ├── __init__.py
+    │   │   │   ├── test_calibrationd.py
+    │   │   │   ├── test_locationd.py
+    │   │   │   └── test_locationd_scenarios.py
+    │   │   └── torqued.py
+    │   ├── modeld
+    │   │   ├── SConscript
+    │   │   ├── __init__.py
+    │   │   ├── constants.py
+    │   │   ├── dmonitoringmodeld.py
+    │   │   ├── fill_model_msg.py
+    │   │   ├── get_model_metadata.py
+    │   │   ├── modeld
+    │   │   ├── modeld.py
+    │   │   ├── models
+    │   │   │   ├── README.md
+    │   │   │   ├── __init__.py
+    │   │   │   ├── commonmodel.cc
+    │   │   │   ├── commonmodel.h
+    │   │   │   ├── commonmodel.pxd
+    │   │   │   ├── commonmodel_pyx.pxd
+    │   │   │   ├── commonmodel_pyx.pyx
+    │   │   │   ├── desired_curvature_supercombo_metadata.pkl
+    │   │   │   ├── dmonitoring_model.current
+    │   │   │   ├── dmonitoring_model.onnx
+    │   │   │   ├── dmonitoring_model_q.dlc
+    │   │   │   └── supercombo.onnx
+    │   │   ├── parse_model_outputs.py
+    │   │   ├── runners
+    │   │   │   ├── __init__.py
+    │   │   │   ├── onnxmodel.py
+    │   │   │   ├── ort_helpers.py
+    │   │   │   ├── run.h
+    │   │   │   ├── runmodel.h
+    │   │   │   ├── runmodel.pxd
+    │   │   │   ├── runmodel_pyx.pxd
+    │   │   │   ├── runmodel_pyx.pyx
+    │   │   │   ├── snpemodel.cc
+    │   │   │   ├── snpemodel.h
+    │   │   │   ├── snpemodel.pxd
+    │   │   │   ├── snpemodel_pyx.pyx
+    │   │   │   ├── thneedmodel.cc
+    │   │   │   ├── thneedmodel.h
+    │   │   │   ├── thneedmodel.pxd
+    │   │   │   └── thneedmodel_pyx.pyx
+    │   │   ├── tests
+    │   │   │   ├── __init__.py
+    │   │   │   ├── dmon_lag
+    │   │   │   │   └── repro.cc
+    │   │   │   ├── snpe_benchmark
+    │   │   │   │   ├── benchmark.cc
+    │   │   │   │   └── benchmark.sh
+    │   │   │   ├── test_modeld.py
+    │   │   │   ├── tf_test
+    │   │   │   │   ├── main.cc
+    │   │   │   │   └── pb_loader.py
+    │   │   │   └── timing
+    │   │   │       └── benchmark.py
+    │   │   ├── thneed
+    │   │   │   ├── README
+    │   │   │   ├── __init__.py
+    │   │   │   ├── serialize.cc
+    │   │   │   ├── thneed.h
+    │   │   │   ├── thneed_common.cc
+    │   │   │   ├── thneed_pc.cc
+    │   │   │   └── thneed_qcom2.cc
+    │   │   └── transforms
+    │   │       ├── loadyuv.cc
+    │   │       ├── loadyuv.cl
+    │   │       ├── loadyuv.h
+    │   │       ├── transform.cc
+    │   │       ├── transform.cl
+    │   │       └── transform.h
+    │   ├── monitoring
+    │   │   ├── README.md
+    │   │   ├── dmonitoringd.py
+    │   │   ├── helpers.py
+    │   │   └── test_monitoring.py
+    │   ├── navd
+    │   │   ├── README.md
+    │   │   ├── SConscript
+    │   │   ├── __init__.py
+    │   │   ├── helpers.py
+    │   │   ├── main.cc
+    │   │   ├── map_renderer.cc
+    │   │   ├── map_renderer.h
+    │   │   ├── map_renderer.py
+    │   │   ├── navd.py
+    │   │   ├── set_destination.py
+    │   │   ├── style.json
+    │   │   └── tests
+    │   │       ├── test_map_renderer.py
+    │   │       └── test_navd.py
+    │   ├── pandad
+    │   │   ├── SConscript
+    │   │   ├── __init__.py
+    │   │   ├── can_list_to_can_capnp.cc
+    │   │   ├── main.cc
+    │   │   ├── panda.cc
+    │   │   ├── panda.h
+    │   │   ├── panda_comms.cc
+    │   │   ├── panda_comms.h
+    │   │   ├── pandad.cc
+    │   │   ├── pandad.h
+    │   │   ├── pandad.py
+    │   │   ├── pandad_api_impl.pyx
+    │   │   ├── spi.cc
+    │   │   └── tests
+    │   │       ├── __init__.py
+    │   │       ├── bootstub.panda.bin
+    │   │       ├── bootstub.panda_h7.bin
+    │   │       ├── bootstub.panda_h7_spiv0.bin
+    │   │       ├── test_pandad.py
+    │   │       ├── test_pandad_loopback.py
+    │   │       ├── test_pandad_spi.py
+    │   │       └── test_pandad_usbprotocol.cc
+    │   ├── test
+    │   │   ├── __init__.py
+    │   │   ├── ci_shell.sh
+    │   │   ├── ciui.py
+    │   │   ├── cpp_harness.py
+    │   │   ├── docker_common.sh
+    │   │   ├── docker_tag_multiarch.sh
+    │   │   ├── fuzzy_generation.py
+    │   │   ├── helpers.py
+    │   │   ├── longitudinal_maneuvers
+    │   │   │   ├── __init__.py
+    │   │   │   ├── maneuver.py
+    │   │   │   ├── plant.py
+    │   │   │   └── test_longitudinal.py
+    │   │   ├── loop_until_fail.sh
+    │   │   ├── process_replay
+    │   │   │   ├── README.md
+    │   │   │   ├── __init__.py
+    │   │   │   ├── capture.py
+    │   │   │   ├── compare_logs.py
+    │   │   │   ├── imgproc_replay_ref_hash
+    │   │   │   ├── migration.py
+    │   │   │   ├── model_replay.py
+    │   │   │   ├── model_replay_ref_commit
+    │   │   │   ├── process_replay.py
+    │   │   │   ├── ref_commit
+    │   │   │   ├── regen.py
+    │   │   │   ├── regen_all.py
+    │   │   │   ├── test_fuzzy.py
+    │   │   │   ├── test_imgproc.py
+    │   │   │   ├── test_processes.py
+    │   │   │   ├── test_regen.py
+    │   │   │   └── vision_meta.py
+    │   │   ├── profiling
+    │   │   │   ├── __init__.py
+    │   │   │   ├── lib.py
+    │   │   │   └── profiler.py
+    │   │   ├── setup_device_ci.sh
+    │   │   ├── setup_vsound.sh
+    │   │   ├── setup_xvfb.sh
+    │   │   ├── test_onroad.py
+    │   │   ├── test_time_to_onroad.py
+    │   │   ├── test_updated.py
+    │   │   └── update_ci_routes.py
+    │   └── ui
+    │       ├── SConscript
+    │       ├── __init__.py
+    │       ├── installer
+    │       │   ├── continue_openpilot.sh
+    │       │   ├── installer.cc
+    │       │   └── installer.h
+    │       ├── main.cc
+    │       ├── mui.cc
+    │       ├── qt
+    │       │   ├── api.cc
+    │       │   ├── api.h
+    │       │   ├── body.cc
+    │       │   ├── body.h
+    │       │   ├── home.cc
+    │       │   ├── home.h
+    │       │   ├── maps
+    │       │   │   ├── map.cc
+    │       │   │   ├── map.h
+    │       │   │   ├── map_eta.cc
+    │       │   │   ├── map_eta.h
+    │       │   │   ├── map_helpers.cc
+    │       │   │   ├── map_helpers.h
+    │       │   │   ├── map_instructions.cc
+    │       │   │   ├── map_instructions.h
+    │       │   │   ├── map_panel.cc
+    │       │   │   ├── map_panel.h
+    │       │   │   ├── map_settings.cc
+    │       │   │   └── map_settings.h
+    │       │   ├── network
+    │       │   │   ├── networking.cc
+    │       │   │   ├── networking.h
+    │       │   │   ├── networkmanager.h
+    │       │   │   ├── wifi_manager.cc
+    │       │   │   └── wifi_manager.h
+    │       │   ├── offroad
+    │       │   │   ├── driverview.cc
+    │       │   │   ├── driverview.h
+    │       │   │   ├── experimental_mode.cc
+    │       │   │   ├── experimental_mode.h
+    │       │   │   ├── onboarding.cc
+    │       │   │   ├── onboarding.h
+    │       │   │   ├── settings.cc
+    │       │   │   ├── settings.h
+    │       │   │   ├── software_settings.cc
+    │       │   │   └── text_view.qml
+    │       │   ├── onroad
+    │       │   │   ├── alerts.cc
+    │       │   │   ├── alerts.h
+    │       │   │   ├── annotated_camera.cc
+    │       │   │   ├── annotated_camera.h
+    │       │   │   ├── buttons.cc
+    │       │   │   ├── buttons.h
+    │       │   │   ├── onroad_home.cc
+    │       │   │   └── onroad_home.h
+    │       │   ├── python_helpers.py
+    │       │   ├── qt_window.cc
+    │       │   ├── qt_window.h
+    │       │   ├── request_repeater.cc
+    │       │   ├── request_repeater.h
+    │       │   ├── setup
+    │       │   │   ├── reset.cc
+    │       │   │   ├── reset.h
+    │       │   │   ├── setup.cc
+    │       │   │   ├── setup.h
+    │       │   │   ├── updater.cc
+    │       │   │   └── updater.h
+    │       │   ├── sidebar.cc
+    │       │   ├── sidebar.h
+    │       │   ├── spinner.cc
+    │       │   ├── spinner.h
+    │       │   ├── spinner_larch64
+    │       │   ├── text.cc
+    │       │   ├── text_larch64
+    │       │   ├── util.cc
+    │       │   ├── util.h
+    │       │   ├── widgets
+    │       │   │   ├── cameraview.cc
+    │       │   │   ├── cameraview.h
+    │       │   │   ├── controls.cc
+    │       │   │   ├── controls.h
+    │       │   │   ├── input.cc
+    │       │   │   ├── input.h
+    │       │   │   ├── keyboard.cc
+    │       │   │   ├── keyboard.h
+    │       │   │   ├── offroad_alerts.cc
+    │       │   │   ├── offroad_alerts.h
+    │       │   │   ├── prime.cc
+    │       │   │   ├── prime.h
+    │       │   │   ├── scrollview.cc
+    │       │   │   ├── scrollview.h
+    │       │   │   ├── ssh_keys.cc
+    │       │   │   ├── ssh_keys.h
+    │       │   │   ├── toggle.cc
+    │       │   │   ├── toggle.h
+    │       │   │   ├── wifi.cc
+    │       │   │   └── wifi.h
+    │       │   ├── window.cc
+    │       │   └── window.h
+    │       ├── soundd.py
+    │       ├── spinner
+    │       ├── tests
+    │       │   ├── __init__.py
+    │       │   ├── body.py
+    │       │   ├── create_test_translations.sh
+    │       │   ├── cycle_offroad_alerts.py
+    │       │   ├── playsound.cc
+    │       │   ├── test_runner.cc
+    │       │   ├── test_soundd.py
+    │       │   ├── test_translations.cc
+    │       │   ├── test_translations.py
+    │       │   ├── test_ui
+    │       │   │   ├── run.py
+    │       │   │   └── template.html
+    │       │   ├── ui_snapshot.cc
+    │       │   └── ui_snapshot.h
+    │       ├── text
+    │       ├── translations
+    │       │   ├── README.md
+    │       │   ├── auto_translate.py
+    │       │   ├── create_badges.py
+    │       │   ├── languages.json
+    │       │   ├── main_ar.ts
+    │       │   ├── main_de.ts
+    │       │   ├── main_en.ts
+    │       │   ├── main_fr.ts
+    │       │   ├── main_ja.ts
+    │       │   ├── main_ko.ts
+    │       │   ├── main_nl.ts
+    │       │   ├── main_pl.ts
+    │       │   ├── main_pt-BR.ts
+    │       │   ├── main_th.ts
+    │       │   ├── main_tr.ts
+    │       │   ├── main_zh-CHS.ts
+    │       │   └── main_zh-CHT.ts
+    │       ├── ui.cc
+    │       ├── ui.h
+    │       ├── ui.py
+    │       ├── update_translations.py
+    │       └── watch3.cc
+    ├── site_scons
+    │   └── site_tools
+    │       └── cython.py
+    ├── src
+    │   └── selfdrive
+    │       └── frogpilot
+    │           └── controls
+    │               └── lib
+    ├── system
+    │   ├── __init__.py
+    │   ├── athena
+    │   │   ├── __init__.py
+    │   │   ├── athenad.py
+    │   │   ├── manage_athenad.py
+    │   │   ├── registration.py
+    │   │   └── tests
+    │   │       ├── __init__.py
+    │   │       ├── helpers.py
+    │   │       ├── test_athenad.py
+    │   │       ├── test_athenad_ping.py
+    │   │       └── test_registration.py
+    │   ├── camerad
+    │   │   ├── SConscript
+    │   │   ├── __init__.py
+    │   │   ├── cameras
+    │   │   │   ├── camera_common.cc
+    │   │   │   ├── camera_common.h
+    │   │   │   ├── camera_qcom2.cc
+    │   │   │   ├── camera_qcom2.h
+    │   │   │   ├── camera_util.cc
+    │   │   │   ├── camera_util.h
+    │   │   │   └── process_raw.cl
+    │   │   ├── main.cc
+    │   │   ├── sensors
+    │   │   │   ├── ar0231.cc
+    │   │   │   ├── ar0231_cl.h
+    │   │   │   ├── ar0231_registers.h
+    │   │   │   ├── os04c10.cc
+    │   │   │   ├── os04c10_cl.h
+    │   │   │   ├── os04c10_registers.h
+    │   │   │   ├── ox03c10.cc
+    │   │   │   ├── ox03c10_cl.h
+    │   │   │   ├── ox03c10_registers.h
+    │   │   │   └── sensor.h
+    │   │   ├── snapshot
+    │   │   │   ├── __init__.py
+    │   │   │   └── snapshot.py
+    │   │   └── test
+    │   │       ├── check_skips.py
+    │   │       ├── get_thumbnails_for_segment.py
+    │   │       ├── stress_restart.sh
+    │   │       ├── test_ae_gray.cc
+    │   │       ├── test_camerad.py
+    │   │       └── test_exposure.py
+    │   ├── fleetmanager
+    │   │   ├── static
+    │   │   │   └── frog.png
+    │   │   └── templates
+    │   │       └── index.html
+    │   ├── hardware
+    │   │   ├── __init__.py
+    │   │   ├── base.h
+    │   │   ├── base.py
+    │   │   ├── fan_controller.py
+    │   │   ├── hardwared.py
+    │   │   ├── hw.h
+    │   │   ├── hw.py
+    │   │   ├── pc
+    │   │   │   ├── __init__.py
+    │   │   │   ├── hardware.h
+    │   │   │   └── hardware.py
+    │   │   ├── power_monitoring.py
+    │   │   ├── tests
+    │   │   │   ├── __init__.py
+    │   │   │   ├── test_fan_controller.py
+    │   │   │   └── test_power_monitoring.py
+    │   │   └── tici
+    │   │       ├── __init__.py
+    │   │       ├── agnos.json
+    │   │       ├── agnos.py
+    │   │       ├── amplifier.py
+    │   │       ├── esim.nmconnection
+    │   │       ├── esim.py
+    │   │       ├── hardware.h
+    │   │       ├── hardware.py
+    │   │       ├── iwlist.py
+    │   │       ├── pins.py
+    │   │       ├── power_monitor.py
+    │   │       ├── precise_power_measure.py
+    │   │       ├── restart_modem.sh
+    │   │       ├── tests
+    │   │       │   ├── __init__.py
+    │   │       │   ├── compare_casync_manifest.py
+    │   │       │   ├── test_agnos_updater.py
+    │   │       │   ├── test_amplifier.py
+    │   │       │   ├── test_hardware.py
+    │   │       │   └── test_power_draw.py
+    │   │       └── updater
+    │   ├── logcatd
+    │   │   ├── SConscript
+    │   │   └── logcatd_systemd.cc
+    │   ├── loggerd
+    │   │   ├── README.md
+    │   │   ├── SConscript
+    │   │   ├── __init__.py
+    │   │   ├── bootlog.cc
+    │   │   ├── config.py
+    │   │   ├── deleter.py
+    │   │   ├── encoder
+    │   │   │   ├── encoder.cc
+    │   │   │   ├── encoder.h
+    │   │   │   ├── ffmpeg_encoder.cc
+    │   │   │   ├── ffmpeg_encoder.h
+    │   │   │   ├── v4l_encoder.cc
+    │   │   │   └── v4l_encoder.h
+    │   │   ├── encoderd.cc
+    │   │   ├── logger.cc
+    │   │   ├── logger.h
+    │   │   ├── loggerd.cc
+    │   │   ├── loggerd.h
+    │   │   ├── tests
+    │   │   │   ├── __init__.py
+    │   │   │   ├── loggerd_tests_common.py
+    │   │   │   ├── test_deleter.py
+    │   │   │   ├── test_encoder.py
+    │   │   │   ├── test_logger.cc
+    │   │   │   ├── test_loggerd.py
+    │   │   │   ├── test_runner.cc
+    │   │   │   └── test_uploader.py
+    │   │   ├── uploader.py
+    │   │   ├── video_writer.cc
+    │   │   ├── video_writer.h
+    │   │   └── xattr_cache.py
+    │   ├── logmessaged.py
+    │   ├── manager
+    │   │   ├── __init__.py
+    │   │   ├── helpers.py
+    │   │   ├── manager.py
+    │   │   ├── process.py
+    │   │   ├── process_config.py
+    │   │   └── test
+    │   │       ├── __init__.py
+    │   │       └── test_manager.py
+    │   ├── micd.py
+    │   ├── proclogd
+    │   │   ├── SConscript
+    │   │   ├── main.cc
+    │   │   ├── proclog.cc
+    │   │   ├── proclog.h
+    │   │   └── tests
+    │   │       └── test_proclog.cc
+    │   ├── qcomgpsd
+    │   │   ├── modemdiag.py
+    │   │   ├── nmeaport.py
+    │   │   ├── qcomgpsd.py
+    │   │   ├── structs.py
+    │   │   └── tests
+    │   │       └── test_qcomgpsd.py
+    │   ├── sensord
+    │   │   ├── SConscript
+    │   │   ├── __init__.py
+    │   │   ├── sensors
+    │   │   │   ├── bmx055_accel.cc
+    │   │   │   ├── bmx055_accel.h
+    │   │   │   ├── bmx055_gyro.cc
+    │   │   │   ├── bmx055_gyro.h
+    │   │   │   ├── bmx055_magn.cc
+    │   │   │   ├── bmx055_magn.h
+    │   │   │   ├── bmx055_temp.cc
+    │   │   │   ├── bmx055_temp.h
+    │   │   │   ├── constants.h
+    │   │   │   ├── i2c_sensor.cc
+    │   │   │   ├── i2c_sensor.h
+    │   │   │   ├── lsm6ds3_accel.cc
+    │   │   │   ├── lsm6ds3_accel.h
+    │   │   │   ├── lsm6ds3_gyro.cc
+    │   │   │   ├── lsm6ds3_gyro.h
+    │   │   │   ├── lsm6ds3_temp.cc
+    │   │   │   ├── lsm6ds3_temp.h
+    │   │   │   ├── mmc5603nj_magn.cc
+    │   │   │   ├── mmc5603nj_magn.h
+    │   │   │   └── sensor.h
+    │   │   ├── sensors_qcom2.cc
+    │   │   └── tests
+    │   │       ├── __init__.py
+    │   │       ├── test_sensord.py
+    │   │       └── ttff_test.py
+    │   ├── sentry.py
+    │   ├── statsd.py
+    │   ├── tests
+    │   │   ├── __init__.py
+    │   │   └── test_logmessaged.py
+    │   ├── timed.py
+    │   ├── tombstoned.py
+    │   ├── ubloxd
+    │   │   ├── SConscript
+    │   │   ├── generated
+    │   │   │   ├── glonass.cpp
+    │   │   │   ├── glonass.h
+    │   │   │   ├── gps.cpp
+    │   │   │   ├── gps.h
+    │   │   │   ├── ubx.cpp
+    │   │   │   └── ubx.h
+    │   │   ├── glonass.ksy
+    │   │   ├── glonass_fix.patch
+    │   │   ├── gps.ksy
+    │   │   ├── pigeond.py
+    │   │   ├── tests
+    │   │   │   ├── print_gps_stats.py
+    │   │   │   ├── test_glonass_kaitai.cc
+    │   │   │   ├── test_glonass_runner.cc
+    │   │   │   ├── test_pigeond.py
+    │   │   │   └── ubloxd.py
+    │   │   ├── ublox_msg.cc
+    │   │   ├── ublox_msg.h
+    │   │   ├── ubloxd.cc
+    │   │   └── ubx.ksy
+    │   ├── ugpsd.py
+    │   ├── updated
+    │   │   ├── casync
+    │   │   │   ├── casync.py
+    │   │   │   ├── common.py
+    │   │   │   ├── tar.py
+    │   │   │   └── tests
+    │   │   │       └── test_casync.py
+    │   │   ├── common.py
+    │   │   ├── tests
+    │   │   │   ├── test_base.py
+    │   │   │   └── test_git.py
+    │   │   └── updated.py
+    │   ├── version.py
+    │   └── webrtc
+    │       ├── __init__.py
+    │       ├── device
+    │       │   ├── audio.py
+    │       │   └── video.py
+    │       ├── schema.py
+    │       ├── tests
+    │       │   ├── test_stream_session.py
+    │       │   └── test_webrtcd.py
+    │       └── webrtcd.py
+    ├── teleoprtc
+    ├── teleoprtc_repo
+    │   ├── LICENSE
+    │   ├── README.md
+    │   ├── examples
+    │   │   ├── face_detection
+    │   │   │   ├── README.md
+    │   │   │   └── face_detection.py
+    │   │   └── videostream_cli
+    │   │       ├── README.md
+    │   │       └── cli.py
+    │   ├── pyproject.toml
+    │   ├── scripts
+    │   │   ├── bump_tag.sh
+    │   │   └── publish_pypi.sh
+    │   ├── teleoprtc
+    │   │   ├── __init__.py
+    │   │   ├── info.py
+    │   │   ├── stream.py
+    │   │   └── tracks.py
+    │   └── tests
+    │       ├── test_info.py
+    │       ├── test_integration.py
+    │       ├── test_stream.py
+    │       └── test_track.py
+    ├── third_party
+    │   ├── SConscript
+    │   ├── acados
+    │   │   ├── Darwin
+    │   │   │   └── t_renderer
+    │   │   ├── aarch64
+    │   │   ├── acados_template
+    │   │   │   ├── __init__.py
+    │   │   │   ├── acados_layout.json
+    │   │   │   ├── acados_model.py
+    │   │   │   ├── acados_ocp.py
+    │   │   │   ├── acados_ocp_solver.py
+    │   │   │   ├── acados_ocp_solver_pyx.pyx
+    │   │   │   ├── acados_sim.py
+    │   │   │   ├── acados_sim_layout.json
+    │   │   │   ├── acados_sim_solver.py
+    │   │   │   ├── acados_sim_solver_common.pxd
+    │   │   │   ├── acados_sim_solver_pyx.pyx
+    │   │   │   ├── acados_solver_common.pxd
+    │   │   │   ├── c_templates_tera
+    │   │   │   │   ├── CMakeLists.in.txt
+    │   │   │   │   ├── Makefile.in
+    │   │   │   │   ├── acados_sim_solver.in.c
+    │   │   │   │   ├── acados_sim_solver.in.h
+    │   │   │   │   ├── acados_sim_solver.in.pxd
+    │   │   │   │   ├── acados_solver.in.c
+    │   │   │   │   ├── acados_solver.in.h
+    │   │   │   │   ├── acados_solver.in.pxd
+    │   │   │   │   ├── constraints.in.h
+    │   │   │   │   ├── cost.in.h
+    │   │   │   │   ├── main.in.c
+    │   │   │   │   ├── main_sim.in.c
+    │   │   │   │   ├── matlab_templates
+    │   │   │   │   │   ├── acados_mex_create.in.c
+    │   │   │   │   │   ├── acados_mex_free.in.c
+    │   │   │   │   │   ├── acados_mex_set.in.c
+    │   │   │   │   │   ├── acados_mex_solve.in.c
+    │   │   │   │   │   ├── acados_sim_solver_sfun.in.c
+    │   │   │   │   │   ├── acados_solver_sfun.in.c
+    │   │   │   │   │   ├── main_mex.in.c
+    │   │   │   │   │   ├── make_main_mex.in.m
+    │   │   │   │   │   ├── make_mex.in.m
+    │   │   │   │   │   ├── make_sfun.in.m
+    │   │   │   │   │   ├── make_sfun_sim.in.m
+    │   │   │   │   │   └── mex_solver.in.m
+    │   │   │   │   └── model.in.h
+    │   │   │   ├── casadi_function_generation.py
+    │   │   │   ├── custom_update_templates
+    │   │   │   │   ├── custom_update_function_zoro_template.in.c
+    │   │   │   │   └── custom_update_function_zoro_template.in.h
+    │   │   │   ├── gnsf
+    │   │   │   │   ├── __init__.py
+    │   │   │   │   ├── check_reformulation.py
+    │   │   │   │   ├── detect_affine_terms_reduce_nonlinearity.py
+    │   │   │   │   ├── detect_gnsf_structure.py
+    │   │   │   │   ├── determine_input_nonlinearity_function.py
+    │   │   │   │   ├── determine_trivial_gnsf_transcription.py
+    │   │   │   │   ├── matlab to python.md
+    │   │   │   │   ├── reformulate_with_LOS.py
+    │   │   │   │   ├── reformulate_with_invertible_E_mat.py
+    │   │   │   │   └── structure_detection_print_summary.py
+    │   │   │   ├── simulink_default_opts.json
+    │   │   │   ├── utils.py
+    │   │   │   └── zoro_description.py
+    │   │   ├── include
+    │   │   │   ├── acados
+    │   │   │   │   ├── dense_qp
+    │   │   │   │   │   ├── dense_qp_common.h
+    │   │   │   │   │   ├── dense_qp_daqp.h
+    │   │   │   │   │   ├── dense_qp_hpipm.h
+    │   │   │   │   │   ├── dense_qp_ooqp.h
+    │   │   │   │   │   ├── dense_qp_qore.h
+    │   │   │   │   │   └── dense_qp_qpoases.h
+    │   │   │   │   ├── ocp_nlp
+    │   │   │   │   │   ├── ocp_nlp_common.h
+    │   │   │   │   │   ├── ocp_nlp_constraints_bgh.h
+    │   │   │   │   │   ├── ocp_nlp_constraints_bgp.h
+    │   │   │   │   │   ├── ocp_nlp_constraints_common.h
+    │   │   │   │   │   ├── ocp_nlp_cost_common.h
+    │   │   │   │   │   ├── ocp_nlp_cost_conl.h
+    │   │   │   │   │   ├── ocp_nlp_cost_external.h
+    │   │   │   │   │   ├── ocp_nlp_cost_ls.h
+    │   │   │   │   │   ├── ocp_nlp_cost_nls.h
+    │   │   │   │   │   ├── ocp_nlp_dynamics_common.h
+    │   │   │   │   │   ├── ocp_nlp_dynamics_cont.h
+    │   │   │   │   │   ├── ocp_nlp_dynamics_disc.h
+    │   │   │   │   │   ├── ocp_nlp_reg_common.h
+    │   │   │   │   │   ├── ocp_nlp_reg_convexify.h
+    │   │   │   │   │   ├── ocp_nlp_reg_mirror.h
+    │   │   │   │   │   ├── ocp_nlp_reg_noreg.h
+    │   │   │   │   │   ├── ocp_nlp_reg_project.h
+    │   │   │   │   │   ├── ocp_nlp_reg_project_reduc_hess.h
+    │   │   │   │   │   ├── ocp_nlp_sqp.h
+    │   │   │   │   │   └── ocp_nlp_sqp_rti.h
+    │   │   │   │   ├── ocp_qp
+    │   │   │   │   │   ├── ocp_qp_common.h
+    │   │   │   │   │   ├── ocp_qp_common_frontend.h
+    │   │   │   │   │   ├── ocp_qp_full_condensing.h
+    │   │   │   │   │   ├── ocp_qp_hpipm.h
+    │   │   │   │   │   ├── ocp_qp_hpmpc.h
+    │   │   │   │   │   ├── ocp_qp_ooqp.h
+    │   │   │   │   │   ├── ocp_qp_osqp.h
+    │   │   │   │   │   ├── ocp_qp_partial_condensing.h
+    │   │   │   │   │   ├── ocp_qp_qpdunes.h
+    │   │   │   │   │   └── ocp_qp_xcond_solver.h
+    │   │   │   │   ├── sim
+    │   │   │   │   │   ├── sim_collocation_utils.h
+    │   │   │   │   │   ├── sim_common.h
+    │   │   │   │   │   ├── sim_erk_integrator.h
+    │   │   │   │   │   ├── sim_gnsf.h
+    │   │   │   │   │   ├── sim_irk_integrator.h
+    │   │   │   │   │   └── sim_lifted_irk_integrator.h
+    │   │   │   │   └── utils
+    │   │   │   │       ├── external_function_generic.h
+    │   │   │   │       ├── math.h
+    │   │   │   │       ├── mem.h
+    │   │   │   │       ├── print.h
+    │   │   │   │       ├── strsep.h
+    │   │   │   │       ├── timing.h
+    │   │   │   │       └── types.h
+    │   │   │   ├── acados_c
+    │   │   │   │   ├── condensing_interface.h
+    │   │   │   │   ├── dense_qp_interface.h
+    │   │   │   │   ├── external_function_interface.h
+    │   │   │   │   ├── ocp_nlp_interface.h
+    │   │   │   │   ├── ocp_qp_interface.h
+    │   │   │   │   └── sim_interface.h
+    │   │   │   ├── blasfeo
+    │   │   │   │   └── include
+    │   │   │   │       ├── blasfeo.h
+    │   │   │   │       ├── blasfeo_block_size.h
+    │   │   │   │       ├── blasfeo_common.h
+    │   │   │   │       ├── blasfeo_d_aux.h
+    │   │   │   │       ├── blasfeo_d_aux_ext_dep.h
+    │   │   │   │       ├── blasfeo_d_aux_ext_dep_ref.h
+    │   │   │   │       ├── blasfeo_d_aux_old.h
+    │   │   │   │       ├── blasfeo_d_aux_ref.h
+    │   │   │   │       ├── blasfeo_d_aux_test.h
+    │   │   │   │       ├── blasfeo_d_blas.h
+    │   │   │   │       ├── blasfeo_d_blas_api.h
+    │   │   │   │       ├── blasfeo_d_blasfeo_api.h
+    │   │   │   │       ├── blasfeo_d_blasfeo_api_ref.h
+    │   │   │   │       ├── blasfeo_d_blasfeo_hp_api.h
+    │   │   │   │       ├── blasfeo_d_blasfeo_ref_api.h
+    │   │   │   │       ├── blasfeo_d_kernel.h
+    │   │   │   │       ├── blasfeo_i_aux_ext_dep.h
+    │   │   │   │       ├── blasfeo_m_aux.h
+    │   │   │   │       ├── blasfeo_memory.h
+    │   │   │   │       ├── blasfeo_naming.h
+    │   │   │   │       ├── blasfeo_processor_features.h
+    │   │   │   │       ├── blasfeo_s_aux.h
+    │   │   │   │       ├── blasfeo_s_aux_ext_dep.h
+    │   │   │   │       ├── blasfeo_s_aux_ext_dep_ref.h
+    │   │   │   │       ├── blasfeo_s_aux_old.h
+    │   │   │   │       ├── blasfeo_s_aux_ref.h
+    │   │   │   │       ├── blasfeo_s_aux_test.h
+    │   │   │   │       ├── blasfeo_s_blas.h
+    │   │   │   │       ├── blasfeo_s_blas_api.h
+    │   │   │   │       ├── blasfeo_s_blasfeo_api.h
+    │   │   │   │       ├── blasfeo_s_blasfeo_api_ref.h
+    │   │   │   │       ├── blasfeo_s_blasfeo_ref_api.h
+    │   │   │   │       ├── blasfeo_s_kernel.h
+    │   │   │   │       ├── blasfeo_stdlib.h
+    │   │   │   │       ├── blasfeo_target.h
+    │   │   │   │       ├── blasfeo_timing.h
+    │   │   │   │       ├── blasfeo_v_aux_ext_dep.h
+    │   │   │   │       ├── d_blas.h
+    │   │   │   │       ├── d_blas_64.h
+    │   │   │   │       ├── s_blas.h
+    │   │   │   │       └── s_blas_64.h
+    │   │   │   ├── hpipm
+    │   │   │   │   └── include
+    │   │   │   │       ├── hpipm_aux_mem.h
+    │   │   │   │       ├── hpipm_aux_string.h
+    │   │   │   │       ├── hpipm_common.h
+    │   │   │   │       ├── hpipm_d_cast_qcqp.h
+    │   │   │   │       ├── hpipm_d_cond.h
+    │   │   │   │       ├── hpipm_d_cond_aux.h
+    │   │   │   │       ├── hpipm_d_cond_qcqp.h
+    │   │   │   │       ├── hpipm_d_core_qp_ipm.h
+    │   │   │   │       ├── hpipm_d_core_qp_ipm_aux.h
+    │   │   │   │       ├── hpipm_d_dense_qcqp.h
+    │   │   │   │       ├── hpipm_d_dense_qcqp_dim.h
+    │   │   │   │       ├── hpipm_d_dense_qcqp_ipm.h
+    │   │   │   │       ├── hpipm_d_dense_qcqp_res.h
+    │   │   │   │       ├── hpipm_d_dense_qcqp_sol.h
+    │   │   │   │       ├── hpipm_d_dense_qcqp_utils.h
+    │   │   │   │       ├── hpipm_d_dense_qp.h
+    │   │   │   │       ├── hpipm_d_dense_qp_dim.h
+    │   │   │   │       ├── hpipm_d_dense_qp_ipm.h
+    │   │   │   │       ├── hpipm_d_dense_qp_kkt.h
+    │   │   │   │       ├── hpipm_d_dense_qp_res.h
+    │   │   │   │       ├── hpipm_d_dense_qp_sol.h
+    │   │   │   │       ├── hpipm_d_dense_qp_utils.h
+    │   │   │   │       ├── hpipm_d_ocp_qcqp.h
+    │   │   │   │       ├── hpipm_d_ocp_qcqp_dim.h
+    │   │   │   │       ├── hpipm_d_ocp_qcqp_ipm.h
+    │   │   │   │       ├── hpipm_d_ocp_qcqp_res.h
+    │   │   │   │       ├── hpipm_d_ocp_qcqp_sol.h
+    │   │   │   │       ├── hpipm_d_ocp_qcqp_utils.h
+    │   │   │   │       ├── hpipm_d_ocp_qp.h
+    │   │   │   │       ├── hpipm_d_ocp_qp_dim.h
+    │   │   │   │       ├── hpipm_d_ocp_qp_ipm.h
+    │   │   │   │       ├── hpipm_d_ocp_qp_kkt.h
+    │   │   │   │       ├── hpipm_d_ocp_qp_red.h
+    │   │   │   │       ├── hpipm_d_ocp_qp_res.h
+    │   │   │   │       ├── hpipm_d_ocp_qp_sol.h
+    │   │   │   │       ├── hpipm_d_ocp_qp_utils.h
+    │   │   │   │       ├── hpipm_d_part_cond.h
+    │   │   │   │       ├── hpipm_d_part_cond_qcqp.h
+    │   │   │   │       ├── hpipm_d_sim_erk.h
+    │   │   │   │       ├── hpipm_d_sim_rk.h
+    │   │   │   │       ├── hpipm_d_tree_ocp_qcqp.h
+    │   │   │   │       ├── hpipm_d_tree_ocp_qcqp_dim.h
+    │   │   │   │       ├── hpipm_d_tree_ocp_qcqp_ipm.h
+    │   │   │   │       ├── hpipm_d_tree_ocp_qcqp_res.h
+    │   │   │   │       ├── hpipm_d_tree_ocp_qcqp_sol.h
+    │   │   │   │       ├── hpipm_d_tree_ocp_qcqp_utils.h
+    │   │   │   │       ├── hpipm_d_tree_ocp_qp.h
+    │   │   │   │       ├── hpipm_d_tree_ocp_qp_dim.h
+    │   │   │   │       ├── hpipm_d_tree_ocp_qp_ipm.h
+    │   │   │   │       ├── hpipm_d_tree_ocp_qp_kkt.h
+    │   │   │   │       ├── hpipm_d_tree_ocp_qp_res.h
+    │   │   │   │       ├── hpipm_d_tree_ocp_qp_sol.h
+    │   │   │   │       ├── hpipm_d_tree_ocp_qp_utils.h
+    │   │   │   │       ├── hpipm_m_dense_qp.h
+    │   │   │   │       ├── hpipm_m_dense_qp_dim.h
+    │   │   │   │       ├── hpipm_m_ocp_qp.h
+    │   │   │   │       ├── hpipm_m_ocp_qp_ipm_hard.h
+    │   │   │   │       ├── hpipm_m_ocp_qp_kkt.h
+    │   │   │   │       ├── hpipm_s_cast_qcqp.h
+    │   │   │   │       ├── hpipm_s_cond.h
+    │   │   │   │       ├── hpipm_s_cond_aux.h
+    │   │   │   │       ├── hpipm_s_cond_qcqp.h
+    │   │   │   │       ├── hpipm_s_core_qp_ipm.h
+    │   │   │   │       ├── hpipm_s_core_qp_ipm_aux.h
+    │   │   │   │       ├── hpipm_s_dense_qcqp.h
+    │   │   │   │       ├── hpipm_s_dense_qcqp_dim.h
+    │   │   │   │       ├── hpipm_s_dense_qcqp_ipm.h
+    │   │   │   │       ├── hpipm_s_dense_qcqp_res.h
+    │   │   │   │       ├── hpipm_s_dense_qcqp_sol.h
+    │   │   │   │       ├── hpipm_s_dense_qcqp_utils.h
+    │   │   │   │       ├── hpipm_s_dense_qp.h
+    │   │   │   │       ├── hpipm_s_dense_qp_dim.h
+    │   │   │   │       ├── hpipm_s_dense_qp_ipm.h
+    │   │   │   │       ├── hpipm_s_dense_qp_kkt.h
+    │   │   │   │       ├── hpipm_s_dense_qp_res.h
+    │   │   │   │       ├── hpipm_s_dense_qp_sol.h
+    │   │   │   │       ├── hpipm_s_dense_qp_utils.h
+    │   │   │   │       ├── hpipm_s_ocp_qcqp.h
+    │   │   │   │       ├── hpipm_s_ocp_qcqp_dim.h
+    │   │   │   │       ├── hpipm_s_ocp_qcqp_ipm.h
+    │   │   │   │       ├── hpipm_s_ocp_qcqp_res.h
+    │   │   │   │       ├── hpipm_s_ocp_qcqp_sol.h
+    │   │   │   │       ├── hpipm_s_ocp_qcqp_utils.h
+    │   │   │   │       ├── hpipm_s_ocp_qp.h
+    │   │   │   │       ├── hpipm_s_ocp_qp_dim.h
+    │   │   │   │       ├── hpipm_s_ocp_qp_ipm.h
+    │   │   │   │       ├── hpipm_s_ocp_qp_kkt.h
+    │   │   │   │       ├── hpipm_s_ocp_qp_red.h
+    │   │   │   │       ├── hpipm_s_ocp_qp_res.h
+    │   │   │   │       ├── hpipm_s_ocp_qp_sol.h
+    │   │   │   │       ├── hpipm_s_ocp_qp_utils.h
+    │   │   │   │       ├── hpipm_s_part_cond.h
+    │   │   │   │       ├── hpipm_s_part_cond_qcqp.h
+    │   │   │   │       ├── hpipm_s_sim_erk.h
+    │   │   │   │       ├── hpipm_s_sim_rk.h
+    │   │   │   │       ├── hpipm_s_tree_ocp_qcqp.h
+    │   │   │   │       ├── hpipm_s_tree_ocp_qcqp_dim.h
+    │   │   │   │       ├── hpipm_s_tree_ocp_qcqp_ipm.h
+    │   │   │   │       ├── hpipm_s_tree_ocp_qcqp_res.h
+    │   │   │   │       ├── hpipm_s_tree_ocp_qcqp_sol.h
+    │   │   │   │       ├── hpipm_s_tree_ocp_qcqp_utils.h
+    │   │   │   │       ├── hpipm_s_tree_ocp_qp.h
+    │   │   │   │       ├── hpipm_s_tree_ocp_qp_dim.h
+    │   │   │   │       ├── hpipm_s_tree_ocp_qp_ipm.h
+    │   │   │   │       ├── hpipm_s_tree_ocp_qp_kkt.h
+    │   │   │   │       ├── hpipm_s_tree_ocp_qp_res.h
+    │   │   │   │       ├── hpipm_s_tree_ocp_qp_sol.h
+    │   │   │   │       ├── hpipm_s_tree_ocp_qp_utils.h
+    │   │   │   │       ├── hpipm_scenario_tree.h
+    │   │   │   │       ├── hpipm_timing.h
+    │   │   │   │       └── hpipm_tree.h
+    │   │   │   └── qpOASES_e
+    │   │   │       ├── Bounds.h
+    │   │   │       ├── Constants.h
+    │   │   │       ├── ConstraintProduct.h
+    │   │   │       ├── Constraints.h
+    │   │   │       ├── Flipper.h
+    │   │   │       ├── Indexlist.h
+    │   │   │       ├── Matrices.h
+    │   │   │       ├── MessageHandling.h
+    │   │   │       ├── Options.h
+    │   │   │       ├── QProblem.h
+    │   │   │       ├── QProblemB.h
+    │   │   │       ├── Types.h
+    │   │   │       ├── UnitTesting.h
+    │   │   │       ├── Utils.h
+    │   │   │       └── extras
+    │   │   │           └── OQPinterface.h
+    │   │   ├── larch64
+    │   │   │   ├── lib
+    │   │   │   │   ├── libacados.so
+    │   │   │   │   ├── libblasfeo.so
+    │   │   │   │   ├── libhpipm.so
+    │   │   │   │   ├── libqpOASES_e.so
+    │   │   │   │   └── libqpOASES_e.so.3.1
+    │   │   │   └── t_renderer
+    │   │   └── x86_64
+    │   │       ├── lib
+    │   │       │   ├── libacados.so
+    │   │       │   ├── libblasfeo.so
+    │   │       │   ├── libhpipm.so
+    │   │       │   ├── libqpOASES_e.so
+    │   │       │   └── libqpOASES_e.so.3.1
+    │   │       └── t_renderer
+    │   ├── bootstrap
+    │   │   ├── bootstrap-icons.svg
+    │   │   └── pull.sh
+    │   ├── catch2
+    │   │   └── include
+    │   │       └── catch2
+    │   │           ├── catch.hpp
+    │   │           ├── catch_reporter_automake.hpp
+    │   │           ├── catch_reporter_sonarqube.hpp
+    │   │           ├── catch_reporter_tap.hpp
+    │   │           └── catch_reporter_teamcity.hpp
+    │   ├── json11
+    │   │   ├── json11.cpp
+    │   │   └── json11.hpp
+    │   ├── kaitai
+    │   │   ├── custom_decoder.h
+    │   │   ├── exceptions.h
+    │   │   ├── kaitaistream.cpp
+    │   │   ├── kaitaistream.h
+    │   │   └── kaitaistruct.h
+    │   ├── libyuv
+    │   │   ├── LICENSE
+    │   │   ├── aarch64
+    │   │   ├── include
+    │   │   │   ├── libyuv
+    │   │   │   │   ├── basic_types.h
+    │   │   │   │   ├── compare.h
+    │   │   │   │   ├── compare_row.h
+    │   │   │   │   ├── convert.h
+    │   │   │   │   ├── convert_argb.h
+    │   │   │   │   ├── convert_from.h
+    │   │   │   │   ├── convert_from_argb.h
+    │   │   │   │   ├── cpu_id.h
+    │   │   │   │   ├── macros_msa.h
+    │   │   │   │   ├── mjpeg_decoder.h
+    │   │   │   │   ├── planar_functions.h
+    │   │   │   │   ├── rotate.h
+    │   │   │   │   ├── rotate_argb.h
+    │   │   │   │   ├── rotate_row.h
+    │   │   │   │   ├── row.h
+    │   │   │   │   ├── scale.h
+    │   │   │   │   ├── scale_argb.h
+    │   │   │   │   ├── scale_row.h
+    │   │   │   │   ├── version.h
+    │   │   │   │   └── video_common.h
+    │   │   │   └── libyuv.h
+    │   │   ├── larch64
+    │   │   │   └── lib
+    │   │   │       └── libyuv.a
+    │   │   └── x86_64
+    │   │       ├── include
+    │   │       └── lib
+    │   │           └── libyuv.a
+    │   ├── linux
+    │   │   └── include
+    │   │       ├── linux
+    │   │       │   └── ion.h
+    │   │       ├── media
+    │   │       │   ├── cam_cpas.h
+    │   │       │   ├── cam_defs.h
+    │   │       │   ├── cam_fd.h
+    │   │       │   ├── cam_icp.h
+    │   │       │   ├── cam_isp.h
+    │   │       │   ├── cam_isp_ife.h
+    │   │       │   ├── cam_isp_vfe.h
+    │   │       │   ├── cam_jpeg.h
+    │   │       │   ├── cam_lrme.h
+    │   │       │   ├── cam_req_mgr.h
+    │   │       │   ├── cam_sensor.h
+    │   │       │   ├── cam_sensor_cmn_header.h
+    │   │       │   └── cam_sync.h
+    │   │       ├── msm_cam_sensor.h
+    │   │       ├── msm_camsensor_sdk.h
+    │   │       ├── msm_ion.h
+    │   │       ├── msm_kgsl.h
+    │   │       ├── msm_media_info.h
+    │   │       ├── msmb_camera.h
+    │   │       ├── msmb_isp.h
+    │   │       ├── msmb_ispif.h
+    │   │       └── v4l2-controls.h
+    │   ├── maplibre-native-qt
+    │   │   ├── aarch64
+    │   │   ├── include
+    │   │   │   ├── conversion_p.hpp
+    │   │   │   ├── export_core.hpp
+    │   │   │   ├── export_location.hpp
+    │   │   │   ├── export_widgets.hpp
+    │   │   │   ├── geojson_p.hpp
+    │   │   │   ├── gl_widget.hpp
+    │   │   │   ├── gl_widget_p.hpp
+    │   │   │   ├── map.hpp
+    │   │   │   ├── map_observer_p.hpp
+    │   │   │   ├── map_p.hpp
+    │   │   │   ├── map_renderer_p.hpp
+    │   │   │   ├── qgeomap.hpp
+    │   │   │   ├── qgeomap_p.hpp
+    │   │   │   ├── qmaplibre.hpp
+    │   │   │   ├── qmaplibrewidgets.hpp
+    │   │   │   ├── qt_mapping_engine.hpp
+    │   │   │   ├── settings.hpp
+    │   │   │   ├── settings_p.hpp
+    │   │   │   ├── style_change_utils_p.hpp
+    │   │   │   ├── texture_node.hpp
+    │   │   │   ├── types.hpp
+    │   │   │   └── utils.hpp
+    │   │   ├── larch64
+    │   │   │   ├── include
+    │   │   │   │   └── QMapLibre
+    │   │   │   │       ├── Export
+    │   │   │   │       ├── LayerParameter
+    │   │   │   │       ├── Map
+    │   │   │   │       ├── QMapLibre
+    │   │   │   │       ├── Settings
+    │   │   │   │       ├── SourceParameter
+    │   │   │   │       ├── StyleParameter
+    │   │   │   │       ├── Types
+    │   │   │   │       └── Utils
+    │   │   │   └── lib
+    │   │   │       ├── libQMapLibre.so
+    │   │   │       └── libQMapLibre.so.3.0.0
+    │   │   └── x86_64
+    │   │       ├── include
+    │   │       │   └── QMapLibre
+    │   │       │       ├── Export
+    │   │       │       ├── LayerParameter
+    │   │       │       ├── Map
+    │   │       │       ├── QMapLibre
+    │   │       │       ├── Settings
+    │   │       │       ├── SourceParameter
+    │   │       │       ├── StyleParameter
+    │   │       │       ├── Types
+    │   │       │       └── Utils
+    │   │       └── lib
+    │   │           ├── libQMapLibre.so
+    │   │           └── libQMapLibre.so.3.0.0
+    │   ├── opencl
+    │   │   └── include
+    │   │       └── CL
+    │   │           ├── cl.h
+    │   │           ├── cl_d3d10.h
+    │   │           ├── cl_d3d11.h
+    │   │           ├── cl_dx9_media_sharing.h
+    │   │           ├── cl_egl.h
+    │   │           ├── cl_ext.h
+    │   │           ├── cl_ext_qcom.h
+    │   │           ├── cl_gl.h
+    │   │           ├── cl_gl_ext.h
+    │   │           ├── cl_platform.h
+    │   │           └── opencl.h
+    │   ├── qrcode
+    │   │   ├── QrCode.cc
+    │   │   └── QrCode.hpp
+    │   ├── qt5
+    │   │   └── larch64
+    │   │       └── bin
+    │   │           ├── lrelease
+    │   │           └── lupdate
+    │   └── snpe
+    │       ├── aarch64-ubuntu-gcc7.5
+    │       │   ├── libPlatformValidatorShared.so
+    │       │   ├── libSNPE.so
+    │       │   ├── libcalculator.so
+    │       │   ├── libhta.so
+    │       │   └── libsnpe_dsp_domains_v2.so
+    │       ├── dsp
+    │       │   ├── libcalculator_skel.so
+    │       │   ├── libsnpe_dsp_v65_domains_v2_skel.so
+    │       │   ├── libsnpe_dsp_v66_domains_v2_skel.so
+    │       │   └── libsnpe_dsp_v68_domains_v3_skel.so
+    │       ├── include
+    │       │   ├── DiagLog
+    │       │   │   ├── IDiagLog.hpp
+    │       │   │   └── Options.hpp
+    │       │   ├── DlContainer
+    │       │   │   └── IDlContainer.hpp
+    │       │   ├── DlSystem
+    │       │   │   ├── DlEnums.hpp
+    │       │   │   ├── DlError.hpp
+    │       │   │   ├── DlOptional.hpp
+    │       │   │   ├── DlVersion.hpp
+    │       │   │   ├── IBufferAttributes.hpp
+    │       │   │   ├── IOBufferDataTypeMap.hpp
+    │       │   │   ├── ITensor.hpp
+    │       │   │   ├── ITensorFactory.hpp
+    │       │   │   ├── ITensorItr.hpp
+    │       │   │   ├── ITensorItrImpl.hpp
+    │       │   │   ├── IUDL.hpp
+    │       │   │   ├── IUserBuffer.hpp
+    │       │   │   ├── IUserBufferFactory.hpp
+    │       │   │   ├── PlatformConfig.hpp
+    │       │   │   ├── RuntimeList.hpp
+    │       │   │   ├── String.hpp
+    │       │   │   ├── StringList.hpp
+    │       │   │   ├── TensorMap.hpp
+    │       │   │   ├── TensorShape.hpp
+    │       │   │   ├── TensorShapeMap.hpp
+    │       │   │   ├── UDLContext.hpp
+    │       │   │   ├── UDLFunc.hpp
+    │       │   │   ├── UserBufferMap.hpp
+    │       │   │   ├── UserMemoryMap.hpp
+    │       │   │   └── ZdlExportDefine.hpp
+    │       │   ├── PlatformValidator
+    │       │   │   └── PlatformValidator.hpp
+    │       │   ├── SNPE
+    │       │   │   ├── ApplicationBufferMap.hpp
+    │       │   │   ├── PSNPE.hpp
+    │       │   │   ├── RuntimeConfigList.hpp
+    │       │   │   ├── SNPE.hpp
+    │       │   │   ├── SNPEBuilder.hpp
+    │       │   │   ├── SNPEFactory.hpp
+    │       │   │   └── UserBufferList.hpp
+    │       │   └── SnpeUdo
+    │       │       ├── UdoBase.h
+    │       │       ├── UdoImpl.h
+    │       │       ├── UdoImplCpu.h
+    │       │       ├── UdoImplDsp.h
+    │       │       ├── UdoImplGpu.h
+    │       │       ├── UdoReg.h
+    │       │       └── UdoShared.h
+    │       ├── larch64
+    │       ├── x86_64
+    │       └── x86_64-linux-clang
+    │           ├── libHtpPrepare.so
+    │           ├── libSNPE.so
+    │           └── libomp.so
+    ├── tinygrad
+    ├── tinygrad_repo
+    │   ├── CONTRIBUTING.md
+    │   ├── LICENSE
+    │   ├── README.md
+    │   ├── compile.sh
+    │   ├── disassemblers
+    │   │   └── adreno
+    │   │       ├── README
+    │   │       ├── __init__.py
+    │   │       ├── disasm-a3xx.c
+    │   │       ├── instr-a3xx.h
+    │   │       ├── ir3.h
+    │   │       ├── shader_enums.h
+    │   │       └── util
+    │   │           ├── bitscan.h
+    │   │           ├── bitset.h
+    │   │           ├── list.h
+    │   │           └── macros.h
+    │   ├── docs
+    │   │   ├── DESIGNv2.md
+    │   │   ├── README.md
+    │   │   ├── abstractions.py
+    │   │   ├── adding_new_accelerators.md
+    │   │   ├── env_vars.md
+    │   │   ├── logo.png
+    │   │   ├── quickstart.md
+    │   │   ├── showcase
+    │   │   │   ├── mnist_by_tinygrad.jpg
+    │   │   │   ├── stable_diffusion_by_tinygrad.jpg
+    │   │   │   ├── yolo_by_tinygrad.jpg
+    │   │   │   └── yolov8_showcase_image.png
+    │   │   └── showcase.md
+    │   ├── examples
+    │   │   ├── __init__.py
+    │   │   ├── benchmark_train_efficientnet.py
+    │   │   ├── compile_efficientnet.py
+    │   │   ├── compile_tensorflow.py
+    │   │   ├── efficientnet.py
+    │   │   ├── f16_w_uint32.py
+    │   │   ├── gpt2.py
+    │   │   ├── handcode_resnet50_opt.py
+    │   │   ├── hlb_cifar10.py
+    │   │   ├── index.html
+    │   │   ├── llama.py
+    │   │   ├── mask_rcnn.py
+    │   │   ├── mlperf
+    │   │   │   ├── README
+    │   │   │   ├── helpers.py
+    │   │   │   ├── metrics.py
+    │   │   │   ├── model_eval.py
+    │   │   │   ├── model_spec.py
+    │   │   │   └── model_train.py
+    │   │   ├── mnist_gan.py
+    │   │   ├── serious_mnist.py
+    │   │   ├── simple_conv_bn.py
+    │   │   ├── so_vits_svc.py
+    │   │   ├── sovits_helpers
+    │   │   │   └── preprocess.py
+    │   │   ├── stable_diffusion.py
+    │   │   ├── train_efficientnet.py
+    │   │   ├── train_resnet.py
+    │   │   ├── transformer.py
+    │   │   ├── vgg7.py
+    │   │   ├── vgg7_helpers
+    │   │   │   └── waifu2x.py
+    │   │   ├── vit.py
+    │   │   ├── vits.py
+    │   │   ├── webgpu
+    │   │   │   └── stable_diffusion
+    │   │   │       ├── compile.py
+    │   │   │       ├── f16_to_f32.js
+    │   │   │       └── index.html
+    │   │   ├── whisper.py
+    │   │   ├── yolov3.py
+    │   │   ├── yolov8-onnx.py
+    │   │   └── yolov8.py
+    │   ├── extra
+    │   │   ├── accel
+    │   │   │   ├── MAPPING
+    │   │   │   ├── README
+    │   │   │   ├── ane
+    │   │   │   │   ├── 2_compile
+    │   │   │   │   │   ├── ane.py
+    │   │   │   │   │   ├── aneregs.json
+    │   │   │   │   │   ├── compile.m
+    │   │   │   │   │   ├── compile.mm
+    │   │   │   │   │   ├── compile.sh
+    │   │   │   │   │   ├── dcompile.py
+    │   │   │   │   │   ├── hwx_parse.py
+    │   │   │   │   │   ├── min.weights
+    │   │   │   │   │   ├── min_uint8.weights
+    │   │   │   │   │   ├── model.espresso.weights
+    │   │   │   │   │   ├── model.hwx.golden
+    │   │   │   │   │   ├── net.additional.weights
+    │   │   │   │   │   ├── net.plist
+    │   │   │   │   │   ├── plists
+    │   │   │   │   │   │   ├── broadcast.plist
+    │   │   │   │   │   │   ├── concat.plist
+    │   │   │   │   │   │   ├── gemm.plist
+    │   │   │   │   │   │   ├── goc.plist
+    │   │   │   │   │   │   ├── inputview.plist
+    │   │   │   │   │   │   ├── neuron.plist
+    │   │   │   │   │   │   ├── reshape.plist
+    │   │   │   │   │   │   ├── scaled.plist
+    │   │   │   │   │   │   └── sum.plist
+    │   │   │   │   │   ├── simple
+    │   │   │   │   │   │   ├── concat.plist
+    │   │   │   │   │   │   ├── conv.plist
+    │   │   │   │   │   │   ├── convneuron.plist
+    │   │   │   │   │   │   ├── convuint8.plist
+    │   │   │   │   │   │   ├── doubleconv.plist
+    │   │   │   │   │   │   ├── doubleconvrev.plist
+    │   │   │   │   │   │   ├── doubleconvsout.plist
+    │   │   │   │   │   │   ├── doubleneuron.plist
+    │   │   │   │   │   │   ├── gemm.plist
+    │   │   │   │   │   │   ├── goc.plist
+    │   │   │   │   │   │   ├── neuron.plist
+    │   │   │   │   │   │   ├── quadconv.plist
+    │   │   │   │   │   │   └── reshape.plist
+    │   │   │   │   │   ├── struct_recover.py
+    │   │   │   │   │   └── twos.weights
+    │   │   │   │   ├── 3_run
+    │   │   │   │   │   ├── entitlements.xml
+    │   │   │   │   │   ├── h11ane.h
+    │   │   │   │   │   └── test.mm
+    │   │   │   │   ├── README.md
+    │   │   │   │   ├── README.old
+    │   │   │   │   ├── amfi
+    │   │   │   │   │   └── new_patch.py
+    │   │   │   │   ├── aneregs
+    │   │   │   │   ├── lib
+    │   │   │   │   │   ├── ane.mm
+    │   │   │   │   │   ├── ane.py
+    │   │   │   │   │   ├── aneregs.json
+    │   │   │   │   │   ├── entitlements.xml
+    │   │   │   │   │   ├── h11ane.h
+    │   │   │   │   │   ├── sign_python.sh
+    │   │   │   │   │   └── testconv.py
+    │   │   │   │   ├── ops
+    │   │   │   │   │   ├── concat.hwx
+    │   │   │   │   │   ├── conv.hwx
+    │   │   │   │   │   ├── gemm.hwx
+    │   │   │   │   │   ├── relu.hwx
+    │   │   │   │   │   ├── sigmoid.hwx
+    │   │   │   │   │   └── sum.hwx
+    │   │   │   │   └── tinygrad
+    │   │   │   │       └── ops_ane.py
+    │   │   │   └── tpu
+    │   │   │       ├── README.md
+    │   │   │       ├── logs
+    │   │   │       │   └── tpu_driver.t1v-n-852cd0d5-w-0.taylor.log.INFO.20210619-062914.26926.gz
+    │   │   │       └── tfexample
+    │   │   │           ├── libtpu.h
+    │   │   │           └── libtpu_client.c
+    │   │   ├── archprobe.py
+    │   │   ├── assembly
+    │   │   │   ├── assembly.py
+    │   │   │   ├── assembly_arm64.py
+    │   │   │   ├── assembly_ptx.py
+    │   │   │   └── assembly_rdna.py
+    │   │   ├── augment.py
+    │   │   ├── datasets
+    │   │   │   ├── __init__.py
+    │   │   │   ├── coco.py
+    │   │   │   ├── imagenet.py
+    │   │   │   ├── imagenet_download.py
+    │   │   │   ├── kits19.py
+    │   │   │   ├── librispeech.py
+    │   │   │   ├── mnist
+    │   │   │   │   ├── t10k-images-idx3-ubyte.gz
+    │   │   │   │   ├── t10k-labels-idx1-ubyte.gz
+    │   │   │   │   ├── train-images-idx3-ubyte.gz
+    │   │   │   │   └── train-labels-idx1-ubyte.gz
+    │   │   │   ├── openimages.py
+    │   │   │   ├── preprocess_imagenet.py
+    │   │   │   ├── sops.gz
+    │   │   │   └── squad.py
+    │   │   ├── disk
+    │   │   │   └── test.cc
+    │   │   ├── dump_cache.py
+    │   │   ├── export_model.py
+    │   │   ├── fastvits
+    │   │   │   ├── conv1_reorder.cl
+    │   │   │   └── fastvits_speed.py
+    │   │   ├── gemm
+    │   │   │   ├── amx.py
+    │   │   │   ├── cuda_matmul.py
+    │   │   │   ├── gemm.c
+    │   │   │   ├── gemm.py
+    │   │   │   ├── gemv_845.py
+    │   │   │   ├── hip_matmul.py
+    │   │   │   ├── metal_conv.py
+    │   │   │   ├── metal_matmul.py
+    │   │   │   ├── metal_matvec.py
+    │   │   │   ├── simple_matmul.py
+    │   │   │   ├── tf_gemm.py
+    │   │   │   ├── torch_gemm.py
+    │   │   │   └── tvm_gemm.py
+    │   │   ├── gradcheck.py
+    │   │   ├── helpers.py
+    │   │   ├── hip_wrapper.py
+    │   │   ├── intel
+    │   │   │   ├── README
+    │   │   │   ├── benchmark_matmul.py
+    │   │   │   ├── go.sh
+    │   │   │   └── joint_matrix_bfloat16.cpp
+    │   │   ├── introspection.py
+    │   │   ├── lib_test_ast.py
+    │   │   ├── lr_scheduler.py
+    │   │   ├── onnx.py
+    │   │   ├── onnx_ops.py
+    │   │   ├── optimization
+    │   │   │   ├── extract_policynet.py
+    │   │   │   ├── extract_sa_pairs.py
+    │   │   │   ├── generate_dataset.sh
+    │   │   │   ├── get_action_space.py
+    │   │   │   ├── helpers.py
+    │   │   │   ├── pretrain_valuenet.py
+    │   │   │   ├── rl.py
+    │   │   │   ├── run_qnet.py
+    │   │   │   ├── test_beam_search.py
+    │   │   │   ├── test_net.py
+    │   │   │   └── test_time_linearizer.py
+    │   │   ├── ptx
+    │   │   │   └── test.py
+    │   │   ├── rocm
+    │   │   │   ├── NOTES
+    │   │   │   ├── kernel_crashes
+    │   │   │   │   ├── dump
+    │   │   │   │   ├── dump2
+    │   │   │   │   ├── dump3
+    │   │   │   │   └── dump4
+    │   │   │   ├── rdna3
+    │   │   │   │   ├── asm.py
+    │   │   │   │   └── prog.s
+    │   │   │   ├── rocm_clone.sh
+    │   │   │   ├── rocm_from_scratch.sh
+    │   │   │   ├── rocm_setup.sh
+    │   │   │   └── sniffer
+    │   │   │       └── sniff.cc
+    │   │   ├── thneed.py
+    │   │   ├── training.py
+    │   │   ├── triton
+    │   │   │   └── test.py
+    │   │   └── utils.py
+    │   ├── models
+    │   │   ├── bert.py
+    │   │   ├── convnext.py
+    │   │   ├── efficientnet.py
+    │   │   ├── mask_rcnn.py
+    │   │   ├── resnet.py
+    │   │   ├── retinanet.py
+    │   │   ├── rnnt.py
+    │   │   ├── transformer.py
+    │   │   ├── unet3d.py
+    │   │   └── vit.py
+    │   ├── mypy.ini
+    │   ├── openpilot
+    │   │   ├── compile.py
+    │   │   ├── compile2.py
+    │   │   └── go.sh
+    │   ├── push_pypi.sh
+    │   ├── pytest.ini
+    │   ├── rmso.sh
+    │   ├── ruff.toml
+    │   ├── run_multibackend.sh
+    │   ├── setup.py
+    │   ├── strip_whitespace.sh
+    │   ├── sz.py
+    │   ├── test
+    │   │   ├── Dockerfile
+    │   │   ├── __init__.py
+    │   │   ├── external
+    │   │   │   ├── external_copy_benchmark.py
+    │   │   │   ├── external_llama_eval.py
+    │   │   │   ├── external_model_benchmark.py
+    │   │   │   ├── external_multi_gpu.py
+    │   │   │   ├── external_osx_profiling.py
+    │   │   │   ├── external_test_allocator_on_models.py
+    │   │   │   ├── external_test_embedding.py
+    │   │   │   ├── external_test_gpu_ast.py
+    │   │   │   ├── external_test_image.py
+    │   │   │   ├── external_test_jit_on_models.py
+    │   │   │   ├── external_test_onnx_backend.py
+    │   │   │   ├── external_test_opt.py
+    │   │   │   ├── external_test_optim.py
+    │   │   │   ├── external_test_speed_llama.py
+    │   │   │   ├── external_test_uops_graphing.py
+    │   │   │   ├── external_test_yolo.py
+    │   │   │   ├── external_test_yolov8.py
+    │   │   │   ├── fuzz_shapetracker.py
+    │   │   │   ├── fuzz_symbolic.py
+    │   │   │   ├── graph_batchnorm.py
+    │   │   │   └── test_example.py
+    │   │   ├── extra
+    │   │   │   ├── test_export_model.py
+    │   │   │   ├── test_extra_helpers.py
+    │   │   │   ├── test_lr_scheduler.py
+    │   │   │   └── test_utils.py
+    │   │   ├── helpers.py
+    │   │   ├── models
+    │   │   │   ├── efficientnet
+    │   │   │   │   ├── Chicken.jpg
+    │   │   │   │   └── car.jpg
+    │   │   │   ├── test_bert.py
+    │   │   │   ├── test_efficientnet.py
+    │   │   │   ├── test_end2end.py
+    │   │   │   ├── test_mnist.py
+    │   │   │   ├── test_onnx.py
+    │   │   │   ├── test_real_world.py
+    │   │   │   ├── test_rnnt.py
+    │   │   │   ├── test_train.py
+    │   │   │   ├── test_waifu2x.py
+    │   │   │   ├── test_whisper.py
+    │   │   │   ├── waifu2x
+    │   │   │   │   ├── input.png
+    │   │   │   │   └── output.png
+    │   │   │   └── whisper
+    │   │   │       └── test.wav
+    │   │   ├── test_allocators.py
+    │   │   ├── test_assign.py
+    │   │   ├── test_conv.py
+    │   │   ├── test_conv_shapetracker.py
+    │   │   ├── test_custom_function.py
+    │   │   ├── test_dtype.py
+    │   │   ├── test_gc.py
+    │   │   ├── test_jit.py
+    │   │   ├── test_kernel_cache.py
+    │   │   ├── test_lazybuffer.py
+    │   │   ├── test_lazyop.py
+    │   │   ├── test_linearizer.py
+    │   │   ├── test_linearizer_failures.py
+    │   │   ├── test_net_speed.py
+    │   │   ├── test_nn.py
+    │   │   ├── test_ops.py
+    │   │   ├── test_optim.py
+    │   │   ├── test_randomness.py
+    │   │   ├── test_schedule.py
+    │   │   ├── test_search.py
+    │   │   ├── test_specific_conv.py
+    │   │   ├── test_speed_v_torch.py
+    │   │   ├── test_symbolic_jit.py
+    │   │   ├── test_symbolic_ops.py
+    │   │   ├── test_symbolic_shapetracker.py
+    │   │   ├── test_tensor.py
+    │   │   ├── test_uops.py
+    │   │   ├── test_webgpu.js
+    │   │   ├── test_winograd.py
+    │   │   └── unit
+    │   │       ├── test_disk_cache.py
+    │   │       ├── test_disk_tensor.py
+    │   │       ├── test_flopcounter.py
+    │   │       ├── test_helpers.py
+    │   │       ├── test_shapetracker.py
+    │   │       ├── test_shm_tensor.py
+    │   │       └── test_symbolic.py
+    │   └── tinygrad
+    │       ├── codegen
+    │       │   ├── kernel.py
+    │       │   └── linearizer.py
+    │       ├── features
+    │       │   ├── image.py
+    │       │   └── search.py
+    │       ├── graph.py
+    │       ├── helpers.py
+    │       ├── jit.py
+    │       ├── lazy.py
+    │       ├── mlops.py
+    │       ├── nn
+    │       │   ├── __init__.py
+    │       │   ├── optim.py
+    │       │   └── state.py
+    │       ├── ops.py
+    │       ├── realize.py
+    │       ├── renderer
+    │       │   ├── cstyle.py
+    │       │   ├── cuda.py
+    │       │   ├── llvmir.py
+    │       │   ├── metal.py
+    │       │   ├── opencl.py
+    │       │   ├── triton.py
+    │       │   └── wgsl.py
+    │       ├── runtime
+    │       │   ├── lib.py
+    │       │   ├── ops_clang.py
+    │       │   ├── ops_cpu.py
+    │       │   ├── ops_cuda.py
+    │       │   ├── ops_disk.py
+    │       │   ├── ops_gpu.py
+    │       │   ├── ops_hip.py
+    │       │   ├── ops_llvm.py
+    │       │   ├── ops_metal.py
+    │       │   ├── ops_shm.py
+    │       │   ├── ops_torch.py
+    │       │   └── ops_webgpu.py
+    │       ├── shape
+    │       │   ├── shapetracker.py
+    │       │   ├── symbolic.py
+    │       │   └── view.py
+    │       └── tensor.py
+    ├── tools
+    │   ├── CTF.md
+    │   ├── README.md
+    │   ├── __init__.py
+    │   ├── bodyteleop
+    │   │   ├── static
+    │   │   │   ├── index.html
+    │   │   │   ├── js
+    │   │   │   │   ├── controls.js
+    │   │   │   │   ├── jsmain.js
+    │   │   │   │   ├── plots.js
+    │   │   │   │   └── webrtc.js
+    │   │   │   ├── main.css
+    │   │   │   └── poster.png
+    │   │   └── web.py
+    │   ├── cabana
+    │   │   ├── README.md
+    │   │   ├── SConscript
+    │   │   ├── assets
+    │   │   │   ├── assets.qrc
+    │   │   │   └── cabana-icon.png
+    │   │   ├── binaryview.cc
+    │   │   ├── binaryview.h
+    │   │   ├── cabana.cc
+    │   │   ├── chart
+    │   │   │   ├── chart.cc
+    │   │   │   ├── chart.h
+    │   │   │   ├── chartswidget.cc
+    │   │   │   ├── chartswidget.h
+    │   │   │   ├── signalselector.cc
+    │   │   │   ├── signalselector.h
+    │   │   │   ├── sparkline.cc
+    │   │   │   ├── sparkline.h
+    │   │   │   ├── tiplabel.cc
+    │   │   │   └── tiplabel.h
+    │   │   ├── commands.cc
+    │   │   ├── commands.h
+    │   │   ├── dbc
+    │   │   │   ├── dbc.cc
+    │   │   │   ├── dbc.h
+    │   │   │   ├── dbcfile.cc
+    │   │   │   ├── dbcfile.h
+    │   │   │   ├── dbcmanager.cc
+    │   │   │   ├── dbcmanager.h
+    │   │   │   └── generate_dbc_json.py
+    │   │   ├── detailwidget.cc
+    │   │   ├── detailwidget.h
+    │   │   ├── historylog.cc
+    │   │   ├── historylog.h
+    │   │   ├── mainwin.cc
+    │   │   ├── mainwin.h
+    │   │   ├── messageswidget.cc
+    │   │   ├── messageswidget.h
+    │   │   ├── settings.cc
+    │   │   ├── settings.h
+    │   │   ├── signalview.cc
+    │   │   ├── signalview.h
+    │   │   ├── streams
+    │   │   │   ├── abstractstream.cc
+    │   │   │   ├── abstractstream.h
+    │   │   │   ├── devicestream.cc
+    │   │   │   ├── devicestream.h
+    │   │   │   ├── livestream.cc
+    │   │   │   ├── livestream.h
+    │   │   │   ├── pandastream.cc
+    │   │   │   ├── pandastream.h
+    │   │   │   ├── replaystream.cc
+    │   │   │   ├── replaystream.h
+    │   │   │   ├── routes.cc
+    │   │   │   ├── routes.h
+    │   │   │   ├── socketcanstream.cc
+    │   │   │   └── socketcanstream.h
+    │   │   ├── streamselector.cc
+    │   │   ├── streamselector.h
+    │   │   ├── tests
+    │   │   │   ├── test_cabana.cc
+    │   │   │   └── test_runner.cc
+    │   │   ├── tools
+    │   │   │   ├── findsignal.cc
+    │   │   │   ├── findsignal.h
+    │   │   │   ├── findsimilarbits.cc
+    │   │   │   └── findsimilarbits.h
+    │   │   ├── utils
+    │   │   │   ├── export.cc
+    │   │   │   ├── export.h
+    │   │   │   ├── util.cc
+    │   │   │   └── util.h
+    │   │   ├── videowidget.cc
+    │   │   └── videowidget.h
+    │   ├── camerastream
+    │   │   ├── README.md
+    │   │   └── compressed_vipc.py
+    │   ├── car_porting
+    │   │   ├── README.md
+    │   │   ├── auto_fingerprint.py
+    │   │   ├── examples
+    │   │   │   ├── ford_vin_fingerprint.ipynb
+    │   │   │   ├── subaru_fuzzy_fingerprint.ipynb
+    │   │   │   ├── subaru_long_accel.ipynb
+    │   │   │   └── subaru_steer_temp_fault.ipynb
+    │   │   └── test_car_model.py
+    │   ├── install_python_dependencies.sh
+    │   ├── install_ubuntu_dependencies.sh
+    │   ├── joystick
+    │   │   ├── README.md
+    │   │   └── joystickd.py
+    │   ├── latencylogger
+    │   │   ├── README.md
+    │   │   └── latency_logger.py
+    │   ├── lib
+    │   │   ├── README.md
+    │   │   ├── __init__.py
+    │   │   ├── api.py
+    │   │   ├── auth.py
+    │   │   ├── auth_config.py
+    │   │   ├── azure_container.py
+    │   │   ├── bootlog.py
+    │   │   ├── cache.py
+    │   │   ├── comma_car_segments.py
+    │   │   ├── exceptions.py
+    │   │   ├── filereader.py
+    │   │   ├── framereader.py
+    │   │   ├── helpers.py
+    │   │   ├── kbhit.py
+    │   │   ├── live_logreader.py
+    │   │   ├── logreader.py
+    │   │   ├── openpilotci.py
+    │   │   ├── openpilotcontainers.py
+    │   │   ├── route.py
+    │   │   ├── sanitizer.py
+    │   │   ├── tests
+    │   │   │   ├── __init__.py
+    │   │   │   ├── test_caching.py
+    │   │   │   ├── test_comma_car_segments.py
+    │   │   │   ├── test_logreader.py
+    │   │   │   ├── test_readers.py
+    │   │   │   └── test_route_library.py
+    │   │   ├── url_file.py
+    │   │   └── vidindex.py
+    │   ├── mac_setup.sh
+    │   ├── plotjuggler
+    │   │   ├── README.md
+    │   │   ├── juggle.py
+    │   │   ├── layouts
+    │   │   │   ├── CAN-bus-debug.xml
+    │   │   │   ├── camera-timings.xml
+    │   │   │   ├── can-states.xml
+    │   │   │   ├── controls_mismatch_debug.xml
+    │   │   │   ├── demo.xml
+    │   │   │   ├── gps_vs_llk.xml
+    │   │   │   ├── longitudinal.xml
+    │   │   │   ├── max-torque-debug.xml
+    │   │   │   ├── system_lag_debug.xml
+    │   │   │   ├── thermal_debug.xml
+    │   │   │   ├── torque-controller.xml
+    │   │   │   ├── tuning.xml
+    │   │   │   └── ublox-debug.xml
+    │   │   └── test_plotjuggler.py
+    │   ├── profiling
+    │   │   ├── clpeak
+    │   │   │   ├── no_print.patch
+    │   │   │   └── run_continuously.patch
+    │   │   ├── ftrace.sh
+    │   │   ├── palanteer
+    │   │   │   └── setup.sh
+    │   │   ├── perfetto
+    │   │   │   ├── copy.sh
+    │   │   │   ├── record.sh
+    │   │   │   ├── server.sh
+    │   │   │   └── traces.sh
+    │   │   ├── py-spy
+    │   │   │   └── profile.sh
+    │   │   ├── snapdragon
+    │   │   │   ├── README.md
+    │   │   │   ├── setup-agnos.sh
+    │   │   │   └── setup-profiler.sh
+    │   │   └── watch-irqs.sh
+    │   ├── replay
+    │   │   ├── README.md
+    │   │   ├── SConscript
+    │   │   ├── __init__.py
+    │   │   ├── camera.cc
+    │   │   ├── camera.h
+    │   │   ├── can_replay.py
+    │   │   ├── consoleui.cc
+    │   │   ├── consoleui.h
+    │   │   ├── filereader.cc
+    │   │   ├── filereader.h
+    │   │   ├── framereader.cc
+    │   │   ├── framereader.h
+    │   │   ├── lib
+    │   │   │   ├── __init__.py
+    │   │   │   └── ui_helpers.py
+    │   │   ├── logreader.cc
+    │   │   ├── logreader.h
+    │   │   ├── main.cc
+    │   │   ├── replay.cc
+    │   │   ├── replay.h
+    │   │   ├── route.cc
+    │   │   ├── route.h
+    │   │   ├── tests
+    │   │   │   ├── test_replay.cc
+    │   │   │   └── test_runner.cc
+    │   │   ├── ui.py
+    │   │   ├── unlog_ci_segment.py
+    │   │   ├── util.cc
+    │   │   └── util.h
+    │   ├── rerun
+    │   │   └── run.py
+    │   ├── scripts
+    │   │   ├── fetch_image_from_route.py
+    │   │   ├── save_ubloxraw_stream.py
+    │   │   └── setup_ssh_keys.py
+    │   ├── serial
+    │   │   ├── README.md
+    │   │   └── connect.sh
+    │   ├── sim
+    │   │   ├── README.md
+    │   │   ├── __init__.py
+    │   │   ├── bridge
+    │   │   │   ├── __init__.py
+    │   │   │   ├── common.py
+    │   │   │   └── metadrive
+    │   │   │       ├── metadrive_bridge.py
+    │   │   │       ├── metadrive_common.py
+    │   │   │       ├── metadrive_process.py
+    │   │   │       └── metadrive_world.py
+    │   │   ├── launch_openpilot.sh
+    │   │   ├── lib
+    │   │   │   ├── __init__.py
+    │   │   │   ├── camerad.py
+    │   │   │   ├── common.py
+    │   │   │   ├── keyboard_ctrl.py
+    │   │   │   ├── manual_ctrl.py
+    │   │   │   ├── simulated_car.py
+    │   │   │   └── simulated_sensors.py
+    │   │   ├── rgb_to_nv12.cl
+    │   │   ├── run_bridge.py
+    │   │   ├── start_openpilot_docker.sh
+    │   │   └── tests
+    │   │       ├── __init__.py
+    │   │       ├── conftest.py
+    │   │       ├── test_metadrive_bridge.py
+    │   │       └── test_sim_bridge.py
+    │   ├── ssh
+    │   │   ├── README.md
+    │   │   └── id_rsa
+    │   ├── tuning
+    │   │   └── measure_steering_accuracy.py
+    │   ├── ubuntu_setup.sh
+    │   └── webcam
+    │       ├── README.md
+    │       ├── camera.py
+    │       ├── camerad.py
+    │       └── start_camerad.sh
+    └── workspace_map.py
