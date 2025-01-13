@@ -21,8 +21,8 @@ class SpeedLimitController:
     self.update_map_speed_limit(v_ego, frogpilot_toggles)
     max_speed_limit = v_cruise if enabled else 0
 
-    self.offset = self.get_offset(frogpilot_toggles)
     self.speed_limit = self.get_speed_limit(dashboard_speed_limit, max_speed_limit, navigation_speed_limit, frogpilot_toggles)
+    self.offset = self.get_offset(self.speed_limit, frogpilot_toggles)
     self.desired_speed_limit = self.get_desired_speed_limit()
 
     self.experimental_mode = frogpilot_toggles.slc_fallback_experimental_mode and self.speed_limit == 0
