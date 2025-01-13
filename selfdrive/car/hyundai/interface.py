@@ -110,13 +110,14 @@ class CarInterface(CarInterfaceBase):
 
     # HKG tuning without hat trick
     if hkg_tuning: # and not hat_trick:
-      ret.longitudinalTuning.kiV = [0.0]
+      ret.longitudinalTuning.kiV = [0.02]
       ret.vEgoStopping = 0.10
       ret.vEgoStarting = 0.15
       ret.longitudinalActuatorDelay = 0.2
 
       if ret.flags & (HyundaiFlags.HYBRID | HyundaiFlags.EV):
           ret.startingState = False
+          ret.startAccel = 2.0
       else:
           ret.startingState = True
           ret.startAccel = 1.6
