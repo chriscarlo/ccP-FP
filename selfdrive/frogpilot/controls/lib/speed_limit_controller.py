@@ -1,5 +1,6 @@
 # PFEIFER - SLC - Modified by FrogAi for FrogPilot
 import json
+import math
 
 from openpilot.selfdrive.frogpilot.frogpilot_utilities import calculate_distance_to_point
 from openpilot.selfdrive.frogpilot.frogpilot_variables import TO_RADIANS, params, params_memory
@@ -16,7 +17,14 @@ class SpeedLimitController:
 
     self.source = "None"
 
+    # Pull previous speed limit from params
     self.previous_speed_limit = params.get_float("PreviousSpeedLimit")
+
+    # 1) Clamp it in case it’s invalid or out of range
+    if (math.isnan(self.previous_speed_limit) or
+        self.previous_speed_limit < 0 or
+        self.previous_speed_limit > 150):
+      self.previous_speed_limit = 0
 
   def update(self, dashboard_speed_limit, enabled, navigation_speed_limit,
              v_cruise, v_ego, frogpilot_toggles):
@@ -27,12 +35,13 @@ class SpeedLimitController:
     max_speed_limit = v_cruise if enabled else 0
 
     # 3) Retrieve the raw/base speed limit from your chosen priority source
-    self.speed_limit = self.get_speed_limit(
+    base_limit = self.get_speed_limit(
       dashboard_speed_limit,
       max_speed_limit,
       navigation_speed_limit,
       frogpilot_toggles
     )
+    self.speed_limit = base_limit
 
     # 4) Determine offset for this base speed limit
     self.offset = self.get_offset(self.speed_limit, frogpilot_toggles)
@@ -63,6 +72,9 @@ class SpeedLimitController:
 
       return final_speed
     else:
+      # If there's no valid base limit, it's safer to return 0,
+      # and also zero out the offset
+      self.offset = 0
       return 0
 
   def update_map_speed_limit(self, v_ego, frogpilot_toggles):
@@ -98,6 +110,10 @@ class SpeedLimitController:
 
       if distance < max_distance:
         self.map_speed_limit = self.upcoming_speed_limit
+    else:
+      # If there's no upcoming map-based limit, just keep the stored map_speed_limit
+      # or it might be 0 if none is available
+      pass
 
   def get_offset(self, speed_limit, frogpilot_toggles):
     """
@@ -105,9 +121,13 @@ class SpeedLimitController:
     'speed_limit' falls into. For example:
       - If speed < 13.5 mph, use offset1
       - If speed < 24 mph, use offset2
-      - ...
+      - If speed < 29 mph, use offset3
+      - Otherwise use offset4
     """
-    if speed_limit < 13.5:
+    if speed_limit < 1:
+      # If it's 0 or invalid, no offset
+      return 0
+    elif speed_limit < 13.5:
       return frogpilot_toggles.speed_limit_offset1
     elif speed_limit < 24:
       return frogpilot_toggles.speed_limit_offset2
@@ -158,14 +178,18 @@ class SpeedLimitController:
     # If we end up here, no valid limit found or all were <= 1
     self.source = "None"
 
-    # Fallback: use stored "previous" speed limit if toggled on
+    # Fallback: use stored "previous" speed limit if toggled on and valid
     if frogpilot_toggles.slc_fallback_previous_speed_limit:
-      return self.previous_speed_limit
+      # Ensure that it's within a sane range
+      if 1 < self.previous_speed_limit < 150:
+        return self.previous_speed_limit
+      else:
+        return 0
 
     # Fallback: use set cruise speed if toggled on
     if frogpilot_toggles.slc_fallback_set_speed:
-      self.offset = 0
-      return max_speed_limit
+      # We’ll zero offset in get_desired_speed_limit() if this is 0
+      return max_speed_limit if max_speed_limit > 1 else 0
 
     # Otherwise, no valid speed limit
     return 0
