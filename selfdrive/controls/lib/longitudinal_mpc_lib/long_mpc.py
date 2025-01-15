@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import time
+import math
 import numpy as np
 from cereal import log
 from openpilot.common.numpy_fast import clip
@@ -16,7 +17,6 @@ else:
   from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.c_generated_code.acados_ocp_solver_pyx import AcadosOcpSolverCython
 
 from casadi import SX, vertcat
-
 
 MODEL_NAME = 'long'
 LONG_MPC_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -120,6 +120,7 @@ def desired_follow_distance(v_ego, v_lead, t_follow=None):
     t_follow = get_T_FOLLOW()
   return get_safe_obstacle_distance(v_ego, t_follow) - get_stopped_equivalence_factor(v_lead)
 
+
 # for more urgent scenarios
 def get_ohshit_equivalence_factor(v_lead):
   return (v_lead**2) / (2 * DISCOMFORT_BRAKE)
@@ -135,16 +136,62 @@ def fuck_this_follow_distance(v_ego, v_lead, t_follow=None):
   return get_unsafe_obstacle_distance(v_ego, t_follow) - get_ohshit_equivalence_factor(v_lead)
 
 
-def get_dynamic_j_ego_cost_array(x_obstacle, x_ego, v_ego, v_lead, t_follow, J_EGO_COST):
-  """
-  Returns an array of jerk costs for each time step in the horizon, going from
-  normal cost (J_EGO_COST) at/above desired distance down to near zero
-  when below an "oh-shit" distance.
+# -----------------------------------------------------------------------------
+# OLD function - preserve for reference
+# -----------------------------------------------------------------------------
+# def get_dynamic_j_ego_cost_array(x_obstacle, x_ego, v_ego, v_lead, t_follow, J_EGO_COST):
+#   """
+#   Returns an array of jerk costs for each time step in the horizon, going from
+#   normal cost (J_EGO_COST) at/above desired distance down to near zero
+#   when below an "oh-shit" distance. (OLD approach, piecewise.)
+#   """
+#   if not isinstance(x_obstacle, np.ndarray):
+#     x_obstacle = np.array([float(x_obstacle)])
+#   n_steps = x_obstacle.shape[0]
 
-  If v_ego <= v_lead, we won't reduce the jerk cost (not actually closing).
+#   def ensure_array(val):
+#     if not isinstance(val, np.ndarray):
+#       return np.full(n_steps, float(val))
+#     return val
+
+#   x_ego_arr = ensure_array(x_ego)
+#   v_ego_arr = ensure_array(v_ego)
+#   v_lead_arr = ensure_array(v_lead)
+#   t_follow_arr = ensure_array(t_follow)
+
+#   current_dist = (x_obstacle - x_ego_arr) / (v_ego_arr + 10.0)
+#   desired_dist = desired_follow_distance(v_ego_arr, v_lead_arr, t_follow_arr) / (v_ego_arr + 10.0)
+#   ohshit_dist  = fuck_this_follow_distance(v_ego_arr, v_lead_arr, t_follow_arr) / (v_ego_arr + 10.0)
+
+#   is_closing = v_ego_arr > v_lead_arr
+
+#   ratio = (current_dist - ohshit_dist) / np.maximum(desired_dist - ohshit_dist, 1e-9)
+#   ratio = np.clip(ratio, 0.0, 1.0)
+
+#   dyn_j_array = np.where(is_closing, ratio * J_EGO_COST, J_EGO_COST)
+#   return dyn_j_array
+
+
+# -----------------------------------------------------------------------------
+# Logistic-based “Dr. Limo / Mr. Andretti” Jerk Cost
+# -----------------------------------------------------------------------------
+def get_smooth_dynamic_j_ego_cost_array(
+    x_obstacle, x_ego, v_ego, v_lead,
+    t_follow, base_jerk_cost=5.0,
+    low_jerk_cost=1.0,
+    logistic_k_dist=8.0,
+    logistic_k_speed=3.0,
+    min_speed_for_closing=0.1,
+    distance_smoothing=5.0,
+    time_taper=False
+):
+  """
+  Returns an array of jerk costs for each time step, smoothly transitioning
+  between high cost (limo mode) when comfortable, and low cost (Andretti)
+  when dangerously close or large negative delta-v.
   """
 
-  # Convert scalars to arrays if necessary, so we can do elementwise ops
+  # 1) Ensure inputs are arrays
   if not isinstance(x_obstacle, np.ndarray):
     x_obstacle = np.array([float(x_obstacle)])
   n_steps = x_obstacle.shape[0]
@@ -159,28 +206,52 @@ def get_dynamic_j_ego_cost_array(x_obstacle, x_ego, v_ego, v_lead, t_follow, J_E
   v_lead_arr = ensure_array(v_lead)
   t_follow_arr = ensure_array(t_follow)
 
-  # Distances normalized by (v_ego+10)
-  current_dist = (x_obstacle - x_ego_arr) / (v_ego_arr + 10.0)
+  # 2) Compute a measure of "distance margin": how close are we to the 'desired' follow distance?
+  desired_dist = desired_follow_distance(v_ego_arr, v_lead_arr, t_follow_arr)
+  ohshit_dist = fuck_this_follow_distance(v_ego_arr, v_lead_arr, t_follow_arr)
 
-  desired_dist = desired_follow_distance(v_ego_arr, v_lead_arr, t_follow_arr) / (v_ego_arr + 10.0)
-  ohshit_dist  = fuck_this_follow_distance(v_ego_arr, v_lead_arr, t_follow_arr) / (v_ego_arr + 10.0)
+  current_dist = (x_obstacle - x_ego_arr)
+  # Add a small offset to avoid singularities/sensitivity
+  dist_ratio = (desired_dist - current_dist) / (desired_dist + distance_smoothing)
 
-  # Only reduce cost if actually closing on the lead
-  is_closing = v_ego_arr > v_lead_arr  # bool array
+  # 3) Logistic function
+  def logistic(z):
+    return 1.0 / (1.0 + np.exp(-z))
 
-  # ratio: 1.0 above desired_dist -> 0.0 below ohshit_dist
-  ratio = (current_dist - ohshit_dist) / np.maximum(desired_dist - ohshit_dist, 1e-9)
-  ratio = np.clip(ratio, 0.0, 1.0)  # stays between 0 and 1
+  dist_logistic = logistic(logistic_k_dist * dist_ratio)
 
-  # blend based on is_closing
-  # if not closing, jerk cost remains J_EGO_COST
-  # if closing, jerk cost is ratio * J_EGO_COST
-  dyn_j_array = np.where(is_closing, ratio * J_EGO_COST, J_EGO_COST)
+  # 4) "closing speed" logistic
+  closing_speed = v_ego_arr - v_lead_arr
+  closing_shifted = closing_speed - min_speed_for_closing
+  speed_logistic = logistic(logistic_k_speed * closing_shifted)
 
-  return dyn_j_array
+  # 5) Combine
+  combined_factor = dist_logistic * speed_logistic
+
+  # 6) Map to jerk cost
+  # combined_factor=0 => cost=base_jerk_cost, combined_factor=1 => cost=low_jerk_cost
+  jerk_cost_array = low_jerk_cost + (1.0 - combined_factor) * (base_jerk_cost - low_jerk_cost)
+
+  # 7) Optional "time-based taper"
+  if time_taper:
+    # We already have T_IDXS in this file
+    taper_factors = []
+    for t in T_IDXS[:n_steps]:
+      if t <= 2.0:
+        # fade from 1.5 down to 1.0
+        alpha = t / 2.0
+        factor_t = 1.5 + (1.0 - 1.5) * alpha
+      else:
+        factor_t = 1.0
+      taper_factors.append(factor_t)
+    taper_factors = np.array(taper_factors)
+    jerk_cost_array *= taper_factors
+
+  return jerk_cost_array
 
 
 def gen_long_model():
+  from openpilot.third_party.acados.acados_template import AcadosModel
   model = AcadosModel()
   model.name = MODEL_NAME
 
@@ -217,6 +288,7 @@ def gen_long_model():
 
 
 def gen_long_ocp():
+  from openpilot.third_party.acados.acados_template import AcadosOcp
   ocp = AcadosOcp()
   ocp.model = gen_long_model()
 
@@ -344,42 +416,53 @@ class LongitudinalMpc:
   def set_weights(self, acceleration_jerk=1.0, danger_jerk=1.0, speed_jerk=1.0,
                   prev_accel_constraint=True, personality=log.LongitudinalPersonality.standard):
     """
-    Updated version that uses array-based dynamic jerk cost.
+    Updated version that uses the new smooth logistic-based jerk cost array.
+    Tune parameters as desired.
     """
     if self.mode == 'acc':
       a_change_cost = acceleration_jerk if prev_accel_constraint else 0.0
 
-      # Generate an array of jerk costs for each horizon step
-      # We'll consider self.params[:,2] as x_obstacle,
-      # self.x0[0] as x_ego, self.x0[1] as v_ego,
-      # self.params[:,4] as t_follow, etc.
-      # For simplicity, let's assume the lead speed is also self.x0[1].
-      dyn_j_ego_array = get_dynamic_j_ego_cost_array(
+      # Example tuned values -- adjust as needed:
+      base_jerk_cost = 5.0
+      low_jerk_cost  = 0.5
+      logistic_k_dist = 8.0
+      logistic_k_speed = 3.0
+      min_speed_for_closing = 0.3
+      distance_smoothing = 5.0
+      time_taper = True  # Try out time-based taper
+
+      # Call the new smooth jerk cost function:
+      dyn_j_ego_array = get_smooth_dynamic_j_ego_cost_array(
         x_obstacle=self.params[:,2],
         x_ego=self.x0[0],
         v_ego=self.x0[1],
-        v_lead=self.x0[1],
+        v_lead=self.x0[1],  # or real lead speed if you have it
         t_follow=self.params[:,4],
-        J_EGO_COST=J_EGO_COST
+        base_jerk_cost=base_jerk_cost,
+        low_jerk_cost=low_jerk_cost,
+        logistic_k_dist=logistic_k_dist,
+        logistic_k_speed=logistic_k_speed,
+        min_speed_for_closing=min_speed_for_closing,
+        distance_smoothing=distance_smoothing,
+        time_taper=time_taper
       )
 
       # Our "base" cost weights for the 6 cost dimensions:
-      #   0) obstacle distance cost,
-      #   1) x_ego cost,
-      #   2) v_ego cost,
-      #   3) a_ego cost,
-      #   4) a_change cost,
-      #   5) jerk cost (this will be overwritten per step)
+      #   0) obstacle distance cost
+      #   1) x_ego cost
+      #   2) v_ego cost
+      #   3) a_ego cost
+      #   4) (a-a_prev)
+      #   5) jerk cost
       base_cost_weights = [3.0, 0.0, 0.0, 0.0, a_change_cost, 1.0]
-
       constraint_cost_weights = [LIMIT_COST, LIMIT_COST, LIMIT_COST, 50.0]
 
-      # Instead of setting a single W for the entire horizon, we set W per step:
       for i in range(N):
         W_step = np.diag(base_cost_weights)
-        # Lower the cost on (a-a_prev) as time goes
+        # Let's do your linear fade on (a-a_prev) as time goes
         W_step[4,4] = a_change_cost * np.interp(T_IDXS[i], [0.0, 1.0, 2.0], [1.0, 1.0, 0.0])
-        # The dynamic jerk cost for step i
+
+        # The new dynamic jerk cost for step i
         W_step[5,5] = dyn_j_ego_array[i]
         self.solver.cost_set(i, 'W', W_step)
 
@@ -392,7 +475,7 @@ class LongitudinalMpc:
         self.solver.cost_set(i, 'Zl', Zl)
 
     elif self.mode == 'blended':
-      # Original "blended" weights example (unchanged)
+      # Original "blended" weights example
       a_change_cost = 40.0 if prev_accel_constraint else 0
       cost_weights = [0., 0.1, 0.2, 5.0, a_change_cost, 1.0]
       constraint_cost_weights = [LIMIT_COST, LIMIT_COST, LIMIT_COST, 50.0]
@@ -539,6 +622,7 @@ class LongitudinalMpc:
 
 
 if __name__ == "__main__":
+  from openpilot.third_party.acados.acados_template import AcadosOcp, AcadosOcpSolver
   ocp = gen_long_ocp()
   AcadosOcpSolver.generate(ocp, json_file=JSON_FILE)
   # AcadosOcpSolver.build(ocp.code_export_directory, with_cython=True)
