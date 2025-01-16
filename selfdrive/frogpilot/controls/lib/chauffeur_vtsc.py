@@ -6,27 +6,27 @@ from openpilot.common.numpy_fast import clip
 from openpilot.common.realtime import DT_MDL
 
 def nonlinear_lat_accel(v_ego_ms: float, turn_aggressiveness: float = 1.0) -> float:
-  """
-  Smooth logistic function returning a comfortable max lateral accel.
+    """
+    Smooth logistic function returning a comfortable max lateral accel.
 
-  This logistic is centered around ~30 mph and tuned so that:
-    - at 10 mph => ~1.7 m/s^2
-    - at 40 mph => ~3.0 m/s^2
-    - at 70 mph => ~3.2 m/s^2
+    This logistic is centered around ~30 mph and tuned so that:
+      - at 10 mph => ~1.7 m/s^2
+      - at 40 mph => ~3.0 m/s^2
+      - at 70 mph => ~3.2 m/s^2
 
-  v_ego_ms: vehicle speed in m/s
-  turn_aggressiveness: user multiplier, e.g. 1.0 for default
-  """
-  v_ego_mph = v_ego_ms * CV.MS_TO_MPH
+    v_ego_ms: vehicle speed in m/s
+    turn_aggressiveness: user multiplier, e.g. 1.0 for default
+    """
+    v_ego_mph = v_ego_ms * CV.MS_TO_MPH
 
-  base = 1.7
-  span = 1.9
-  center = 45.0
-  k = 0.14
+    base = 1.7
+    span = 1.9
+    center = 45.0
+    k = 0.14
 
-  lat_acc = base + span / (1.0 + math.exp(-k * (v_ego_mph - center)))
-  lat_acc = min(lat_acc, 3.2)  # clamp for safety
-  return lat_acc * turn_aggressiveness
+    lat_acc = base + span / (1.0 + math.exp(-k * (v_ego_mph - center)))
+    lat_acc = min(lat_acc, 3.2)  # clamp for safety
+    return lat_acc * turn_aggressiveness
 
 def find_apexes(curvature: np.ndarray, threshold: float = 1e-4) -> list:
     """
@@ -129,14 +129,11 @@ class VisionTurnSpeedController:
 
         # 2) Identify apex indices in the horizon
         apex_indices = find_apexes(curvature_array)
-        # Example: [5, 12, 27] if there are multiple apexes
 
         # 3) Forward pass
         #
-        # Start from the current speed, ensure jerk-limited acceleration,
-        # but also add a small "apex-out" acceleration if the next apex is far.
-
-        planned_speeds[0] = min(planned_speeds[0], v_ego)
+        # FIX: Start exactly at current speed, so the plan can go above v_ego if needed.
+        planned_speeds[0] = v_ego
         accel_cmd = 0.0
 
         # We'll keep track of where we are relative to the next apex
@@ -159,7 +156,7 @@ class VisionTurnSpeedController:
             desired_acc = (planned_speeds[i] - v_prev) / dt
 
             # "intelligent" apex-out factor:
-            # if the next apex is far away => accelerate more
+            # if the next apex is far => accelerate more
             # if near => accelerate less
             if steps_to_next_apex > 10:
                 desired_acc *= 1.2
@@ -185,7 +182,6 @@ class VisionTurnSpeedController:
         # Ensure we can still slow down for upcoming apexes/curves. This step
         # "pulls down" speeds from the end backward, guaranteeing feasible
         # deceleration if a tight turn is imminent.
-
         accel_cmd = 0.0
         for i in range(n - 2, -1, -1):
             v_next = planned_speeds[i + 1]
