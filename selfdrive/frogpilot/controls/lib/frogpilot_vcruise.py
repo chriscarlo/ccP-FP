@@ -16,10 +16,11 @@ from openpilot.selfdrive.frogpilot.frogpilot_variables import CRUISING_SPEED, PL
 
 from openpilot.selfdrive.frogpilot.frogpilot_utilities import calculate_road_curvature
 
-# ------------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
 # Non-linear function for max comfortable lateral acceleration (m/s^2)
-# (Unchanged from original, just here for completeness)
-# ------------------------------------------------------------------------------
+# (Unchanged from original)
+# -----------------------------------------------------------------------------
 def nonlinear_lat_accel(v_ego_ms: float, turn_aggressiveness: float = 1.0) -> float:
   """
   Smooth logistic function returning a comfortable max lateral accel.
@@ -27,7 +28,7 @@ def nonlinear_lat_accel(v_ego_ms: float, turn_aggressiveness: float = 1.0) -> fl
     v_ego_ms:          vehicle speed in m/s
     turn_aggressiveness: user multiplier
 
-  This logistic is centered around ~30-45 mph and tuned so that:
+  This logistic is centered around ~30 mph and tuned so that:
     - at 10 mph => ~1.7 m/s^2
     - at 40 mph => ~3.0 m/s^2
     - at 70 mph => ~3.2 m/s^2
@@ -37,9 +38,9 @@ def nonlinear_lat_accel(v_ego_ms: float, turn_aggressiveness: float = 1.0) -> fl
 
   # Lower bound + range
   base = 1.7
-  span = 1.9     # up to ~3.2 total
-  center = 45.0  # "middle" in mph
-  k = 0.14       # slope factor
+  span = 1.9
+  center = 45.0
+  k = 0.14
 
   # logistic form: f(x) = base + span / (1 + e^{-k (x - center)})
   lat_acc = base + span / (1.0 + math.exp(-k * (v_ego_mph - center)))
@@ -50,9 +51,9 @@ def nonlinear_lat_accel(v_ego_ms: float, turn_aggressiveness: float = 1.0) -> fl
   return lat_acc * turn_aggressiveness
 
 
-# ------------------------------------------------------------------------------
-# Main FrogPilotVCruise class, with Chauffeur edits added for backward-compat
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# Main FrogPilotVCruise class (with multi-stage + jerk-limited decel)
+# -----------------------------------------------------------------------------
 class FrogPilotVCruise:
     def __init__(self, FrogPilotPlanner):
         self.frogpilot_planner = FrogPilotPlanner
@@ -82,49 +83,36 @@ class FrogPilotVCruise:
         self.previous_speed_limit = 0
         self.tracked_model_length = 0
 
-        # --------------------------------------------------------
-        # Original line that sets threshold to detect turns sooner
-        # (We'll keep it for backward compatibility.)
-        # --------------------------------------------------------
-        self.turn_lat_acc_threshold = 0.3  # was 0.5 before
-
-        # Also keep the original snippet that redefines CRUISING_SPEED:
+        # Original user changes to detect turns sooner + lower CRUISING_SPEED
+        self.turn_lat_acc_threshold = 0.3  # was 0.5
         global CRUISING_SPEED
-        CRUISING_SPEED = 6.7  # ~15 mph
-
-        # vtsc_target_prev from original code
+        CRUISING_SPEED = 6.7  # ~15 mph in m/s
+        self.turn_smoothing_alpha = 0.3
         self.vtsc_target_prev = 0.0
 
-        # =======================================================
-        # CHAUFFEUR EDITS (ADDED FIELDS FOR BACKWARD COMPATIBILITY)
-        # =======================================================
+        # -----------------------------------------------------------------
+        # CHAUFFEUR-STYLE ADDITIONS
+        # -----------------------------------------------------------------
+        # Multi-stage latAccel thresholds
+        self.LOW_LAT_ACC  = 0.20
+        self.HIGH_LAT_ACC = 0.40
 
-        # 1) Jerk-limited deceleration parameters (new fields)
-        self.MAX_DECEL = 2.0      # m/s^2  (maximum comfortable decel)
-        self.MAX_JERK  = 1.0      # m/s^3  (rate-of-change of decel)
-
-        # 2) Multi-stage latAccel thresholds (new fields)
-        self.LOW_LAT_ACC  = 0.20  # lightly begin slowing
-        self.HIGH_LAT_ACC = 0.40  # definitely in turn
-
-        # 3) Look-ahead distance for pre-slow logic (new field)
-        self.LOOKAHEAD_DIST = 150.0  # meters
-
-        # 4) Jerk-limited decel: store last decel (new field)
+        # Jerk-limited deceleration parameters
+        self.MAX_DECEL = 2.0  # m/s^2
+        self.MAX_JERK  = 1.0  # m/s^3
         self.current_decel = 0.0
 
-        # Additional smoothing factors for new logic
-        self.turn_smoothing_alpha_chauffeur = 0.3
-        self.reaccel_alpha_chauffeur = 0.2
+        # Slightly gentler re-acceleration
+        self.reaccel_alpha = 0.2
 
 
     def update(self, carControl, carState, controlsState,
                frogpilotCarControl, frogpilotCarState, frogpilotNavigation,
                v_cruise, v_ego, frogpilot_toggles):
 
-        # ---------------------------------------------
+        # -------------------------------------------------------------
         # Force Stop Logic (original)
-        # ---------------------------------------------
+        # -------------------------------------------------------------
         force_stop = (
             frogpilot_toggles.force_stops
             and self.frogpilot_planner.cem.stop_light_detected
@@ -136,7 +124,6 @@ class FrogPilotVCruise:
         self.force_stop_timer = self.force_stop_timer + DT_MDL if force_stop else 0
         force_stop_enabled = self.force_stop_timer >= 1
 
-        # Conditions that override forced stop
         self.override_force_stop |= (
             (not frogpilot_toggles.force_standstill
              and carState.standstill
@@ -151,16 +138,16 @@ class FrogPilotVCruise:
         elif self.override_force_stop_timer > 0:
             self.override_force_stop_timer -= DT_MDL
 
-        # Keep cluster in sync with v_cruise
+        # Keep cluster in sync
         v_cruise_cluster = max(controlsState.vCruiseCluster * CV.KPH_TO_MS, v_cruise)
         v_cruise_diff = v_cruise_cluster - v_cruise
 
         v_ego_cluster = max(carState.vEgoCluster, v_ego)
         v_ego_diff = v_ego_cluster - v_ego
 
-        # ---------------------------------------------
+        # -------------------------------------------------------------
         # Map Turn Speed Controller (original)
-        # ---------------------------------------------
+        # -------------------------------------------------------------
         if frogpilot_toggles.map_turn_speed_controller and v_ego > CRUISING_SPEED and carControl.longActive:
             mtsc_active = self.mtsc_target < v_cruise
             self.mtsc_target = clip(
@@ -179,9 +166,9 @@ class FrogPilotVCruise:
         else:
             self.mtsc_target = v_cruise if v_cruise != V_CRUISE_UNSET else 0
 
-        # ---------------------------------------------
+        # -------------------------------------------------------------
         # Speed Limit Controller (original)
-        # ---------------------------------------------
+        # -------------------------------------------------------------
         if frogpilot_toggles.show_speed_limits or frogpilot_toggles.speed_limit_controller:
             self.slc.update(
                 frogpilotCarState.dashboardSpeedLimit,
@@ -193,12 +180,12 @@ class FrogPilotVCruise:
             )
             unconfirmed_slc_target = self.slc.desired_speed_limit
 
-            # Optional: user-confirmation logic
+            # Optional user-confirmation logic
             if ((frogpilot_toggles.speed_limit_changed_alert or frogpilot_toggles.speed_limit_confirmation)
                 and self.slc_target != 0):
                 self.speed_limit_changed = (
-                    abs(self.slc_target - unconfirmed_slc_target) > 1
-                    and self.slc_target != 0
+                    abs(self.previous_speed_limit - unconfirmed_slc_target) > 1
+                    and self.previous_speed_limit != 0
                     and unconfirmed_slc_target > 1
                 )
                 speed_limit_accepted = (
@@ -221,18 +208,22 @@ class FrogPilotVCruise:
                 )
 
                 if speed_limit_accepted:
+                    self.previous_speed_limit = unconfirmed_slc_target
                     self.slc_target = unconfirmed_slc_target
                     self.speed_limit_changed = False
                     params_memory.remove("SLCConfirmed")
 
                 elif speed_limit_denied:
+                    self.previous_speed_limit = unconfirmed_slc_target
                     self.speed_limit_changed = False
 
                 elif speed_limit_decreased and not frogpilot_toggles.speed_limit_confirmation_lower:
+                    self.previous_speed_limit = unconfirmed_slc_target
                     self.slc_target = unconfirmed_slc_target
                     self.speed_limit_changed = False
 
                 elif speed_limit_increased and not frogpilot_toggles.speed_limit_confirmation_higher:
+                    self.previous_speed_limit = unconfirmed_slc_target
                     self.slc_target = unconfirmed_slc_target
                     self.speed_limit_changed = False
 
@@ -263,10 +254,11 @@ class FrogPilotVCruise:
         else:
             self.slc_target = 0
 
-        # --------------------------------------------------------
-        # VISION TURN SPEED CONTROL - with “Chauffeur” additions
-        # --------------------------------------------------------
+        # ----------------------------------------------------------------
+        # Vision Turn Speed Controller (VTSC), with multi-stage + jerk-limit
+        # ----------------------------------------------------------------
         if frogpilot_toggles.vision_turn_controller and v_ego > CRUISING_SPEED and carControl.longActive:
+            # The existing (original) curvature
             c = abs(self.frogpilot_planner.road_curvature)
 
             # If extremely small curvature => no limit
@@ -276,54 +268,30 @@ class FrogPilotVCruise:
                 lat_acc = nonlinear_lat_accel(v_ego, frogpilot_toggles.turn_aggressiveness)
                 v_curvature_ms = math.sqrt(lat_acc / c)
 
-            # Keep speed within [CRUISING_SPEED, v_cruise]
+            # Clip final speed to [CRUISING_SPEED, v_cruise]
             v_curvature_ms = clip(v_curvature_ms, CRUISING_SPEED, v_cruise)
 
-            # Decide whether we’re in a turn by the “old” threshold OR use new multi-stage:
+            # Multi-stage latAccel logic
             current_lat_acc = c * (v_ego ** 2)
 
-            # If you want to keep backward-compat with self.turn_lat_acc_threshold:
-            #   e.g. in_turn = (current_lat_acc > self.turn_lat_acc_threshold)
-            #   But also do multi-stage logic, so we do both:
-            in_turn_old = (current_lat_acc > self.turn_lat_acc_threshold)
-
-            # ---------------
-            # CHAUFFEUR: Multi-stage
-            # ---------------
             if current_lat_acc > self.LOW_LAT_ACC:
-                # Lightly in turn => alpha approach
+                # Lightly or definitely in turn => alpha approach
                 if current_lat_acc < self.HIGH_LAT_ACC:
-                    # Pre-slow alpha is mild
+                    # Pre-slow alpha is mild, e.g. 0.1
                     alpha = 0.1
                 else:
-                    # Definitely in turn => normal smoothing
-                    alpha = self.turn_smoothing_alpha_chauffeur
+                    # Definitely in turn => stronger smoothing
+                    alpha = self.turn_smoothing_alpha
 
-                target_speed_unsmoothed = v_curvature_ms
-                v_target = alpha * self.vtsc_target_prev + (1.0 - alpha) * target_speed_unsmoothed
+                v_target = alpha * self.vtsc_target_prev + (1.0 - alpha) * v_curvature_ms
             else:
                 # Not in a turn => revert quickly, but not abruptly
-                alpha = self.reaccel_alpha_chauffeur
+                alpha = self.reaccel_alpha
                 v_target = alpha * self.vtsc_target_prev + (1.0 - alpha) * v_cruise
 
-            # ---------------
-            # CHAUFFEUR: Lookahead Distance
-            # ---------------
-            dist_to_curve = self.frogpilot_planner.upcoming_curve_dist
-            next_curv     = self.frogpilot_planner.upcoming_curvature
-
-            if dist_to_curve < self.LOOKAHEAD_DIST and next_curv > 0.0005:
-                v_curve_ahead = math.sqrt(lat_acc / next_curv)
-                fraction = max(0.0, 1.0 - dist_to_curve / self.LOOKAHEAD_DIST)
-                pre_slow_target = v_curve_ahead + fraction * (v_curve_ahead - v_target)
-                v_target = min(v_target, pre_slow_target)
-
-            # ---------------
-            # CHAUFFEUR: Jerk-Limited Decel
-            # ---------------
+            # Jerk-limited decel
             desired_decel = 0.0
             if v_target < v_ego:
-                # Just approximate how much decel we need per step
                 desired_decel = clip((v_ego - v_target), 0.0, self.MAX_DECEL)
 
             decel_diff = desired_decel - self.current_decel
@@ -339,17 +307,16 @@ class FrogPilotVCruise:
             jerk_limited_target = min(jerk_limited_target, v_target)
 
             self.vtsc_target = jerk_limited_target
-            self.vtsc_target_prev = self.vtsc_target
-
+            self.vtsc_target_prev = jerk_limited_target
         else:
             # If Vision Turn is off or speed < CRUISING_SPEED, no turn limit
-            self.vtsc_target = v_cruise
+            self.vtsc_target = v_cruise if v_cruise != V_CRUISE_UNSET else 0
             self.vtsc_target_prev = self.vtsc_target
             self.current_decel = 0.0
 
-        # --------------------------------------------------------
+        # -------------------------------------------------------------
         # Force Standstill / Stop (original)
-        # --------------------------------------------------------
+        # -------------------------------------------------------------
         if (frogpilot_toggles.force_standstill
             and carState.standstill
             and not self.override_force_stop
@@ -367,7 +334,7 @@ class FrogPilotVCruise:
             self.forcing_stop = False
             self.tracked_model_length = self.frogpilot_planner.model_length
 
-            # Final target among [MapTurn, SpeedLimit, VisionTurn]
+            # Choose final target among [MapTurn, SpeedLimit, VisionTurn]
             if frogpilot_toggles.speed_limit_controller:
                 targets = [
                     self.mtsc_target,
@@ -387,15 +354,15 @@ class FrogPilotVCruise:
         return v_cruise
 
 
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # OPTIONAL Example: Test or Visualization Code
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 if __name__ == "__main__":
-  # Quick test for lat accel function
+  # Quick test to verify lat accel function
   test_mph = list(range(5, 80, 5))
   test_ms  = [s * CV.MPH_TO_MS for s in test_mph]
 
-  lat_accels = [nonlinear_lat_accel(v) for v in test_ms]
+  lat_accels = [ nonlinear_lat_accel(v) for v in test_ms ]
 
   print(" MPH | Speed(m/s) | LatAccel(m/s^2) | LatAccel(g)")
   print("-----+------------+-----------------+-----------")
