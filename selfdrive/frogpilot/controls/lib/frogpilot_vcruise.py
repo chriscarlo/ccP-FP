@@ -52,7 +52,7 @@ def nonlinear_lat_accel(v_ego_ms: float, turn_aggressiveness: float = 1.0) -> fl
 
 
 # -----------------------------------------------------------------------------
-# Main FrogPilotVCruise class (with multi-stage + jerk-limited decel)
+# Main FrogPilotVCruise class (with multi-stage + jerk-limited decel/accel)
 # -----------------------------------------------------------------------------
 class FrogPilotVCruise:
     def __init__(self, FrogPilotPlanner):
@@ -97,13 +97,16 @@ class FrogPilotVCruise:
         self.LOW_LAT_ACC  = 0.20
         self.HIGH_LAT_ACC = 0.40
 
-        # Jerk-limited deceleration parameters
+        # Jerk-limited deceleration/acceleration parameters
         self.MAX_DECEL = 2.0  # m/s^2
         self.MAX_JERK  = 1.0  # m/s^3
-        self.current_decel = 0.0
+        self.current_decel = 0.0  # We'll reuse this for both decel and accel
 
         # Slightly gentler re-acceleration
         self.reaccel_alpha = 0.2
+
+        # For optional “apex approach”: detect if curvature is decreasing
+        self.previous_curvature = 0.0
 
 
     def update(self, carControl, carState, controlsState,
@@ -255,7 +258,7 @@ class FrogPilotVCruise:
             self.slc_target = 0
 
         # ----------------------------------------------------------------
-        # Vision Turn Speed Controller (VTSC), with multi-stage + jerk-limit
+        # Vision Turn Speed Controller (VTSC) with symmetrical jerk-limit
         # ----------------------------------------------------------------
         if frogpilot_toggles.vision_turn_controller and v_ego > CRUISING_SPEED and carControl.longActive:
             # The existing (original) curvature
@@ -289,30 +292,48 @@ class FrogPilotVCruise:
                 alpha = self.reaccel_alpha
                 v_target = alpha * self.vtsc_target_prev + (1.0 - alpha) * v_cruise
 
-            # Jerk-limited decel
-            desired_decel = 0.0
-            if v_target < v_ego:
-                desired_decel = clip((v_ego - v_target), 0.0, self.MAX_DECEL)
+            # ----------------------------------------------------------------
+            # Optional "apex" logic: if curvature is *decreasing*, nudge speed up
+            # ----------------------------------------------------------------
+            # This helps the car begin accelerating earlier than the "end" of the turn.
+            # Keep it modest or 0.0-0.3; too high can cause weird mid-turn surging.
+            if c < self.previous_curvature:
+                apex_alpha = 0.2
+                v_target = (1.0 - apex_alpha) * v_target + apex_alpha * v_cruise
 
-            decel_diff = desired_decel - self.current_decel
-            max_delta  = self.MAX_JERK * DT_MDL
-            if decel_diff > max_delta:
+            # ----------------------------------------------------------------
+            # Symmetrical jerk-limited deceleration/acceleration
+            # ----------------------------------------------------------------
+            dt = DT_MDL
+            # desired acceleration (m/s^2), negative => decel
+            accel_cmd = (v_target - v_ego) / dt
+            # clamp magnitude to MAX_DECEL (reusing it for both accel & decel)
+            accel_cmd = clip(accel_cmd, -self.MAX_DECEL, self.MAX_DECEL)
+
+            # jerk-limiting step
+            accel_diff = accel_cmd - self.current_decel
+            max_delta = self.MAX_JERK * dt
+            if accel_diff > max_delta:
                 self.current_decel += max_delta
-            elif decel_diff < -max_delta:
+            elif accel_diff < -max_delta:
                 self.current_decel -= max_delta
             else:
-                self.current_decel = desired_decel
+                self.current_decel = accel_cmd
 
-            jerk_limited_target = v_ego - self.current_decel * DT_MDL
-            jerk_limited_target = min(jerk_limited_target, v_target)
+            jerk_limited_target = v_ego + self.current_decel * dt
 
+            # Update our final targets
             self.vtsc_target = jerk_limited_target
             self.vtsc_target_prev = jerk_limited_target
+            self.previous_curvature = c
+
         else:
             # If Vision Turn is off or speed < CRUISING_SPEED, no turn limit
             self.vtsc_target = v_cruise if v_cruise != V_CRUISE_UNSET else 0
             self.vtsc_target_prev = self.vtsc_target
             self.current_decel = 0.0
+            # still update previous_curvature so we don't get a big jump next time
+            self.previous_curvature = abs(self.frogpilot_planner.road_curvature)
 
         # -------------------------------------------------------------
         # Force Standstill / Stop (original)
