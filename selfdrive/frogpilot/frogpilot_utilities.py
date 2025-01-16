@@ -28,7 +28,20 @@ def calculate_lane_width(lane, current_lane, road_edge):
 
   return float(min(distance_to_lane, distance_to_road_edge))
 
-# Credit goes to Pfeiferj!
+"""
+Calculates the road curvature based on predicted vehicle orientation rates.
+The function uses model predictions that extend 10.0 seconds into the future,
+sampled at 33 timesteps (defined by IDX_N in modeld/constants.py).
+modelData.orientationRate.z contains these 33 predictions of the vehicle's
+rotation rate around the z-axis.
+
+Args:
+  modelData: Model predictions containing orientation rates and velocities
+  v_ego: Current vehicle velocity
+
+Returns:
+  max_pred_lat_acc / v_ego^2: Maximum predicted lateral acceleration normalized by velocity squared
+"""
 def calculate_road_curvature(modelData, v_ego):
   orientation_rate = np.abs(modelData.orientationRate.z)
   velocity = modelData.velocity.x

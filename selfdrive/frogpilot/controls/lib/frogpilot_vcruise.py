@@ -16,44 +16,12 @@ from openpilot.selfdrive.frogpilot.frogpilot_variables import CRUISING_SPEED, PL
 
 from openpilot.selfdrive.frogpilot.frogpilot_utilities import calculate_road_curvature
 
-
-# -----------------------------------------------------------------------------
-# Non-linear function for max comfortable lateral acceleration (m/s^2)
-# (Unchanged from original)
-# -----------------------------------------------------------------------------
-def nonlinear_lat_accel(v_ego_ms: float, turn_aggressiveness: float = 1.0) -> float:
-  """
-  Smooth logistic function returning a comfortable max lateral accel.
-
-    v_ego_ms:          vehicle speed in m/s
-    turn_aggressiveness: user multiplier
-
-  This logistic is centered around ~30 mph and tuned so that:
-    - at 10 mph => ~1.7 m/s^2
-    - at 40 mph => ~3.0 m/s^2
-    - at 70 mph => ~3.2 m/s^2
-  """
-  # Convert to mph
-  v_ego_mph = v_ego_ms * CV.MS_TO_MPH
-
-  # Lower bound + range
-  base = 1.7
-  span = 1.9
-  center = 45.0
-  k = 0.14
-
-  # logistic form: f(x) = base + span / (1 + e^{-k (x - center)})
-  lat_acc = base + span / (1.0 + math.exp(-k * (v_ego_mph - center)))
-
-  # minor clamp for safety
-  lat_acc = min(lat_acc, 3.2)
-
-  return lat_acc * turn_aggressiveness
+# -------------------------------------------------------------------------
+#  Import the dedicated VTSC module
+# -------------------------------------------------------------------------
+from openpilot.selfdrive.frogpilot.controls.lib.chauffeur_vtsc import VisionTurnSpeedController
 
 
-# -----------------------------------------------------------------------------
-# Main FrogPilotVCruise class (with multi-stage + jerk-limited decel/accel)
-# -----------------------------------------------------------------------------
 class FrogPilotVCruise:
     def __init__(self, FrogPilotPlanner):
         self.frogpilot_planner = FrogPilotPlanner
@@ -88,26 +56,16 @@ class FrogPilotVCruise:
         global CRUISING_SPEED
         CRUISING_SPEED = 6.7  # ~15 mph in m/s
         self.turn_smoothing_alpha = 0.3
-        self.vtsc_target_prev = 0.0
 
-        # -----------------------------------------------------------------
-        # CHAUFFEUR-STYLE ADDITIONS
-        # -----------------------------------------------------------------
-        # Multi-stage latAccel thresholds
-        self.LOW_LAT_ACC  = 0.20
-        self.HIGH_LAT_ACC = 0.40
-
-        # Jerk-limited deceleration/acceleration parameters
-        self.MAX_DECEL = 2.0  # m/s^2
-        self.MAX_JERK  = 1.0  # m/s^3
-        self.current_decel = 0.0  # We'll reuse this for both decel and accel
-
-        # Slightly gentler re-acceleration
-        self.reaccel_alpha = 0.2
-
-        # For optional “apex approach”: detect if curvature is decreasing
-        self.previous_curvature = 0.0
-
+        # Initialize the Vision Turn Speed Controller
+        self.vtsc = VisionTurnSpeedController(
+            turn_smoothing_alpha=self.turn_smoothing_alpha,
+            reaccel_alpha=0.2,
+            low_lat_acc=0.20,
+            high_lat_acc=0.40,
+            max_decel=2.0,
+            max_jerk=1.2
+        )
 
     def update(self, carControl, carState, controlsState,
                frogpilotCarControl, frogpilotCarState, frogpilotNavigation,
@@ -258,82 +216,20 @@ class FrogPilotVCruise:
             self.slc_target = 0
 
         # ----------------------------------------------------------------
-        # Vision Turn Speed Controller (VTSC) with symmetrical jerk-limit
+        # Vision Turn Speed Controller
         # ----------------------------------------------------------------
         if frogpilot_toggles.vision_turn_controller and v_ego > CRUISING_SPEED and carControl.longActive:
-            # The existing (original) curvature
-            c = abs(self.frogpilot_planner.road_curvature)
-
-            # If extremely small curvature => no limit
-            if c < 1e-9:
-                v_curvature_ms = v_cruise
-            else:
-                lat_acc = nonlinear_lat_accel(v_ego, frogpilot_toggles.turn_aggressiveness)
-                v_curvature_ms = math.sqrt(lat_acc / c)
-
-            # Clip final speed to [CRUISING_SPEED, v_cruise]
-            v_curvature_ms = clip(v_curvature_ms, CRUISING_SPEED, v_cruise)
-
-            # Multi-stage latAccel logic
-            current_lat_acc = c * (v_ego ** 2)
-
-            if current_lat_acc > self.LOW_LAT_ACC:
-                # Lightly or definitely in turn => alpha approach
-                if current_lat_acc < self.HIGH_LAT_ACC:
-                    # Pre-slow alpha is mild, e.g. 0.1
-                    alpha = 0.1
-                else:
-                    # Definitely in turn => stronger smoothing
-                    alpha = self.turn_smoothing_alpha
-
-                v_target = alpha * self.vtsc_target_prev + (1.0 - alpha) * v_curvature_ms
-            else:
-                # Not in a turn => revert quickly, but not abruptly
-                alpha = self.reaccel_alpha
-                v_target = alpha * self.vtsc_target_prev + (1.0 - alpha) * v_cruise
-
-            # ----------------------------------------------------------------
-            # Optional "apex" logic: if curvature is *decreasing*, nudge speed up
-            # ----------------------------------------------------------------
-            # This helps the car begin accelerating earlier than the "end" of the turn.
-            # Keep it modest or 0.0-0.3; too high can cause weird mid-turn surging.
-            if c < self.previous_curvature:
-                apex_alpha = 0.2
-                v_target = (1.0 - apex_alpha) * v_target + apex_alpha * v_cruise
-
-            # ----------------------------------------------------------------
-            # Symmetrical jerk-limited deceleration/acceleration
-            # ----------------------------------------------------------------
-            dt = DT_MDL
-            # desired acceleration (m/s^2), negative => decel
-            accel_cmd = (v_target - v_ego) / dt
-            # clamp magnitude to MAX_DECEL (reusing it for both accel & decel)
-            accel_cmd = clip(accel_cmd, -self.MAX_DECEL, self.MAX_DECEL)
-
-            # jerk-limiting step
-            accel_diff = accel_cmd - self.current_decel
-            max_delta = self.MAX_JERK * dt
-            if accel_diff > max_delta:
-                self.current_decel += max_delta
-            elif accel_diff < -max_delta:
-                self.current_decel -= max_delta
-            else:
-                self.current_decel = accel_cmd
-
-            jerk_limited_target = v_ego + self.current_decel * dt
-
-            # Update our final targets
-            self.vtsc_target = jerk_limited_target
-            self.vtsc_target_prev = jerk_limited_target
-            self.previous_curvature = c
-
+            self.vtsc_target = self.vtsc.update(
+                v_ego,
+                abs(self.frogpilot_planner.road_curvature),
+                frogpilot_toggles.turn_aggressiveness
+            )
         else:
+            # Reset the VTSC if off or under speed threshold
+            self.vtsc.reset(v_ego, abs(self.frogpilot_planner.road_curvature))
+
             # If Vision Turn is off or speed < CRUISING_SPEED, no turn limit
             self.vtsc_target = v_cruise if v_cruise != V_CRUISE_UNSET else 0
-            self.vtsc_target_prev = self.vtsc_target
-            self.current_decel = 0.0
-            # still update previous_curvature so we don't get a big jump next time
-            self.previous_curvature = abs(self.frogpilot_planner.road_curvature)
 
         # -------------------------------------------------------------
         # Force Standstill / Stop (original)
@@ -373,29 +269,3 @@ class FrogPilotVCruise:
         self.vtsc_target += v_cruise_diff
 
         return v_cruise
-
-
-# -----------------------------------------------------------------------------
-# OPTIONAL Example: Test or Visualization Code
-# -----------------------------------------------------------------------------
-if __name__ == "__main__":
-  # Quick test to verify lat accel function
-  test_mph = list(range(5, 80, 5))
-  test_ms  = [s * CV.MPH_TO_MS for s in test_mph]
-
-  lat_accels = [ nonlinear_lat_accel(v) for v in test_ms ]
-
-  print(" MPH | Speed(m/s) | LatAccel(m/s^2) | LatAccel(g)")
-  print("-----+------------+-----------------+-----------")
-  for mph, v, a in zip(test_mph, test_ms, lat_accels):
-    print(f"{mph:4.0f} | {v:10.2f} | {a:15.3f} | {(a/9.81):10.2f}")
-
-  # If needed, you can uncomment and plot the resulting lat accel curve:
-  # import matplotlib.pyplot as plt
-  # fig, ax = plt.subplots()
-  # ax.plot(test_mph, lat_accels, color='blue', marker='o', label='Logistic Lat Accel')
-  # ax.set_xlabel('Speed (mph)')
-  # ax.set_ylabel('Lateral Accel (m/s^2)')
-  # ax.set_title("Nonlinear Lateral Accel Curve")
-  # ax.legend()
-  # plt.show()
