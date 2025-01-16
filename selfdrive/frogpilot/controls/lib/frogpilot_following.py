@@ -156,18 +156,17 @@ class FrogPilotFollowing:
     # for "Dr. Limo / Mr. Andretti"
     # Example usage if you have an mpc instance and want to update it:
     # (Be sure the mpc is in ACC mode.)
-    if self.frogpilot_planner.mpc is not None and self.frogpilot_planner.mpc.mode == 'acc':
-      self.frogpilot_planner.mpc.params[:,4] = self.t_follow  # update T_FOLLOW
-      # The 'speed_scaling' param is a single factor that multiplies the final jerk cost array.
-      # If you want more advanced approach, you can fold your jerk_scale into that, or set it to 1.0
-      speed_scaling = 1.0
-      self.frogpilot_planner.mpc.set_weights(
+    # Safely reference the MPC (if it exists) for Dr. Limo / Mr. Andretti logic
+    mpc = getattr(self.frogpilot_planner, 'mpc', None)
+    if mpc and mpc.mode == 'acc':
+      mpc.params[:,4] = self.t_follow  # update T_FOLLOW
+      mpc.set_weights(
         acceleration_jerk=self.acceleration_jerk,
         danger_jerk=self.danger_jerk,
         speed_jerk=self.speed_jerk,
         prev_accel_constraint=True,
         personality=controlsState.personality,
-        speed_scaling=speed_scaling
+        speed_scaling=1.0
       )
     # ---------------------------
 
