@@ -121,7 +121,6 @@ def desired_follow_distance(v_ego, v_lead, t_follow=None):
   return get_safe_obstacle_distance(v_ego, t_follow) - get_stopped_equivalence_factor(v_lead)
 
 
-# for more urgent scenarios
 def get_ohshit_equivalence_factor(v_lead):
   return (v_lead**2) / (2 * DISCOMFORT_BRAKE)
 
@@ -137,42 +136,6 @@ def fuck_this_follow_distance(v_ego, v_lead, t_follow=None):
 
 
 # -----------------------------------------------------------------------------
-# OLD function - preserve for reference
-# -----------------------------------------------------------------------------
-# def get_dynamic_j_ego_cost_array(x_obstacle, x_ego, v_ego, v_lead, t_follow, J_EGO_COST):
-#   """
-#   Returns an array of jerk costs for each time step in the horizon, going from
-#   normal cost (J_EGO_COST) at/above desired distance down to near zero
-#   when below an "oh-shit" distance. (OLD approach, piecewise.)
-#   """
-#   if not isinstance(x_obstacle, np.ndarray):
-#     x_obstacle = np.array([float(x_obstacle)])
-#   n_steps = x_obstacle.shape[0]
-
-#   def ensure_array(val):
-#     if not isinstance(val, np.ndarray):
-#       return np.full(n_steps, float(val))
-#     return val
-
-#   x_ego_arr = ensure_array(x_ego)
-#   v_ego_arr = ensure_array(v_ego)
-#   v_lead_arr = ensure_array(v_lead)
-#   t_follow_arr = ensure_array(t_follow)
-
-#   current_dist = (x_obstacle - x_ego_arr) / (v_ego_arr + 10.0)
-#   desired_dist = desired_follow_distance(v_ego_arr, v_lead_arr, t_follow_arr) / (v_ego_arr + 10.0)
-#   ohshit_dist  = fuck_this_follow_distance(v_ego_arr, v_lead_arr, t_follow_arr) / (v_ego_arr + 10.0)
-
-#   is_closing = v_ego_arr > v_lead_arr
-
-#   ratio = (current_dist - ohshit_dist) / np.maximum(desired_dist - ohshit_dist, 1e-9)
-#   ratio = np.clip(ratio, 0.0, 1.0)
-
-#   dyn_j_array = np.where(is_closing, ratio * J_EGO_COST, J_EGO_COST)
-#   return dyn_j_array
-
-
-# -----------------------------------------------------------------------------
 # Logistic-based “Dr. Limo / Mr. Andretti” Jerk Cost
 # -----------------------------------------------------------------------------
 def get_smooth_dynamic_j_ego_cost_array(
@@ -183,14 +146,14 @@ def get_smooth_dynamic_j_ego_cost_array(
     logistic_k_speed=3.0,
     min_speed_for_closing=0.1,
     distance_smoothing=5.0,
-    time_taper=False
+    time_taper=False,
+    speed_factor=1.0,   # <-- new optional multiplier for speed or other scaling
 ):
   """
   Returns an array of jerk costs for each time step, smoothly transitioning
-  between high cost (limo mode) when comfortable, and low cost (Andretti)
-  when dangerously close or large negative delta-v.
+  between high cost (Limo) and low cost (Andretti). The final array is
+  optionally multiplied by 'speed_factor' to allow additional external scaling.
   """
-
   # 1) Ensure inputs are arrays
   if not isinstance(x_obstacle, np.ndarray):
     x_obstacle = np.array([float(x_obstacle)])
@@ -206,12 +169,10 @@ def get_smooth_dynamic_j_ego_cost_array(
   v_lead_arr = ensure_array(v_lead)
   t_follow_arr = ensure_array(t_follow)
 
-  # 2) Compute a measure of "distance margin": how close are we to the 'desired' follow distance?
+  # 2) Distance margin
   desired_dist = desired_follow_distance(v_ego_arr, v_lead_arr, t_follow_arr)
   ohshit_dist = fuck_this_follow_distance(v_ego_arr, v_lead_arr, t_follow_arr)
-
   current_dist = (x_obstacle - x_ego_arr)
-  # Add a small offset to avoid singularities/sensitivity
   dist_ratio = (desired_dist - current_dist) / (desired_dist + distance_smoothing)
 
   # 3) Logistic function
@@ -220,7 +181,7 @@ def get_smooth_dynamic_j_ego_cost_array(
 
   dist_logistic = logistic(logistic_k_dist * dist_ratio)
 
-  # 4) "closing speed" logistic
+  # 4) Closing speed logistic
   closing_speed = v_ego_arr - v_lead_arr
   closing_shifted = closing_speed - min_speed_for_closing
   speed_logistic = logistic(logistic_k_speed * closing_shifted)
@@ -229,16 +190,13 @@ def get_smooth_dynamic_j_ego_cost_array(
   combined_factor = dist_logistic * speed_logistic
 
   # 6) Map to jerk cost
-  # combined_factor=0 => cost=base_jerk_cost, combined_factor=1 => cost=low_jerk_cost
   jerk_cost_array = low_jerk_cost + (1.0 - combined_factor) * (base_jerk_cost - low_jerk_cost)
 
-  # 7) Optional "time-based taper"
+  # 7) Time-based taper (optional)
   if time_taper:
-    # We already have T_IDXS in this file
     taper_factors = []
     for t in T_IDXS[:n_steps]:
       if t <= 2.0:
-        # fade from 1.5 down to 1.0
         alpha = t / 2.0
         factor_t = 1.5 + (1.0 - 1.5) * alpha
       else:
@@ -246,6 +204,9 @@ def get_smooth_dynamic_j_ego_cost_array(
       taper_factors.append(factor_t)
     taper_factors = np.array(taper_factors)
     jerk_cost_array *= taper_factors
+
+  # 8) External speed factor
+  jerk_cost_array *= speed_factor
 
   return jerk_cost_array
 
@@ -255,23 +216,19 @@ def gen_long_model():
   model = AcadosModel()
   model.name = MODEL_NAME
 
-  # set up states & controls
   x_ego = SX.sym('x_ego')
   v_ego = SX.sym('v_ego')
   a_ego = SX.sym('a_ego')
   model.x = vertcat(x_ego, v_ego, a_ego)
 
-  # controls
   j_ego = SX.sym('j_ego')
   model.u = vertcat(j_ego)
 
-  # xdot
   x_ego_dot = SX.sym('x_ego_dot')
   v_ego_dot = SX.sym('v_ego_dot')
   a_ego_dot = SX.sym('a_ego_dot')
   model.xdot = vertcat(x_ego_dot, v_ego_dot, a_ego_dot)
 
-  # live parameters
   a_min = SX.sym('a_min')
   a_max = SX.sym('a_max')
   x_obstacle = SX.sym('x_obstacle')
@@ -280,7 +237,6 @@ def gen_long_model():
   lead_danger_factor = SX.sym('lead_danger_factor')
   model.p = vertcat(a_min, a_max, x_obstacle, prev_a, lead_t_follow, lead_danger_factor)
 
-  # dynamics model
   f_expl = vertcat(v_ego, a_ego, j_ego)
   model.f_impl_expr = model.xdot - f_expl
   model.f_expl_expr = f_expl
@@ -293,11 +249,8 @@ def gen_long_ocp():
   ocp.model = gen_long_model()
 
   Tf = T_IDXS[-1]
-
-  # set dimensions
   ocp.dims.N = N
 
-  # set cost module
   ocp.cost.cost_type = 'NONLINEAR_LS'
   ocp.cost.cost_type_e = 'NONLINEAR_LS'
 
@@ -392,13 +345,13 @@ class LongitudinalMpc:
     self.status = False
     self.crash_cnt = 0.0
     self.solution_status = 0
-    # timers
+
     self.solve_time = 0.0
     self.time_qp_solution = 0.0
     self.time_linearization = 0.0
     self.time_integrator = 0.0
     self.x0 = np.zeros(X_DIM)
-    self.set_weights()
+    self.set_weights()  # calls default
 
   def set_cost_weights(self, cost_weights, constraint_cost_weights):
     W = np.asfortranarray(np.diag(cost_weights))
@@ -408,35 +361,35 @@ class LongitudinalMpc:
       self.solver.cost_set(i, 'W', W)
     self.solver.cost_set(N, 'W', np.copy(W[:COST_E_DIM, :COST_E_DIM]))
 
-    # slack cost
     Zl = np.array(constraint_cost_weights)
     for i in range(N):
       self.solver.cost_set(i, 'Zl', Zl)
 
   def set_weights(self, acceleration_jerk=1.0, danger_jerk=1.0, speed_jerk=1.0,
-                  prev_accel_constraint=True, personality=log.LongitudinalPersonality.standard):
+                  prev_accel_constraint=True, personality=log.LongitudinalPersonality.standard,
+                  speed_scaling=1.0):
     """
-    Updated version that uses the new smooth logistic-based jerk cost array.
-    Tune parameters as desired.
+    ACC-Mode: use the new smooth logistic-based jerk cost with optional speed_scaling.
+    Blended mode remains unchanged below.
     """
     if self.mode == 'acc':
       a_change_cost = acceleration_jerk if prev_accel_constraint else 0.0
 
-      # Example tuned values -- adjust as needed:
+      # Existing base parameters
       base_jerk_cost = 5.0
       low_jerk_cost  = 0.5
       logistic_k_dist = 8.0
       logistic_k_speed = 3.0
       min_speed_for_closing = 0.3
       distance_smoothing = 5.0
-      time_taper = True  # Try out time-based taper
+      time_taper = True
 
-      # Call the new smooth jerk cost function:
+      # Build dynamic jerk cost array:
       dyn_j_ego_array = get_smooth_dynamic_j_ego_cost_array(
         x_obstacle=self.params[:,2],
         x_ego=self.x0[0],
         v_ego=self.x0[1],
-        v_lead=self.x0[1],  # or real lead speed if you have it
+        v_lead=self.x0[1],  # If you have real lead speed, pass it here
         t_follow=self.params[:,4],
         base_jerk_cost=base_jerk_cost,
         low_jerk_cost=low_jerk_cost,
@@ -444,29 +397,19 @@ class LongitudinalMpc:
         logistic_k_speed=logistic_k_speed,
         min_speed_for_closing=min_speed_for_closing,
         distance_smoothing=distance_smoothing,
-        time_taper=time_taper
+        time_taper=time_taper,
+        speed_factor=speed_scaling,  # <-- new external multiplier
       )
 
-      # Our "base" cost weights for the 6 cost dimensions:
-      #   0) obstacle distance cost
-      #   1) x_ego cost
-      #   2) v_ego cost
-      #   3) a_ego cost
-      #   4) (a-a_prev)
-      #   5) jerk cost
       base_cost_weights = [3.0, 0.0, 0.0, 0.0, a_change_cost, 1.0]
       constraint_cost_weights = [LIMIT_COST, LIMIT_COST, LIMIT_COST, 50.0]
 
       for i in range(N):
         W_step = np.diag(base_cost_weights)
-        # Let's do your linear fade on (a-a_prev) as time goes
         W_step[4,4] = a_change_cost * np.interp(T_IDXS[i], [0.0, 1.0, 2.0], [1.0, 1.0, 0.0])
-
-        # The new dynamic jerk cost for step i
         W_step[5,5] = dyn_j_ego_array[i]
         self.solver.cost_set(i, 'W', W_step)
 
-      # Terminal cost matrix (no jerk dimension)
       W_e = np.copy(np.diag(base_cost_weights[:COST_E_DIM]))
       self.solver.cost_set(N, 'W', W_e)
 
@@ -475,7 +418,7 @@ class LongitudinalMpc:
         self.solver.cost_set(i, 'Zl', Zl)
 
     elif self.mode == 'blended':
-      # Original "blended" weights example
+      # Leave blended mode alone (backward compatibility)
       a_change_cost = 40.0 if prev_accel_constraint else 0
       cost_weights = [0., 0.1, 0.2, 5.0, a_change_cost, 1.0]
       constraint_cost_weights = [LIMIT_COST, LIMIT_COST, LIMIT_COST, 50.0]
@@ -487,7 +430,7 @@ class LongitudinalMpc:
     v_prev = self.x0[1]
     self.x0[1] = v
     self.x0[2] = a
-    if abs(v_prev - v) > 2.:  # large jump in speed
+    if abs(v_prev - v) > 2.:
       for i in range(N+1):
         self.solver.set(i, 'x', self.x0)
 
@@ -539,7 +482,6 @@ class LongitudinalMpc:
     if self.mode == 'acc':
       self.params[:,5] = LEAD_DANGER_FACTOR
 
-      # "Fake" an obstacle for cruise:
       v_lower = v_ego + (T_IDXS * self.cruise_min_a * 1.05)
       v_upper = v_ego + (T_IDXS * self.max_a * 1.05)
       v_cruise_clipped = np.clip(v_cruise * np.ones(N+1), v_lower, v_upper)
@@ -551,9 +493,9 @@ class LongitudinalMpc:
       x[:], v[:], a[:], j[:] = 0.0, 0.0, 0.0, 0.0
 
     elif self.mode == 'blended':
+      # LEAVE THIS ALONE
       self.params[:,5] = 1.0
       x_obstacles = np.column_stack([lead_0_obstacle, lead_1_obstacle])
-
       cruise_target = T_IDXS * np.clip(v_cruise, v_ego - 2.0, 1e3) + x[0]
       xforward = ((v[1:] + v[:-1]) / 2) * (T_IDXS[1:] - T_IDXS[:-1])
       x = np.cumsum(np.insert(xforward, 0, x[0]))
@@ -584,9 +526,9 @@ class LongitudinalMpc:
       self.crash_cnt = 0
 
     if self.mode == 'blended':
-      if any((lead_0_obstacle - get_safe_obstacle_distance(self.x_sol[:,1], t_follow))- self.x_sol[:,0] < 0.0):
+      if any((lead_0_obstacle - get_safe_obstacle_distance(self.x_sol[:,1], t_follow)) - self.x_sol[:,0] < 0.0):
         self.source = 'lead0'
-      if any((lead_1_obstacle - get_safe_obstacle_distance(self.x_sol[:,1], t_follow))- self.x_sol[:,0] < 0.0) and \
+      if any((lead_1_obstacle - get_safe_obstacle_distance(self.x_sol[:,1], t_follow)) - self.x_sol[:,0] < 0.0) and \
          (lead_1_obstacle[0] - lead_0_obstacle[0]):
         self.source = 'lead1'
 

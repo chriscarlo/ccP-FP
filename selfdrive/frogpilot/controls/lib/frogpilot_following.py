@@ -7,6 +7,7 @@ from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import (
     get_safe_obstacle_distance,
     get_stopped_equivalence_factor,
     get_T_FOLLOW,
+    LongitudinalMpc,
 )
 from openpilot.selfdrive.frogpilot.frogpilot_variables import CITY_SPEED_LIMIT, CRUISING_SPEED
 
@@ -149,6 +150,26 @@ class FrogPilotFollowing:
       self.safe_obstacle_distance = 0
       self.safe_obstacle_distance_stock = 0
       self.stopped_equivalence_factor = 0
+
+    # ---------------------------
+    # (NEW) Optionally push these jerk factors & t_follow into the ACC MPC
+    # for "Dr. Limo / Mr. Andretti"
+    # Example usage if you have an mpc instance and want to update it:
+    # (Be sure the mpc is in ACC mode.)
+    if self.frogpilot_planner.mpc is not None and self.frogpilot_planner.mpc.mode == 'acc':
+      self.frogpilot_planner.mpc.params[:,4] = self.t_follow  # update T_FOLLOW
+      # The 'speed_scaling' param is a single factor that multiplies the final jerk cost array.
+      # If you want more advanced approach, you can fold your jerk_scale into that, or set it to 1.0
+      speed_scaling = 1.0
+      self.frogpilot_planner.mpc.set_weights(
+        acceleration_jerk=self.acceleration_jerk,
+        danger_jerk=self.danger_jerk,
+        speed_jerk=self.speed_jerk,
+        prev_accel_constraint=True,
+        personality=controlsState.personality,
+        speed_scaling=speed_scaling
+      )
+    # ---------------------------
 
   def update_follow_values(self, lead_distance, v_ego, v_lead, frogpilot_toggles):
     """
