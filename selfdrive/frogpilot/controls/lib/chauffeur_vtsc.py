@@ -6,32 +6,27 @@ from openpilot.common.numpy_fast import clip
 from openpilot.common.realtime import DT_MDL
 
 def nonlinear_lat_accel(v_ego_ms: float, turn_aggressiveness: float = 1.0) -> float:
-
     """
     Returns a 'nonlinear' lateral acceleration limit based on vehicle speed in mph.
-    We slightly adjusted constants to provide a more robust final clamp and
-    a gentler logistic curve, mimicking an F1 driver’s willingness to corner
-    firmly, but with a real-world safety margin.
+    Tweak the logistic curve to stay under ~2.8 m/s² and ramp more gently,
+    for more comfortable cornering.
     """
-
     v_ego_mph = v_ego_ms * CV.MS_TO_MPH
-    base = 1.8
-    span = 2.1
-    center = 40.0
-    k = 0.12
+
+    # A gentler logistic shape that peaks at 2.8 m/s²
+    base = 1.5       # lower "floor"
+    span = 2.2       # growth above base
+    center = 35.0    # mph center point
+    k = 0.10         # slope in the logistic function
+
     lat_acc = base + span / (1.0 + math.exp(-k * (v_ego_mph - center)))
-    lat_acc = min(lat_acc, 3.4)
+    lat_acc = min(lat_acc, 2.8)   # clamp at 2.8 m/s²
     return lat_acc * turn_aggressiveness
 
 def find_apexes(curvature: np.ndarray, threshold: float = 1e-4) -> list:
-
     """
     Identify indices of "apexes" (local maxima in curvature).
-    An apex is a point where curvature[i] is a local maximum
-    above 'threshold'. We also check that curvature is truly
-    peaking (i.e., difference on either side) to reduce noise.
     """
-
     apex_indices = []
     for i in range(1, len(curvature) - 1):
         if (curvature[i] > curvature[i - 1]) and (curvature[i] >= curvature[i + 1]) \
@@ -41,14 +36,41 @@ def find_apexes(curvature: np.ndarray, threshold: float = 1e-4) -> list:
                 apex_indices.append(i)
     return apex_indices
 
+def margin_time_fn(v_ego_ms: float) -> float:
+    """
+    A simple piecewise or linear interpolation function to pick
+    an 'early slow-down margin' that grows with speed.
+    - About 1–3 seconds at low speeds
+    - About 3–5 seconds at 65-70 mph
+    Feel free to adjust these exact breakpoints!
+    """
+    # Speeds in m/s
+    v_low = 0.0
+    t_low = 1.0       # 1 s margin at standstill
+    v_med = 15.0      # ~33.6 mph
+    t_med = 3.0       # 3 s margin in mid-range
+    v_high = 31.3     # ~70 mph
+    t_high = 5.0      # 5 s margin at ~70 mph
+
+    if v_ego_ms <= v_low:
+        return t_low
+    elif v_ego_ms >= v_high:
+        return t_high
+    elif v_ego_ms <= v_med:
+        # Interpolate between 1 s and 3 s
+        ratio = (v_ego_ms - v_low) / (v_med - v_low)
+        return t_low + ratio * (t_med - t_low)
+    else:
+        # Interpolate between 3 s and 5 s
+        ratio = (v_ego_ms - v_med) / (v_high - v_med)
+        return t_med + ratio * (t_high - t_med)
+
 class VisionTurnSpeedController:
     """
-    A multi-step Vision Turn Speed Controller (VTSC) that can now handle
-    any number of future timesteps m (≥3). If m < 3, we fallback. If 3 <= m < 33,
-    we upsample to 33. If m >= 33, we just slice the first 33 points.
-
-    All external method signatures remain identical, so this is a drop-in
-    replacement.
+    Multi-step Vision Turn Speed Controller with:
+    - Speed-based margin pass
+    - Gentler logistic curve
+    - Slightly larger apex decel/spool windows
     """
 
     def __init__(
@@ -74,7 +96,7 @@ class VisionTurnSpeedController:
         # We'll store multi-step speeds for the next ~10s (33 steps).
         self.planned_speeds = np.zeros(33, dtype=float)
 
-        # Minimum steps we need to do multi-step planning (apex detection).
+        # Minimum steps for apex-based multi-step planning
         self.MIN_STEPS_FOR_APEX = 3
 
     def reset(self, v_ego: float, curvature: float) -> None:
@@ -91,12 +113,10 @@ class VisionTurnSpeedController:
         ], dtype=float)
 
     def _interpolate_to_33(self, arr: np.ndarray) -> np.ndarray:
-
         """
         Given an array of length m (where 3 <= m < 33),
         linearly interpolate it up to length 33.
         """
-
         m = len(arr)
         x_src = np.arange(m)
         x_dst = np.linspace(0, m - 1, 33)
@@ -110,13 +130,19 @@ class VisionTurnSpeedController:
         turn_aggressiveness: float,
     ) -> np.ndarray:
         """
-        Same logic as before, but with an extra margin-based backward pass
-        to force earlier slow-down for tighter turns.
+        Multi-step speed planning with:
+          1) Base safe speeds from lat accel
+          2) Apex-based decel/spool logic
+          3) Extra margin-based backward pass
+          4) Standard backward pass
+          5) Forward pass
         """
-        n = len(orientation_rate)  # should be 33 by the time we get here
+        n = len(orientation_rate)  # should be 33 by here
         dt = DT_MDL
 
+        # -----------------------------
         # 1) Base "safe speeds"
+        # -----------------------------
         curvature_array = self._compute_curvature_array(orientation_rate, velocity_pred)
         safe_speeds = np.zeros(n, dtype=float)
         for i in range(n):
@@ -125,12 +151,19 @@ class VisionTurnSpeedController:
             safe_speed = math.sqrt(lat_acc_limit / c) if c > 1e-6 else 70.0
             safe_speeds[i] = clip(safe_speed, 0.0, 70.0)
 
-        # 2) "Human-like" apex logic (unchanged)
+        # -----------------------------
+        # 2) Apex logic (slightly larger decel/spool windows)
+        # -----------------------------
         apex_idxs = find_apexes(curvature_array)
         for apex_i in apex_idxs:
             apex_speed = safe_speeds[apex_i]
-            decel_window = int(max(2, (velocity_pred[apex_i] * 0.12) / dt))
-            spool_window = int(max(2, (velocity_pred[apex_i] * 0.07) / dt))
+
+            # Increase these factors a bit so we decel sooner & spool a bit earlier.
+            decel_factor = 0.15
+            spool_factor = 0.08
+
+            decel_window = int(max(2, (velocity_pred[apex_i] * decel_factor) / dt))
+            spool_window = int(max(2, (velocity_pred[apex_i] * spool_factor) / dt))
 
             decel_start = max(0, apex_i - decel_window)
             spool_start = max(0, apex_i - spool_window)
@@ -148,7 +181,7 @@ class VisionTurnSpeedController:
             for idx in range(spool_start, apex_i + 1):
                 safe_speeds[idx] = min(safe_speeds[idx], apex_speed)
 
-            # Spool-up from apex
+            # Spool-up after apex (allow acceleration near apex)
             if spool_end > apex_i:
                 steps_spool = spool_end - apex_i
                 v_spool_end = safe_speeds[spool_end - 1]
@@ -160,11 +193,13 @@ class VisionTurnSpeedController:
 
         planned = safe_speeds.copy()
 
-        ########################################################
-        # 3) MARGIN-BASED BACKWARD PASS (forces earlier slowdown)
-        ########################################################
-        # Approx 1 second margin, but safely bounded by n-1
-        margin_steps = min(n - 1, int(1.0 / dt))
+        # -----------------------------
+        # 3) Margin-based backward pass
+        # -----------------------------
+        # Use a speed-based margin time, then convert to steps
+        margin_t = margin_time_fn(init_speed)   # e.g. 1–3 s at low speed up to 3–5 s at high speed
+        margin_steps = min(n - 1, int(margin_t / dt))
+
         accel_cmd = 0.0
         max_delta = self.MAX_JERK * dt
         for i in range(n - 1 - margin_steps, -1, -1):
@@ -185,9 +220,9 @@ class VisionTurnSpeedController:
             feasible_speed = v_future + accel_cmd * (-time_future)
             planned[i] = min(planned[i], feasible_speed, safe_speeds[i])
 
-        #################################################
-        # 4) STANDARD BACKWARD PASS (decel feasibility)
-        #################################################
+        # -----------------------------
+        # 4) Standard backward pass
+        # -----------------------------
         accel_cmd = 0.0
         for i in range(n - 2, -1, -1):
             v_next = planned[i + 1]
@@ -206,9 +241,9 @@ class VisionTurnSpeedController:
             feasible_speed = v_next + accel_cmd * (-dt)
             planned[i] = min(planned[i], feasible_speed, safe_speeds[i])
 
-        #################################################
-        # 5) FORWARD PASS (accel feasibility)
-        #################################################
+        # -----------------------------
+        # 5) Forward pass
+        # -----------------------------
         accel_cmd = 0.0
         err0 = planned[0] - init_speed
         desired_acc0 = err0 / dt
@@ -252,9 +287,6 @@ class VisionTurnSpeedController:
     ) -> float:
         """
         Main update function.
-        1) If orientationRate & velocityPred have >= self.MIN_STEPS_FOR_APEX points
-           (i.e. >= 3), then we either upsample to 33 or slice the first 33.
-        2) If fewer than 3 points, fallback to single-step logic.
         """
         if orientationRate is not None and velocityPred is not None:
             m = len(orientationRate)
@@ -267,7 +299,7 @@ class VisionTurnSpeedController:
                     orientationRate_33 = orientationRate[:33]
                     velocityPred_33 = velocityPred[:33]
 
-                # Plan with multi-step trajectory
+                # Multi-step plan
                 self.planned_speeds = self._plan_speed_trajectory(
                     orientation_rate=orientationRate_33,
                     velocity_pred=velocityPred_33,
@@ -276,17 +308,13 @@ class VisionTurnSpeedController:
                 )
                 raw_target = self.planned_speeds[0]
             else:
-                # Fallback if not enough data or mismatch
-                raw_target = self._single_step_fallback(
-                    v_ego, curvature, turn_aggressiveness
-                )
+                # Fallback if not enough data
+                raw_target = self._single_step_fallback(v_ego, curvature, turn_aggressiveness)
         else:
             # Fallback if no data
-            raw_target = self._single_step_fallback(
-                v_ego, curvature, turn_aggressiveness
-            )
+            raw_target = self._single_step_fallback(v_ego, curvature, turn_aggressiveness)
 
-        # final symmetrical jerk-limiting
+        # Final symmetrical jerk-limiting
         dt = DT_MDL
         accel_cmd = (raw_target - self.vtsc_target_prev) / dt
         accel_cmd = clip(accel_cmd, -self.MAX_DECEL, self.MAX_DECEL)
