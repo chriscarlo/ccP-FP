@@ -15,7 +15,7 @@ def nonlinear_lat_accel(v_ego_ms: float, turn_aggressiveness: float = 1.0) -> fl
     """
 
     v_ego_mph = v_ego_ms * CV.MS_TO_MPH
-    base = 1.5
+    base = 1.8
     span = 2.1
     center = 40.0
     k = 0.12
