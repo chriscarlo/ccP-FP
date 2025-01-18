@@ -30,6 +30,9 @@ class CarInterface(CarInterfaceBase):
   @staticmethod
   def _get_params(ret, candidate, fingerprint, car_fw, disable_openpilot_long, experimental_long, docs):
     use_new_api = params.get_bool("NewLongAPI")
+    camera_scc = params.get_int("HyundaRadarTracks")
+    if camera_scc > 0:
+      ret.flags |= HyundaiFlags.CAMERA_SCC_CAR.value
     ret.carName = "hyundai"
     ret.radarUnavailable = RADAR_START_ADDR not in fingerprint[1] or DBC[ret.carFingerprint]["radar"] is None
     ret.customStockLongAvailable = True
