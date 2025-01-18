@@ -20,7 +20,7 @@ def nonlinear_lat_accel(v_ego_ms: float, turn_aggressiveness: float = 1.0) -> fl
     center = 40.0
     k = 0.12
     lat_acc = base + span / (1.0 + math.exp(-k * (v_ego_mph - center)))
-    lat_acc = min(lat_acc, 3.2)
+    lat_acc = min(lat_acc, 3.4)
     return lat_acc * turn_aggressiveness
 
 def find_apexes(curvature: np.ndarray, threshold: float = 1e-4) -> list:
