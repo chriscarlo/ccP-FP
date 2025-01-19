@@ -57,7 +57,7 @@ def find_apexes(curv_array: np.ndarray, threshold: float = 5e-5) -> list:
             apex_indices.append(i)
     return apex_indices
 
-class VisionTurnSpeedControllerTimeBased:
+class VisionTurnSpeedController:
     """
     VTSC that respects the non-uniform times from T_IDXS. Instead of
     assuming a constant dt, we fetch times[i+1] - times[i].
