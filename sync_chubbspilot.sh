@@ -88,7 +88,7 @@ compile_device() {
         find . -type f -name '*.cc' ! \( -name 'main.cc' -o -name 'map_renderer.cc' -o -name 'transform.cc' \) -delete
 
         # Delete all .h files except specified ones
-        find . -type f -name '*.h' ! \( -name 'sensor.h' -o -name 'version.h' -o -name 'map_renderer.h' -o -name 'ox03c10_registers.h' -o -name 'ar0231_cl.h' -o -name 'os04c10_cl.h' -o -name 'ox03c10_c.h' \) -delete
+        find . -type f -name '*.h' ! \( -name 'sensor.h' -o -name 'version.h' -o -name 'map_renderer.h' -o -name 'ox03c10_registers.h' -o -name 'ar0231_cl.h' -o -name 'os04c10_cl.h' -o -name 'ox03c10_cl.h' -o -name 'os04c10_registers.h' -o -name 'ar0231_registers.h' \) -delete
 
         # Remove other unwanted file types
         find . -name '*.o' -delete
@@ -187,7 +187,7 @@ skip_compile_device() {
         find . -type f -name '*.cc' ! \( -name 'main.cc' -o -name 'map_renderer.cc' -o -name 'transform.cc' \) -delete
 
         # Delete all .h files except specified ones
-        find . -type f -name '*.h' ! \( -name 'sensor.h' -o -name 'version.h' -o -name 'map_renderer.h' -o -name 'ox03c10_registers.h' -o -name 'ar0231_cl.h' -o -name 'os04c10_cl.h' -o -name 'ox03c10_c.h' \) -delete
+        find . -type f -name '*.h' ! \( -name 'sensor.h' -o -name 'version.h' -o -name 'map_renderer.h' -o -name 'ox03c10_registers.h' -o -name 'ar0231_cl.h' -o -name 'os04c10_cl.h' -o -name 'ox03c10_cl.h' -o -name 'os04c10_registers.h' -o -name 'ar0231_registers.h' \) -delete
 
         # Remove other unwanted file types
         find . -name '*.o' -delete
