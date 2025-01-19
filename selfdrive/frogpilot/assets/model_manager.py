@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import json
 import re
 import requests
@@ -8,13 +9,11 @@ import urllib.request
 
 from pathlib import Path
 
-from openpilot.common.basedir import BASEDIR
-
 from openpilot.selfdrive.frogpilot.assets.download_functions import GITLAB_URL, download_file, get_repository_url, handle_error, handle_request_error, verify_download
 from openpilot.selfdrive.frogpilot.frogpilot_utilities import delete_file
 from openpilot.selfdrive.frogpilot.frogpilot_variables import DEFAULT_MODEL, DEFAULT_CLASSIC_MODEL, MODELS_PATH, params, params_memory
 
-VERSION = "v11"
+VERSION = "v12"
 
 CANCEL_DOWNLOAD_PARAM = "CancelModelDownload"
 DOWNLOAD_PROGRESS_PARAM = "ModelDownloadProgress"
@@ -114,13 +113,13 @@ class ModelManager:
   @staticmethod
   def copy_default_model():
     classic_default_model_path = MODELS_PATH / f"{DEFAULT_CLASSIC_MODEL}.thneed"
-    source_path = Path(BASEDIR) / "selfdrive" / "classic_modeld" / "models" / "supercombo.thneed"
+    source_path = Path(__file__).parents[2] / "selfdrive/classic_modeld/models/supercombo.thneed"
     if source_path.is_file() and not classic_default_model_path.is_file():
       shutil.copyfile(source_path, classic_default_model_path)
       print(f"Copied the classic default model from {source_path} to {classic_default_model_path}")
 
     default_model_path = MODELS_PATH / f"{DEFAULT_MODEL}.thneed"
-    source_path = Path(BASEDIR) / "selfdrive" / "modeld" / "models" / "supercombo.thneed"
+    source_path = Path(__file__).parents[2] / "selfdrive/modeld/models/supercombo.thneed"
     if source_path.is_file() and not default_model_path.is_file():
       shutil.copyfile(source_path, default_model_path)
       print(f"Copied the default model from {source_path} to {default_model_path}")
@@ -172,12 +171,8 @@ class ModelManager:
 
     params.put("AvailableModels", ",".join(available_models))
     params.put("AvailableModelNames", ",".join([model['name'] for model in model_info]))
-    params.put("ClassicModels", ",".join([model['id'] for model in model_info if model.get("classic_model", False)]))
-    params.put("ClippedCurvatureModels", ",".join([model['id'] for model in model_info if model.get("clipped_curvature", False)]))
-    params.put("DesiredCurvatureModels", ",".join([model['id'] for model in model_info if model.get("desired_curvature", False)]))
     params.put("ExperimentalModels", ",".join([model['id'] for model in model_info if model.get("experimental", False)]))
-    params.put("NavigationModels", ",".join([model['id'] for model in model_info if "🗺️" in model['name']]))
-    params.put("RadarlessModels", ",".join([model['id'] for model in model_info if "📡" not in model['name']]))
+    params.put("ModelVersions", ",".join([model['version'] for model in model_info if model.get("version", "v0")]))
     print("Models list updated successfully")
 
     return available_models
