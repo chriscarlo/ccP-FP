@@ -237,20 +237,17 @@ class CarInterface(CarInterfaceBase):
 
   @staticmethod
   def update_radar_tracks_availability(params, logcan, CP):
-    rt_avail = params.get_bool("HyundaiRadarTracksAvailable")
-    rt_avail_persist = params.get_bool("HyundaiRadarTracksAvailablePersistent")
+    # Remove persistent state check and always detect
+    messaging.drain_sock_raw(logcan)
+    fingerprint = can_fingerprint(lambda: get_one_can(logcan))
+    radar_unavailable = RADAR_START_ADDR not in fingerprint[1] or DBC[CP.carFingerprint]["radar"] is None
 
-    # Cache current availability
-    params.put_bool_nonblocking("HyundaiRadarTracksAvailableCache", rt_avail)
+    # Update availability based on current detection
+    params.put_bool_nonblocking("HyundaiRadarTracksAvailable", not radar_unavailable)
+    params.put_bool_nonblocking("HyundaiRadarTracksAvailableCache", not radar_unavailable)
 
-    # Only update persistent status if not already set
-    if not rt_avail_persist:
-        messaging.drain_sock_raw(logcan)
-        fingerprint = can_fingerprint(lambda: get_one_can(logcan))
-        radar_unavailable = RADAR_START_ADDR not in fingerprint[1] or DBC[CP.carFingerprint]["radar"] is None
-
-        params.put_bool_nonblocking("HyundaiRadarTracksAvailable", not radar_unavailable)
-        params.put_bool_nonblocking("HyundaiRadarTracksAvailablePersistent", True)
+    # Remove persistent flag since we'll always detect
+    params.remove("HyundaiRadarTracksAvailablePersistent")
 
   @staticmethod
   def init(CP, logcan, sendcan):
