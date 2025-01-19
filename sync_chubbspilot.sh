@@ -109,12 +109,13 @@ compile_device() {
         rm -rf selfdrive/controls/lib/lateral_mpc_lib/c_generated_code/main_*
 
         # Additional Deletions
-        # Remove specific directories
-        rm -rf .github .vscode .devcontainer debug \
+        # Remove specific directories except .github/workflows and delete body/
+        find .github -mindepth 1 ! -path './.github/workflows*' -delete
+        rm -rf .vscode .devcontainer debug \
                tools/cabana tools/camerastream tools/car_porting tools/joystick \
                tools/latencylogger tools/lib/tests tools/plotjuggler tools/profiling \
                tools/replay tools/scripts tools/serial tools/sim tools/ssh \
-               tools/ubuntu_setup tools/webcam
+               tools/ubuntu_setup tools/webcam body/
 
         # Remove Docker-related files
         rm -f Dockerfile* .dockerignore
@@ -207,12 +208,13 @@ skip_compile_device() {
         rm -rf selfdrive/controls/lib/lateral_mpc_lib/c_generated_code/main_*
 
         # Additional Deletions
-        # Remove specific directories
-        rm -rf .github .vscode .devcontainer debug \
+        # Remove specific directories except .github/workflows and delete body/
+        find .github -mindepth 1 ! -path './.github/workflows*' -delete
+        rm -rf .vscode .devcontainer debug \
                tools/cabana tools/camerastream tools/car_porting tools/joystick \
                tools/latencylogger tools/lib/tests tools/plotjuggler tools/profiling \
                tools/replay tools/scripts tools/serial tools/sim tools/ssh \
-               tools/ubuntu_setup tools/webcam
+               tools/ubuntu_setup tools/webcam body/
 
         # Remove Docker-related files
         rm -f Dockerfile* .dockerignore

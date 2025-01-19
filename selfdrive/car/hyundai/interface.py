@@ -30,7 +30,7 @@ class CarInterface(CarInterfaceBase):
   @staticmethod
   def _get_params(ret, candidate, fingerprint, car_fw, disable_openpilot_long, experimental_long, docs):
     use_new_api = params.get_bool("NewLongAPI")
-    camera_scc = params.get_int("HyundaRadarTracks")
+    camera_scc = params.get_int("HyundaiRadarTracks")
     if camera_scc > 0:
       ret.flags |= HyundaiFlags.CAMERA_SCC_CAR.value
     ret.carName = "hyundai"
