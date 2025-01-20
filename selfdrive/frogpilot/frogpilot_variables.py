@@ -195,6 +195,7 @@ frogpilot_default_params: list[tuple[str, str | bytes, int]] = [
   ("ModelName", DEFAULT_CLASSIC_MODEL_NAME, 1),
   ("ModelRandomizer", "0", 2),
   ("ModelUI", "1", 2),
+  ("ModelVersions", "", 2),
   ("MTSCCurvatureCheck", "1", 2),
   ("MTSCEnabled", "1", 1),
   ("NavigationModels", "", 1),
@@ -618,6 +619,7 @@ class FrogPilotVariables:
     toggle.navigationless_model = navigation_models and toggle.model not in navigation_models.split(",")
     radarless_models = params.get("RadarlessModels", encoding='utf-8') or ""
     toggle.radarless_model = radarless_models and toggle.model in radarless_models.split(",")
+    toggle.model_versions = params.get("ModelVersions", encoding='utf-8') or ""
 
     toggle.model_ui = params.get_bool("ModelUI") if tuning_level >= level["ModelUI"] else default.get_bool("ModelUI")
     toggle.dynamic_path_width = toggle.model_ui and (params.get_bool("DynamicPathWidth") if tuning_level >= level["DynamicPathWidth"] else default.get_bool("DynamicPathWidth"))
