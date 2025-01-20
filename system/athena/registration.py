@@ -94,7 +94,7 @@ def register(show_spinner=False) -> str | None:
 
   if dongle_id:
     params.put("DongleId", dongle_id)
-    if "Offroad_UnofficialHardware" in params:
+    if params.get("Offroad_UnofficialHardware") is not None:
       set_offroad_alert("Offroad_UnofficialHardware", (dongle_id == UNREGISTERED_DONGLE_ID) and not PC)
   return dongle_id
 
