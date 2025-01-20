@@ -64,8 +64,10 @@ FrogPilotSoundsPanel::FrogPilotSoundsPanel(FrogPilotSettingsWindow *parent) : Fr
       std::vector<QString> alertButton{"Test"};
       if (param == "WarningImmediateVolume") {
         soundsToggle = new FrogPilotParamValueButtonControl(param, title, desc, icon, 25, 101, QString(), volumeLabels, 1, {}, alertButton, false, false);
+        params.putInt(param.toStdString(), 25);
       } else {
         soundsToggle = new FrogPilotParamValueButtonControl(param, title, desc, icon, 0, 101, QString(), volumeLabels, 1, {}, alertButton, false, false);
+        params.putInt(param.toStdString(), 0);
       }
 
     } else if (param == "CustomAlerts") {
