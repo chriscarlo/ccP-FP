@@ -194,7 +194,9 @@ OnboardingWindow::OnboardingWindow(QWidget *parent) : QStackedWidget(parent) {
   std::string current_terms_version = params.get("TermsVersion");
   std::string current_training_version = params.get("TrainingVersion");
   accepted_terms = params.get("HasAcceptedTerms") == current_terms_version;
-  training_done = params.get("CompletedTrainingVersion") == current_training_version;
+  // training_done = params.get("CompletedTrainingVersion") == current_training_version;
+  training_done = true;  // Skip training check
+
 
   TermsPage* terms = new TermsPage(this);
   addWidget(terms);
