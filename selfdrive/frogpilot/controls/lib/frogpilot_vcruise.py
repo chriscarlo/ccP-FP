@@ -226,7 +226,7 @@ class FrogPilotVCruise:
             )
         else:
             # Reset the VTSC if off or under speed threshold
-            self.vtsc.reset(v_ego, abs(self.frogpilot_planner.road_curvature))
+            self.vtsc.reset(v_ego)
 
             # If Vision Turn is off or speed < CRUISING_SPEED, no turn limit
             self.vtsc_target = v_cruise if v_cruise != V_CRUISE_UNSET else 0
