@@ -93,32 +93,24 @@ class VisionTurnSpeedController:
         # Add subscriber for model data
         self.sm = messaging.SubMaster(['modelV2'])
 
-        # 1) Add a field to store the last known v_cruise
-        self.prev_v_cruise = 0.0
+        # Track cluster speed separately from target speed
+        self.prev_v_cruise_cluster = 0.0
 
     def reset(self, v_ego: float) -> None:
         self.prev_target_speed = v_ego
         self.current_accel = 0.0
         self.planned_speeds[:] = v_ego
 
-    # 2) Pass v_cruise into update(...)
-    def update(self, v_ego: float, v_cruise: float, turn_aggressiveness=1.0) -> float:
-        """
-        Main update. We expect:
-          modelData.orientationRate.z : array of length 33
-          modelData.velocity.x        : array of length 33
-          modelData.times             : array of length 33
-        """
+    def update(self, v_ego: float, v_cruise_cluster: float, turn_aggressiveness=1.0) -> float:
         self.sm.update()
         modelData = self.sm['modelV2']
 
-        # If speed is below CRUISING_SPEED, do no special turn limit
+        # If speed < CRUISING_SPEED, reset
         if v_ego < CRUISING_SPEED:
             self.reset(v_ego)
-            self.prev_v_cruise = v_cruise  # Track the user's current cruise
+            self.prev_v_cruise_cluster = v_cruise_cluster
             return v_ego
 
-        # Convert the orientationRate and velocity arrays from Cap'n Proto to NumPy:
         orientation_rate_raw = modelData.orientationRate.z
         velocity_pred_raw = modelData.velocity.x
 
@@ -163,16 +155,19 @@ class VisionTurnSpeedController:
         dt = 0.05  # ~20Hz
         final_target_speed = None
 
-        # 3) USER-INITIATED v_cruise INCREASE CHECK
-        if v_cruise > self.prev_v_cruise:
-            # The user is "bumping up" the set speed → skip jerk limit and
-            # immediately allow up to min(v_cruise, raw_target).
-            final_target_speed = min(v_cruise, raw_target)
-            # Optionally reset self.current_accel so next tick starts fresh:
+        # If the driver just bumped up the dash speed from e.g. 15mph to 20mph:
+        if v_cruise_cluster > self.prev_v_cruise_cluster:
+            # Let them accelerate immediately, up to the lesser of:
+            #   * the new cluster set speed (converted to m/s, presumably)
+            #   * the safe curve speed from raw_target
+            final_target_speed = min(v_cruise_cluster, raw_target)
+
+            # Optional: reset current accel to zero if you'd like a "fresh start"
             self.current_accel = 0.0
 
         # 4) If not an increase, proceed with normal jerk-limited approach
         if final_target_speed is None:
+            # Normal symmetrical jerk-limit flow
             accel_cmd = (raw_target - self.prev_target_speed) / dt
             accel_cmd = clip(accel_cmd, -self.MAX_DECEL, self.MAX_DECEL)
 
@@ -188,8 +183,9 @@ class VisionTurnSpeedController:
 
             final_target_speed = self.prev_target_speed + self.current_accel * dt
 
+        # Update our persistent state
         self.prev_target_speed = final_target_speed
-        self.prev_v_cruise = v_cruise
+        self.prev_v_cruise_cluster = v_cruise_cluster
 
         return final_target_speed
 
