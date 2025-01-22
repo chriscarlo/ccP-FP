@@ -75,7 +75,7 @@ class VisionTurnSpeedController:
         low_lat_acc=0.20,
         high_lat_acc=0.40,
         max_decel=2.0,
-        max_jerk=2.0
+        max_jerk=4.0
     ):
         self.turn_smoothing_alpha = turn_smoothing_alpha
         self.reaccel_alpha = reaccel_alpha
