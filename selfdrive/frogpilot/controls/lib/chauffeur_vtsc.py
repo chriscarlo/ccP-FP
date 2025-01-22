@@ -54,7 +54,11 @@ def find_apexes(curv_array: np.ndarray, threshold: float = 5e-5) -> list:
     """
     apex_indices = []
     for i in range(1, len(curv_array) - 1):
-        if curv_array[i] > threshold and curv_array[i] >= curv_array[i + 1] and curv_array[i] > curv_array[i - 1]:
+        if (
+            curv_array[i] > threshold
+            and curv_array[i] >= curv_array[i + 1]
+            and curv_array[i] > curv_array[i - 1]
+        ):
             apex_indices.append(i)
     return apex_indices
 
@@ -99,12 +103,9 @@ class VisionTurnSpeedController:
         Main update. We expect:
           modelData.orientationRate.z : array of length 33
           modelData.velocity.x        : array of length 33
-          modelData.times             : array of length 33  (see note below)
+          modelData.times             : array of length 33
         """
-        # Update messages
         self.sm.update()
-
-        # Get model data directly
         modelData = self.sm['modelV2']
 
         # If speed is below CRUISING_SPEED, do no special turn limit
@@ -112,34 +113,39 @@ class VisionTurnSpeedController:
             self.reset(v_ego)
             return v_ego
 
-        orientation_rate = np.abs(modelData.orientationRate.z)  # Take absolute value right when we get it
-        velocity_pred = modelData.velocity.x
-        times = ModelConstants.T_IDXS  # Always use T_IDXS directly
+        # Convert the orientationRate and velocity arrays from Cap'n Proto to NumPy:
+        orientation_rate_raw = modelData.orientationRate.z
+        velocity_pred_raw = modelData.velocity.x
 
-        # Minimum points needed for reasonable interpolation
+        # If either is None or too short, fall back to simpler logic
         MIN_POINTS = 3
-
-        # If we don't have enough points for even basic interpolation, fallback:
-        if (orientation_rate is None or velocity_pred is None or
-            len(orientation_rate) < MIN_POINTS or len(velocity_pred) < MIN_POINTS):
+        if (
+            orientation_rate_raw is None or velocity_pred_raw is None
+            or len(orientation_rate_raw) < MIN_POINTS
+            or len(velocity_pred_raw) < MIN_POINTS
+        ):
             raw_target = self._single_step_fallback(v_ego, 0.0, turn_aggressiveness)
         else:
+            # Make sure these are NumPy arrays (float)
+            orientation_rate = np.array(orientation_rate_raw, dtype=float)
+            orientation_rate = np.abs(orientation_rate)
+            velocity_pred = np.array(velocity_pred_raw, dtype=float)
+
             n_points = min(len(orientation_rate), len(velocity_pred))
             if n_points < 33:
-                # Create interpolation points
-                src_indices = np.linspace(0, n_points-1, n_points)
-                dst_indices = np.linspace(0, n_points-1, 33)
-
-                # Interpolate orientation rate and velocity to get 33 points
+                # Interpolate up to 33 points if needed
+                src_indices = np.linspace(0, n_points - 1, n_points)
+                dst_indices = np.linspace(0, n_points - 1, 33)
                 orientation_rate_33 = np.interp(dst_indices, src_indices, orientation_rate[:n_points])
                 velocity_pred_33 = np.interp(dst_indices, src_indices, velocity_pred[:n_points])
             else:
-                orientation_rate_33 = np.array(orientation_rate[:33], dtype=float)
-                velocity_pred_33 = np.array(velocity_pred[:33], dtype=float)
+                orientation_rate_33 = orientation_rate[:33]
+                velocity_pred_33 = velocity_pred[:33]
 
-            times_33 = np.array(times[:33], dtype=float)
+            # Convert times to float array, use first 33
+            times_33 = np.array(ModelConstants.T_IDXS[:33], dtype=float)
 
-            # Plan a full 10s trajectory, respecting the actual time steps
+            # Plan the speed trajectory
             self.planned_speeds = self._plan_speed_trajectory(
                 orientation_rate_33,
                 velocity_pred_33,
@@ -149,8 +155,8 @@ class VisionTurnSpeedController:
             )
             raw_target = self.planned_speeds[0]
 
-        # Symmetrical jerk limit from self.prev_target_speed to raw_target
-        dt = 0.05  # Because we're running at 20Hz typically. (Or use your actual control loop dt)
+        # Now apply symmetrical jerk limit from self.prev_target_speed to raw_target
+        dt = 0.05  # ~20Hz
         accel_cmd = (raw_target - self.prev_target_speed) / dt
         accel_cmd = clip(accel_cmd, -self.MAX_DECEL, self.MAX_DECEL)
 
@@ -190,35 +196,32 @@ class VisionTurnSpeedController:
         # times[i+1] - times[i] may vary!
         dt_array = np.diff(times)  # length n-1
 
-        # 1) Curvature and safe speeds
+        # 1) Curvature
         curvature = np.array([
-            orientation_rate[i] / max(velocity_pred[i], eps)  # orientation_rate is already absolute
+            orientation_rate[i] / max(velocity_pred[i], eps)
             for i in range(n)
         ], dtype=float)
 
+        # 2) Compute a safe speed for each step, based on lateral acceleration
         safe_speeds = np.zeros(n, dtype=float)
         for i in range(n):
             lat_acc_limit = nonlinear_lat_accel(velocity_pred[i], turn_aggressiveness)
-            c = max(curvature[i], 1e-9)  # c is already positive since orientation_rate was abs()
+            c = max(curvature[i], 1e-9)
             safe_speeds[i] = math.sqrt(lat_acc_limit / c) if c > 1e-9 else 70.0
             safe_speeds[i] = clip(safe_speeds[i], 0.0, 70.0)
 
-        # 2) Apex detection + decel/spool
+        # 3) Apex detection + decel/spool handling
         apex_idxs = find_apexes(curvature, threshold=5e-5)
         planned = safe_speeds.copy()
 
         for apex_i in apex_idxs:
             apex_speed = planned[apex_i]
 
-            # Factor for how far we begin decel/spool, scaling with velocity
+            # Factors controlling how far before/after apex we decel/spool
             decel_factor = 0.15
             spool_factor = 0.08
 
-            # Convert factor * velocity => approximate distance or time window.
-            # We'll do time-based. We want e.g. decel_factor * velocity => a rough "distance"
-            # but let's just do a simple # of seconds.
-            # For example, let's say we decel for decel_factor * times[-1]
-            # Or do a simpler approach: we do an approximate # of steps:
+            # Convert speed-based factor to approximate # of seconds
             decel_sec = velocity_pred[apex_i] * decel_factor
             spool_sec = velocity_pred[apex_i] * spool_factor
 
@@ -247,54 +250,46 @@ class VisionTurnSpeedController:
                     spool_val = apex_speed * (1 - f) + v_spool_end * f
                     planned[idx] = min(planned[idx], spool_val)
 
-        # 3) Margin-based backward pass, time-based
+        # 4) Margin-based backward pass
         margin_t = margin_time_fn(init_speed)
         new_planned = planned.copy()
 
-        # We go from i=(n-2) down to 0, but we find an index j>i
-        # where times[j] - times[i] >= margin_t
-        # Then we try to decelerate new_planned[i] to match new_planned[j].
-        # The approach below is a simplified discrete pass.
-
         for i in range(n - 2, -1, -1):
-            # find j s.t. times[j] - times[i] >= margin_t
             j = self._find_time_index(times, times[i] + margin_t, clip_high=True)
             if j <= i:
                 continue
-
             dt_ij = times[j] - times[i]
             if dt_ij < 0.001:
                 continue
 
             v_future = new_planned[j]
             err = new_planned[i] - v_future
-            desired_acc = err / dt_ij
-            # We'll jerk-limit it in a simple way: clamp to max_decel
-            desired_acc = clip(desired_acc, -self.MAX_DECEL, self.MAX_DECEL)
-            # new_planned[i] = v_future + (-desired_acc)*dt_ij, but we must not exceed safe_speeds[i]
+            desired_acc = clip(err / dt_ij, -self.MAX_DECEL, self.MAX_DECEL)
             feasible_speed = v_future - desired_acc * dt_ij
             new_planned[i] = min(new_planned[i], feasible_speed, planned[i])
 
-        # 4) Standard backward pass (time-based)
+        # 5) Standard backward pass (time-based)
+        dt_len = len(dt_array)
         for i in range(n - 2, -1, -1):
-            dt_i = dt_array[i]
+            if i < dt_len:
+                dt_i = dt_array[i]
+            else:
+                dt_i = 0.05  # fallback
             v_next = new_planned[i + 1]
             err = new_planned[i] - v_next
-            desired_acc = err / dt_i
-            desired_acc = clip(desired_acc, -self.MAX_DECEL, self.MAX_DECEL)
+            desired_acc = clip(err / dt_i, -self.MAX_DECEL, self.MAX_DECEL)
             feasible_speed = v_next - desired_acc * dt_i
             new_planned[i] = min(new_planned[i], feasible_speed, planned[i])
 
-        # 5) Forward pass (time-based)
-        # Start from init_speed
+        # 6) Forward pass (time-based)
         new_planned[0] = min(new_planned[0], planned[0])
-        dt_0 = dt_array[0] if len(dt_array) > 0 else 0.05
+        dt_0 = dt_array[0] if dt_len > 0 else 0.05
         err0 = new_planned[0] - init_speed
         accel0 = clip(err0 / dt_0, -self.MAX_DECEL, self.MAX_DECEL)
         new_planned[0] = init_speed + accel0 * dt_0
 
         for i in range(1, n):
-            dt_i = dt_array[i - 1]
+            dt_i = dt_array[i - 1] if i - 1 < dt_len else 0.05
             v_prev = new_planned[i - 1]
             err = new_planned[i] - v_prev
             desired_acc = clip(err / dt_i, -self.MAX_DECEL, self.MAX_DECEL)
@@ -306,9 +301,8 @@ class VisionTurnSpeedController:
     def _find_time_index(self, times: np.ndarray, target_time: float, clip_high=False) -> int:
         """
         Returns the index i in 'times' such that times[i] is closest to target_time,
-        without exceeding it (unless clip_high=True, then we allow it to go to the end).
+        without exceeding it (unless clip_high=True).
         """
-        # Simple approach: search
         n = len(times)
         if target_time <= times[0]:
             return 0
@@ -317,12 +311,11 @@ class VisionTurnSpeedController:
 
         for i in range(n - 1):
             if times[i] <= target_time < times[i + 1]:
-                # whichever is closer
+                # pick whichever boundary is closer
                 if (target_time - times[i]) < (times[i + 1] - target_time):
                     return i
                 else:
                     return i + 1
-        # If no match found, just return the last index
         return n - 1 if clip_high else n - 2
 
     def _single_step_fallback(self, v_ego, curvature, turn_aggressiveness):
@@ -334,7 +327,6 @@ class VisionTurnSpeedController:
         safe_speed = math.sqrt(lat_acc / c) if c > 1e-9 else 70.0
         safe_speed = clip(safe_speed, 0.0, 70.0)
 
-        # If current lat accel is above some threshold, blend down:
         current_lat_acc = curvature * (v_ego ** 2)
         if current_lat_acc > self.LOW_LAT_ACC:
             if current_lat_acc < self.HIGH_LAT_ACC:
@@ -343,7 +335,6 @@ class VisionTurnSpeedController:
                 alpha = self.turn_smoothing_alpha
             raw_target = alpha * self.prev_target_speed + (1 - alpha) * safe_speed
         else:
-            # reaccel if below low latacc
             alpha = self.reaccel_alpha
             raw_target = alpha * self.prev_target_speed + (1 - alpha) * safe_speed
 
