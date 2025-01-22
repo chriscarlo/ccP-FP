@@ -83,7 +83,7 @@ class SpeedLimitController:
       frogpilot_toggles
     )
 
-    # 4) Determine the offset (above the raw limit) based on the chosen limit’s range
+    # 4) Determine the offset (above the raw limit) based on the chosen limit's range
     self.offset = self.get_offset(self.speed_limit, frogpilot_toggles)
 
     # 5) Compute the "instantaneous" final speed limit = raw limit + offset
@@ -105,8 +105,9 @@ class SpeedLimitController:
     Exactly the same map ingestion logic as the old script: read from param memory,
     check distance to next speed limit, adopt it if we're within the lookahead threshold.
     """
-    # Current map limit from param memory
-    self.map_speed_limit = params_memory.get_float("MapSpeedLimit")
+    # Current map limit from param memory (convert from m/s to mph)
+    map_speed_limit_ms = params_memory.get_float("MapSpeedLimit")
+    self.map_speed_limit = map_speed_limit_ms * 2.23694 if map_speed_limit_ms > 0 else 0
 
     # Next upcoming speed limit info from param memory
     next_map_speed_limit = json.loads(params_memory.get("NextMapSpeedLimit", "{}"))
@@ -147,7 +148,7 @@ class SpeedLimitController:
     Gather speed limits from dash, map, and navigation, then pick one according
     to user-defined priorities. Fallback to previous speed or set speed if toggles allow.
 
-    Exactly the same as the old code’s logic.
+    Exactly the same as the old code's logic.
     """
     # Collect potential limits
     limits = {
@@ -172,7 +173,7 @@ class SpeedLimitController:
         self.source = min(filtered_limits, key=filtered_limits.get)
         return filtered_limits[self.source]
 
-      # Otherwise follow the user’s priority list
+      # Otherwise follow the user's priority list
       for priority in [
         frogpilot_toggles.speed_limit_priority1,
         frogpilot_toggles.speed_limit_priority2,
@@ -231,7 +232,7 @@ class SpeedLimitController:
   def smooth_transition(self, current_smooth, target_speed, dt):
     """
     Gently move current_smooth -> target_speed using linear accel/decel limits.
-    If target_speed <= 0, snap to zero. If diff < step, jump immediately. 
+    If target_speed <= 0, snap to zero. If diff < step, jump immediately.
     Otherwise move by step in the appropriate direction.
     """
     # If invalid target, clamp to 0

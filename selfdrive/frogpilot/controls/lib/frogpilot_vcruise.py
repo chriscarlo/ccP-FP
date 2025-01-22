@@ -221,6 +221,7 @@ class FrogPilotVCruise:
         if frogpilot_toggles.vision_turn_controller and v_ego > CRUISING_SPEED and carControl.longActive:
             self.vtsc_target = self.vtsc.update(
                 v_ego,
+                v_cruise,
                 frogpilot_toggles.turn_aggressiveness
             )
         else:

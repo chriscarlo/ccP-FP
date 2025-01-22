@@ -226,11 +226,8 @@ class SpeedLimitService:
       msg.navInstruction.speedLimit = float(self.last_speed_limit)
       self.pm.send('navInstruction', msg)
 
-      # Also store in Params so your SpeedLimitController can read it
-      # Convert m/s to mph if your SpeedLimitController expects mph
-      # Or store in m/s if that's what your code expects.
-      speed_limit_mph = self.last_speed_limit * 2.23694
-      self.params.put("MapSpeedLimit", str(speed_limit_mph))
+      # Store in Params in m/s to match navd behavior
+      self.params.put("MapSpeedLimit", str(self.last_speed_limit))
 
 def main():
   service = SpeedLimitService()

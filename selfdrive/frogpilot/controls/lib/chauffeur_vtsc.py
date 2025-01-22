@@ -93,12 +93,16 @@ class VisionTurnSpeedController:
         # Add subscriber for model data
         self.sm = messaging.SubMaster(['modelV2'])
 
+        # 1) Add a field to store the last known v_cruise
+        self.prev_v_cruise = 0.0
+
     def reset(self, v_ego: float) -> None:
         self.prev_target_speed = v_ego
         self.current_accel = 0.0
         self.planned_speeds[:] = v_ego
 
-    def update(self, v_ego: float, turn_aggressiveness=1.0) -> float:
+    # 2) Pass v_cruise into update(...)
+    def update(self, v_ego: float, v_cruise: float, turn_aggressiveness=1.0) -> float:
         """
         Main update. We expect:
           modelData.orientationRate.z : array of length 33
@@ -111,6 +115,7 @@ class VisionTurnSpeedController:
         # If speed is below CRUISING_SPEED, do no special turn limit
         if v_ego < CRUISING_SPEED:
             self.reset(v_ego)
+            self.prev_v_cruise = v_cruise  # Track the user's current cruise
             return v_ego
 
         # Convert the orientationRate and velocity arrays from Cap'n Proto to NumPy:
@@ -155,24 +160,38 @@ class VisionTurnSpeedController:
             )
             raw_target = self.planned_speeds[0]
 
-        # Now apply symmetrical jerk limit from self.prev_target_speed to raw_target
         dt = 0.05  # ~20Hz
-        accel_cmd = (raw_target - self.prev_target_speed) / dt
-        accel_cmd = clip(accel_cmd, -self.MAX_DECEL, self.MAX_DECEL)
+        final_target_speed = None
 
-        # Jerk-limit the change in acceleration
-        accel_diff = accel_cmd - self.current_accel
-        max_delta = self.MAX_JERK * dt
-        if accel_diff > max_delta:
-            self.current_accel += max_delta
-        elif accel_diff < -max_delta:
-            self.current_accel -= max_delta
-        else:
-            self.current_accel = accel_cmd
+        # 3) USER-INITIATED v_cruise INCREASE CHECK
+        if v_cruise > self.prev_v_cruise:
+            # The user is "bumping up" the set speed → skip jerk limit and
+            # immediately allow up to min(v_cruise, raw_target).
+            final_target_speed = min(v_cruise, raw_target)
+            # Optionally reset self.current_accel so next tick starts fresh:
+            self.current_accel = 0.0
 
-        jerk_limited_speed = self.prev_target_speed + self.current_accel * dt
-        self.prev_target_speed = jerk_limited_speed
-        return jerk_limited_speed
+        # 4) If not an increase, proceed with normal jerk-limited approach
+        if final_target_speed is None:
+            accel_cmd = (raw_target - self.prev_target_speed) / dt
+            accel_cmd = clip(accel_cmd, -self.MAX_DECEL, self.MAX_DECEL)
+
+            # Jerk-limit the change in acceleration
+            accel_diff = accel_cmd - self.current_accel
+            max_delta = self.MAX_JERK * dt
+            if accel_diff > max_delta:
+                self.current_accel += max_delta
+            elif accel_diff < -max_delta:
+                self.current_accel -= max_delta
+            else:
+                self.current_accel = accel_cmd
+
+            final_target_speed = self.prev_target_speed + self.current_accel * dt
+
+        self.prev_target_speed = final_target_speed
+        self.prev_v_cruise = v_cruise
+
+        return final_target_speed
 
     def _plan_speed_trajectory(
         self,
