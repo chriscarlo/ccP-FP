@@ -221,14 +221,11 @@ class FrogPilotVCruise:
         if frogpilot_toggles.vision_turn_controller and v_ego > CRUISING_SPEED and carControl.longActive:
             self.vtsc_target = self.vtsc.update(
                 v_ego,
-                abs(self.frogpilot_planner.road_curvature),
                 frogpilot_toggles.turn_aggressiveness
             )
         else:
             # Reset the VTSC if off or under speed threshold
             self.vtsc.reset(v_ego)
-
-            # If Vision Turn is off or speed < CRUISING_SPEED, no turn limit
             self.vtsc_target = v_cruise if v_cruise != V_CRUISE_UNSET else 0
 
         # -------------------------------------------------------------
@@ -261,7 +258,7 @@ class FrogPilotVCruise:
             else:
                 targets = [self.mtsc_target, self.vtsc_target]
 
-            # Don’t drop below CRUISING_SPEED unless needed
+            # Don't drop below CRUISING_SPEED unless needed
             v_cruise = float(min([t if t > CRUISING_SPEED else v_cruise for t in targets]))
 
         # Keep everything in sync w/ cluster differences

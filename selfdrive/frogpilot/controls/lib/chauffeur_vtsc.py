@@ -1,5 +1,6 @@
 import math
 import numpy as np
+import cereal.messaging as messaging
 
 from openpilot.common.conversions import Conversions as CV
 from openpilot.common.numpy_fast import clip
@@ -85,35 +86,57 @@ class VisionTurnSpeedController:
         # We'll store the planned speeds for up to 33 steps
         self.planned_speeds = np.zeros(33, dtype=float)
 
+        # Add subscriber for model data
+        self.sm = messaging.SubMaster(['modelV2'])
+
     def reset(self, v_ego: float) -> None:
         self.prev_target_speed = v_ego
         self.current_accel = 0.0
         self.planned_speeds[:] = v_ego
 
-    def update(self, v_ego: float, modelData, turn_aggressiveness=1.0) -> float:
+    def update(self, v_ego: float, turn_aggressiveness=1.0) -> float:
         """
         Main update. We expect:
           modelData.orientationRate.z : array of length 33
           modelData.velocity.x        : array of length 33
           modelData.times             : array of length 33  (see note below)
-        If there's no .times, you can do times = ModelConstants.T_IDXS or replicate it.
         """
+        # Update messages
+        self.sm.update()
+
+        # Get model data directly
+        modelData = self.sm['modelV2']
+
         # If speed is below CRUISING_SPEED, do no special turn limit
         if v_ego < CRUISING_SPEED:
             self.reset(v_ego)
             return v_ego
 
-        orientation_rate = getattr(modelData.orientationRate, "z", None)
-        velocity_pred = getattr(modelData.velocity, "x", None)
-        times = getattr(modelData, "times", None)  # We'll assume you store T_IDXS in modelData.times
+        orientation_rate = np.abs(modelData.orientationRate.z)  # Take absolute value right when we get it
+        velocity_pred = modelData.velocity.x
+        times = ModelConstants.T_IDXS  # Always use T_IDXS directly
 
-        # If we don't have 33 points or times array, fallback:
-        if (orientation_rate is None or velocity_pred is None or times is None or
-            len(orientation_rate) < 33 or len(velocity_pred) < 33 or len(times) < 33):
+        # Minimum points needed for reasonable interpolation
+        MIN_POINTS = 3
+
+        # If we don't have enough points for even basic interpolation, fallback:
+        if (orientation_rate is None or velocity_pred is None or
+            len(orientation_rate) < MIN_POINTS or len(velocity_pred) < MIN_POINTS):
             raw_target = self._single_step_fallback(v_ego, 0.0, turn_aggressiveness)
         else:
-            orientation_rate_33 = np.array(orientation_rate[:33], dtype=float)
-            velocity_pred_33 = np.array(velocity_pred[:33], dtype=float)
+            n_points = min(len(orientation_rate), len(velocity_pred))
+            if n_points < 33:
+                # Create interpolation points
+                src_indices = np.linspace(0, n_points-1, n_points)
+                dst_indices = np.linspace(0, n_points-1, 33)
+
+                # Interpolate orientation rate and velocity to get 33 points
+                orientation_rate_33 = np.interp(dst_indices, src_indices, orientation_rate[:n_points])
+                velocity_pred_33 = np.interp(dst_indices, src_indices, velocity_pred[:n_points])
+            else:
+                orientation_rate_33 = np.array(orientation_rate[:33], dtype=float)
+                velocity_pred_33 = np.array(velocity_pred[:33], dtype=float)
+
             times_33 = np.array(times[:33], dtype=float)
 
             # Plan a full 10s trajectory, respecting the actual time steps
@@ -169,14 +192,14 @@ class VisionTurnSpeedController:
 
         # 1) Curvature and safe speeds
         curvature = np.array([
-            orientation_rate[i] / max(velocity_pred[i], eps)
+            orientation_rate[i] / max(velocity_pred[i], eps)  # orientation_rate is already absolute
             for i in range(n)
         ], dtype=float)
 
         safe_speeds = np.zeros(n, dtype=float)
         for i in range(n):
             lat_acc_limit = nonlinear_lat_accel(velocity_pred[i], turn_aggressiveness)
-            c = max(curvature[i], 1e-9)
+            c = max(curvature[i], 1e-9)  # c is already positive since orientation_rate was abs()
             safe_speeds[i] = math.sqrt(lat_acc_limit / c) if c > 1e-9 else 70.0
             safe_speeds[i] = clip(safe_speeds[i], 0.0, 70.0)
 
@@ -191,10 +214,10 @@ class VisionTurnSpeedController:
             decel_factor = 0.15
             spool_factor = 0.08
 
-            # Convert factor * velocity => approximate distance or time window. 
-            # We'll do time-based. We want e.g. decel_factor * velocity => a rough "distance" 
-            # but let's just do a simple # of seconds. 
-            # For example, let's say we decel for decel_factor * times[-1] 
+            # Convert factor * velocity => approximate distance or time window.
+            # We'll do time-based. We want e.g. decel_factor * velocity => a rough "distance"
+            # but let's just do a simple # of seconds.
+            # For example, let's say we decel for decel_factor * times[-1]
             # Or do a simpler approach: we do an approximate # of steps:
             decel_sec = velocity_pred[apex_i] * decel_factor
             spool_sec = velocity_pred[apex_i] * spool_factor
@@ -228,7 +251,7 @@ class VisionTurnSpeedController:
         margin_t = margin_time_fn(init_speed)
         new_planned = planned.copy()
 
-        # We go from i=(n-2) down to 0, but we find an index j>i 
+        # We go from i=(n-2) down to 0, but we find an index j>i
         # where times[j] - times[i] >= margin_t
         # Then we try to decelerate new_planned[i] to match new_planned[j].
         # The approach below is a simplified discrete pass.
