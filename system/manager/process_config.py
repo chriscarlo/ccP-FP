@@ -107,6 +107,7 @@ procs = [
   PythonProcess("fleet_manager", "selfdrive.frogpilot.fleetmanager.fleet_manager", always_run),
   PythonProcess("frogpilot_process", "selfdrive.frogpilot.frogpilot_process", always_run),
   PythonProcess("mapd", "selfdrive.frogpilot.navigation.mapd", always_run),
+  PythonProcess("speed_limit_svc", "selfdrive.navd.speed_limit_svc", only_onroad),
 ]
 
 managed_processes = {p.name: p for p in procs}
