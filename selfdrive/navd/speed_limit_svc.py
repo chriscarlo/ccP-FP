@@ -190,10 +190,26 @@ class SpeedLimitService:
     if self.localizer_valid:
       lat = location.positionGeodetic.value[0]
       lon = location.positionGeodetic.value[1]
-      # If 'bearingDeg' is absent or NaN, default to 0
-      heading_deg = getattr(location, 'bearingDeg', 0.0)
+
+      # Try to get bearing from GPS first
+      heading_deg = getattr(location, 'bearingDeg', None)
+
+      # If bearing is None or NaN, calculate from velocity
       if heading_deg is None or math.isnan(heading_deg):
-        heading_deg = 0.0
+        # Get velocity in NED frame
+        if hasattr(location, 'vNED') and len(location.vNED) >= 2:
+          # vNED[0] is North velocity, vNED[1] is East velocity
+          v_north = location.vNED[0]
+          v_east = location.vNED[1]
+          if abs(v_north) > 0.1 or abs(v_east) > 0.1:  # Only calculate if moving
+            heading_rad = math.atan2(v_east, v_north)  # 0 = north, pi/2 = east
+            heading_deg = math.degrees(heading_rad)
+            if heading_deg < 0:
+              heading_deg += 360.0
+          else:
+            heading_deg = 0.0  # Default when stationary
+        else:
+          heading_deg = 0.0  # Default if no velocity data
 
       if self.should_query_api(lat, lon):
         speed_limit_ms = self.query_speed_limit(lat, lon, heading_deg)
@@ -212,7 +228,7 @@ class SpeedLimitService:
 
       # Also store in Params so your SpeedLimitController can read it
       # Convert m/s to mph if your SpeedLimitController expects mph
-      # Or store in m/s if that’s what your code expects.
+      # Or store in m/s if that's what your code expects.
       speed_limit_mph = self.last_speed_limit * 2.23694
       self.params.put("MapSpeedLimit", str(speed_limit_mph))
 
