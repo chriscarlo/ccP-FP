@@ -12,7 +12,7 @@ import requests
 from cereal import log, messaging
 from openpilot.common.params import Params
 from openpilot.common.realtime import Ratekeeper
-from openpilot.system.swaglog import cloudlog
+from openpilot.common.swaglog import cloudlog
 from openpilot.selfdrive.frogpilot.frogpilot_variables import get_frogpilot_toggles
 
 # Path to your Mapbox API credentials file
