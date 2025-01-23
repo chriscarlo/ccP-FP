@@ -289,7 +289,7 @@ static void update_state(UIState *s) {
   }
   if (sm.updated("frogpilotNavigation")) {
     auto frogpilotNavigation = sm["frogpilotNavigation"].getFrogpilotNavigation();
-    scene.navigation_speed_limit = frogpilotNavigation.getNavigationSpeedLimit();
+    scene.navigation_speed_limit = frogpilotNavigation.getNavigationSpeedLimitRealtime();
   }
   if (sm.updated("frogpilotPlan")) {
     auto frogpilotPlan = sm["frogpilotPlan"].getFrogpilotPlan();

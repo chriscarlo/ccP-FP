@@ -40,10 +40,13 @@ struct FrogPilotDeviceState @0xf35cc4560bbf6ec2 {
   usedSpace @1 :Int16;
 }
 
+# fuck you, rebuild you POS
 struct FrogPilotNavigation @0xda96579883444c35 {
   approachingIntersection @0 :Bool;
   approachingTurn @1 :Bool;
   navigationSpeedLimit @2 :Float32;
+  navigationSpeedLimitRealtime @3 :Float32;
+  mapSpeedLimitRealtime @4 :Float32;
 }
 
 struct FrogPilotPlan @0x80ae746ee2596b11 {

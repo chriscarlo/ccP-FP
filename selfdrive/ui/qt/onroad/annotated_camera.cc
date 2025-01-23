@@ -75,7 +75,7 @@ void AnnotatedCameraWidget::updateState(int alert_height, const UIState &s) {
   if (s.scene.show_speed_limits || s.scene.speed_limit_controller) {
     speedLimit = slcOverridden ? s.scene.speed_limit_overridden_speed : s.scene.speed_limit;
   } else {
-    speedLimit = nav_alive ? nav_instruction.getSpeedLimit() : 0.0;
+    speedLimit = s.scene.navigation_speed_limit;  // Using Mapbox speed limit as default
   }
   speedLimit *= (s.scene.is_metric ? MS_TO_KPH : MS_TO_MPH);
   speedLimit -= (showSLCOffset && !slcOverridden ? slcSpeedLimitOffset : 0);

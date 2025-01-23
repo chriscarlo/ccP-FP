@@ -134,7 +134,8 @@ class FrogPilotVCruise:
             self.slc.update(
                 frogpilotCarState.dashboardSpeedLimit,
                 controlsState.enabled,
-                frogpilotNavigation.navigationSpeedLimit,
+                frogpilotNavigation.navigationSpeedLimitRealtime,
+                frogpilotNavigation.mapSpeedLimitRealtime,
                 v_cruise_cluster,
                 v_ego,
                 frogpilot_toggles

@@ -3,6 +3,7 @@
 import json
 import math
 import os
+import subprocess
 import time
 from math import cos, pi, radians, sin, sqrt
 from typing import Optional
@@ -18,6 +19,9 @@ from openpilot.selfdrive.frogpilot.frogpilot_variables import get_frogpilot_togg
 # Path to your Mapbox API credentials file
 MAPBOX_API_FILE = "/persist/mapbox/mapbox_api.txt"
 MAPBOX_HOST = "https://api.mapbox.com"
+
+# Path to mapd binary
+MAPD_PATH = "/data/media/0/osm/mapd"
 
 def load_mapbox_keys() -> tuple[Optional[str], Optional[str]]:
   """
@@ -80,7 +84,7 @@ class SpeedLimitService:
     # SubMaster for reading vehicle location
     self.sm = sm or messaging.SubMaster(['liveLocationKalman'])
     # PubMaster for broadcasting speed limit
-    self.pm = pm or messaging.PubMaster(['navInstruction'])
+    self.pm = pm or messaging.PubMaster(['frogpilotNavigation'])
 
     self.params = Params()
 
@@ -100,6 +104,10 @@ class SpeedLimitService:
     self.MIN_DISTANCE_CHANGE = 25.0   # meters
     self.MIN_QUERY_INTERVAL = 2.0     # seconds
 
+  def is_mapd_available(self) -> bool:
+    """Check if mapd binary exists and is executable."""
+    return os.path.isfile(MAPD_PATH) and os.access(MAPD_PATH, os.X_OK)
+
   def should_query_api(self, lat: float, lon: float) -> bool:
     """Check if enough distance & time have passed since our last query."""
     now = time.monotonic()
@@ -114,7 +122,7 @@ class SpeedLimitService:
 
     # Check distance
     dlat = (lat - self.last_lat) * 111111.0
-    dlon = (lon - self.last_lon) * 111111.0 * abs(cos(lat * pi / 180.0))
+    dlon = (lon - self.last_lon) * 111111.0 * abs(math.cos(lat * pi / 180.0))
     distance = sqrt(dlat*dlat + dlon*dlon)
 
     return distance > self.MIN_DISTANCE_CHANGE
@@ -136,9 +144,6 @@ class SpeedLimitService:
     params = {
       'access_token': self.secret_key,
       'annotations': 'maxspeed',
-      # Optional extras:
-      # 'overview': 'full',
-      # 'geometries': 'polyline',
     }
 
     try:
@@ -148,9 +153,6 @@ class SpeedLimitService:
         return 0.0
 
       data = resp.json()
-      # Debugging:
-      # cloudlog.info(f"Mapbox response: {data}")
-
       routes = data.get('routes', [])
       if len(routes) == 0:
         return 0.0
@@ -167,11 +169,7 @@ class SpeedLimitService:
         return 0.0
 
       # Typically, maxspeed is an array of dicts, one per route segment
-      # We'll just check the first item for a representative value
       ms = maxspeeds[0]
-
-      # If the dict has "unknown" or "none", skip
-      # We can do a string check or just rely on the presence of 'speed'/'unit'
       if 'unknown' in str(ms).lower() or 'none' in str(ms).lower():
         return 0.0
 
@@ -180,25 +178,62 @@ class SpeedLimitService:
       cloudlog.exception(f"Speed limit query failed: {e}")
       return 0.0
 
+  def query_osm_speed_limit(self, lat: float, lon: float) -> float:
+    """
+    Query local OSM data for speed limit at current coordinates.
+    Returns speed limit in m/s if found, else 0.0.
+    """
+    if not self.is_mapd_available() or not self.localizer_valid:
+      return 0.0
+
+    try:
+      # Call mapd binary with current coordinates
+      cmd = [MAPD_PATH, "speed_limit", f"{lat}", f"{lon}"]
+      result = subprocess.run(cmd, capture_output=True, text=True, timeout=1.0)
+
+      if result.returncode != 0:
+        return 0.0
+
+      # Parse speed limit from output
+      # mapd outputs: speed_limit_value unit
+      # e.g. "45 mph" or "50 km/h"
+      output = result.stdout.strip().split()
+      if len(output) != 2:
+        return 0.0
+
+      try:
+        speed = float(output[0])
+        unit = output[1]
+
+        # Convert to m/s
+        if unit == "mph":
+          return speed * 0.44704
+        elif unit == "km/h":
+          return speed * 0.27778
+        else:
+          return 0.0
+
+      except ValueError:
+        return 0.0
+
+    except Exception as e:
+      cloudlog.exception(f"OSM speed limit query failed: {e}")
+      return 0.0
+
   def update(self) -> None:
     """Main update loop: read location, maybe query Mapbox, then broadcast speed limit."""
     self.sm.update(0)
-
     location = self.sm['liveLocationKalman']
     self.localizer_valid = (location.status == log.LiveLocationKalman.Status.valid)
 
     if self.localizer_valid:
       lat = location.positionGeodetic.value[0]
       lon = location.positionGeodetic.value[1]
-
-      # Try to get bearing from GPS first
       heading_deg = getattr(location, 'bearingDeg', None)
 
       # If bearing is None or NaN, calculate from velocity
       if heading_deg is None or math.isnan(heading_deg):
-        # Get velocity in NED frame
         if hasattr(location, 'vNED') and len(location.vNED) >= 2:
-          # vNED[0] is North velocity, vNED[1] is East velocity
           v_north = location.vNED[0]
           v_east = location.vNED[1]
           if abs(v_north) > 0.1 or abs(v_east) > 0.1:  # Only calculate if moving
@@ -212,27 +247,32 @@ class SpeedLimitService:
           heading_deg = 0.0  # Default if no velocity data
 
       if self.should_query_api(lat, lon):
-        speed_limit_ms = self.query_speed_limit(lat, lon, heading_deg)
-        # If we got a non-zero result, store it
-        if speed_limit_ms > 0.0:
-          self.last_speed_limit = speed_limit_ms
-        # Update tracking
+        mapbox_speed_limit = self.query_speed_limit(lat, lon, heading_deg)
+        if mapbox_speed_limit > 0.0:
+          self.last_speed_limit = mapbox_speed_limit
         self.last_lat = lat
         self.last_lon = lon
         self.last_query_time = time.monotonic()
 
-      # Publish on navInstruction
-      msg = messaging.new_message('navInstruction')
-      msg.navInstruction.speedLimit = float(self.last_speed_limit)
-      self.pm.send('navInstruction', msg)
+      # Query OSM data every time (it's local and just needs current position)
+      osm_speed_limit = self.query_osm_speed_limit(lat, lon)
 
-      # Store in Params in m/s to match navd behavior
+      # Publish on frogpilotNavigation
+      msg = messaging.new_message('frogpilotNavigation', valid=True)
+      if self.last_speed_limit > 0.0 and self.localizer_valid:
+        msg.frogpilotNavigation.navigationSpeedLimitRealtime = float(self.last_speed_limit)
+      if osm_speed_limit > 0.0:
+        msg.frogpilotNavigation.mapSpeedLimitRealtime = float(osm_speed_limit)
+      else:
+        msg.valid = False
+
+      self.pm.send('frogpilotNavigation', msg)
+
+      # Store in Params in m/s
       self.params.put("MapSpeedLimit", str(self.last_speed_limit))
 
 def main():
   service = SpeedLimitService()
-
-  # We'll run at 2Hz
   rk = Ratekeeper(2.0, print_delay_threshold=None)
 
   while True:

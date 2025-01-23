@@ -2366,6 +2366,8 @@ struct Event {
     customReservedRawData1 @125 :Data;
     customReservedRawData2 @126 :Data;
 
+# fuck you, rebuild you POS
+
     # *********** Custom: reserved for forks ***********
     frogpilotCarControl @107 :Custom.FrogPilotCarControl;
     frogpilotCarState @108 :Custom.FrogPilotCarState;
