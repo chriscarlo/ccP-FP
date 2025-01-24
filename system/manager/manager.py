@@ -42,7 +42,7 @@ def manager_init() -> None:
   default_params: list[tuple[str, str | bytes]] = [
     ("AlwaysOnDM", "0"),
     ("CarParamsPersistent", ""),
-    ("CompletedTrainingVersion", "0"),
+    ("CompletedTrainingVersion", "0.2.0"),
     ("DisengageOnAccelerator", "0"),
     ("ExperimentalLongitudinalEnabled", "0"),
     ("ExperimentalMode", "0"),
@@ -52,7 +52,7 @@ def manager_init() -> None:
     ("GsmApn", ""),
     ("GsmMetered", "1"),
     ("GsmRoaming", "1"),
-    ("HasAcceptedTerms", "0"),
+    ("HasAcceptedTerms", "2"),
     ("IsLdwEnabled", "0"),
     ("IsMetric", "0"),
     ("LanguageSetting", "main_en"),
