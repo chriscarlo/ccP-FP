@@ -16,24 +16,36 @@ from openpilot.selfdrive.controls.lib.drive_helpers import V_CRUISE_MAX, V_CRUIS
 from openpilot.common.swaglog import cloudlog
 
 LON_MPC_STEP = 0.2
+
 A_CRUISE_MIN = -6.0
 A_CRUISE_MAX_VALS = [4.2, 3.5, 2.8, 1.6, 0.8]
 A_CRUISE_MAX_BP = [0., 10.0, 25., 40., 50.]
+
 CONTROL_N_T_IDX = ModelConstants.T_IDXS[:CONTROL_N]
 ALLOW_THROTTLE_THRESHOLD = 0.5
 MIN_ALLOW_THROTTLE_SPEED = 2.5
+
 LEAD_KALMAN_SPEED, LEAD_KALMAN_ACCEL = 0, 1
 
 
 def get_max_accel(v_ego):
+  """Return maximum allowed acceleration at a given speed, typically for ACC mode."""
   return interp(v_ego, A_CRUISE_MAX_BP, A_CRUISE_MAX_VALS)
 
 
 def get_coast_accel(pitch):
+  """
+  Estimate a 'coasting' acceleration from pitch,
+  e.g., to gently limit throttle in downhill situations.
+  """
   return np.sin(pitch) * -5.65 - 0.3
 
 
 def get_accel_from_plan(speeds, accels, action_t=DT_MDL, vEgoStopping=0.05):
+  """
+  Compute the short-horizon acceleration target and a 'should_stop' boolean from
+  a precomputed plan (speeds, accels).
+  """
   if len(speeds) == CONTROL_N:
     v_now = speeds[0]
     a_now = accels[0]
@@ -44,15 +56,22 @@ def get_accel_from_plan(speeds, accels, action_t=DT_MDL, vEgoStopping=0.05):
     v_target = 0.0
     v_target_1sec = 0.0
     a_target = 0.0
+
   should_stop = (v_target < vEgoStopping and v_target_1sec < vEgoStopping)
   return a_target, should_stop
 
 
 def lead_kf(v_lead: float, dt: float = 0.05):
+  """
+  Simple 1D Kalman filter to track a lead car's velocity and acceleration.
+  """
   assert 0.01 < dt < 0.2
-  A = [[1.0, dt], [0.0, 1.0]]
+  A = [[1.0, dt],
+       [0.0, 1.0]]
   C = [1.0, 0.0]
   dts = [0.01 * i for i in range(1, 21)]
+
+  # Gains precomputed for dt from 0.01..0.20
   K0 = [
     0.12287673, 0.14556536, 0.16522756, 0.18281627, 0.1988689, 0.21372394,
     0.22761098, 0.24069424, 0.253096, 0.26491023, 0.27621103, 0.28705801,
@@ -65,12 +84,18 @@ def lead_kf(v_lead: float, dt: float = 0.05):
     0.27162685, 0.27023228, 0.26888809, 0.26758976, 0.26633338, 0.26511557,
     0.26393339, 0.26278425
   ]
-  K = [[interp(dt, dts, K0)], [interp(dt, dts, K1)]]
+
+  K = [[interp(dt, dts, K0)],
+       [interp(dt, dts, K1)]]
+
   kf = KF1D([[v_lead], [0.0]], A, C, K)
   return kf
 
 
 class Lead:
+  """
+  Simple container for per-lead state with a small Kalman filter.
+  """
   def __init__(self):
     self.dRel = 0.0
     self.yRel = 0.0
@@ -99,8 +124,11 @@ class Lead:
       self.kf = lead_kf(self.vLead)
     else:
       self.kf.update(self.vLead)
+
     self.vLeadK = float(self.kf.x[LEAD_KALMAN_SPEED][0])
     self.aLeadK = float(self.kf.x[LEAD_KALMAN_ACCEL][0])
+
+    # Adapt aLeadTau a bit if the filter sees consistent acceleration
     if abs(self.aLeadK) < 0.5:
       self.aLeadTau = LEAD_ACCEL_TAU
     else:
@@ -108,37 +136,66 @@ class Lead:
 
 
 def _scale_t_follow(original_t_follow: float, v_ego: float) -> float:
+  """
+  Example function to gently scale t_follow at highway speeds, up to +0.2s.
+  """
   max_extra = 0.2
-  scale_speed = 30.0
+  scale_speed = 30.0  # 30 m/s ~ 108 km/h
   extra = max_extra * min(v_ego, scale_speed) / scale_speed
   return original_t_follow + extra
 
 
 class LongitudinalPlanner:
+  """
+  Computes the short-horizon speed/accel trajectory from:
+    - carState, controlsState
+    - (radar or model) leads
+    - optionally sets keep-accel or force-decel states
+
+  The outputs are set to self.v_desired_trajectory, self.a_desired_trajectory, etc.,
+  which CarControls can consume for final actuation.
+  """
   def __init__(self, CP, init_v=0.0, init_a=0.0, dt=DT_MDL):
     self.CP = CP
     self.mpc = LongitudinalMpc(dt=dt)
     self.fcw = False
     self.dt = dt
+
+    # Whether we allow the planner to ask for throttle (versus forcing coast or brake).
     self.allow_throttle = True
+
+    # Current commanded/desired acceleration
     self.a_desired = init_a
+
+    # Filter for the desired speed (helpful for smoothing quick changes)
     self.v_desired_filter = FirstOrderFilter(init_v, 2.0, self.dt)
+
+    # Model vs actual velocity error
     self.v_model_error = 0.0
+
+    # The two leads that we might track
     self.lead_one = Lead()
     self.lead_two = Lead()
+
+    # Output arrays
     self.v_desired_trajectory = np.zeros(CONTROL_N)
     self.a_desired_trajectory = np.zeros(CONTROL_N)
     self.a_desired_trajectory_full = np.zeros(CONTROL_N)
     self.j_desired_trajectory = np.zeros(CONTROL_N)
+
     self.solverExecutionTime = 0.0
 
   @staticmethod
   def parse_model(model_msg, model_error, v_ego, taco_tune):
-    if (
-      len(model_msg.position.x) == ModelConstants.IDX_N
-      and len(model_msg.velocity.x) == ModelConstants.IDX_N
-      and len(model_msg.acceleration.x) == ModelConstants.IDX_N
-    ):
+    """
+    Extract x, v, a, j from model predictions. If 'taco_tune' is set, optionally clamp
+    velocity for sharper turns. Also return 'throttle_prob' from predictions if available.
+    """
+    # Make sure model has valid arrays
+    if (len(model_msg.position.x) == ModelConstants.IDX_N and
+        len(model_msg.velocity.x) == ModelConstants.IDX_N and
+        len(model_msg.acceleration.x) == ModelConstants.IDX_N):
+
       x = np.interp(T_IDXS_MPC, ModelConstants.T_IDXS, model_msg.position.x) - model_error * T_IDXS_MPC
       v = np.interp(T_IDXS_MPC, ModelConstants.T_IDXS, model_msg.velocity.x) - model_error
       a = np.interp(T_IDXS_MPC, ModelConstants.T_IDXS, model_msg.acceleration.x)
@@ -148,46 +205,92 @@ class LongitudinalPlanner:
       v = np.zeros(len(T_IDXS_MPC))
       a = np.zeros(len(T_IDXS_MPC))
       j = np.zeros(len(T_IDXS_MPC))
+
+    # If taco_tune is on, limit speed in high curvature
     if taco_tune:
       max_lat_accel = interp(v_ego, [5, 10, 20], [1.5, 2.0, 3.0])
-      curvatures = np.interp(T_IDXS_MPC, ModelConstants.T_IDXS, model_msg.orientationRate.z) / np.clip(v, 0.3, 100.0)
+      curvatures = (np.interp(T_IDXS_MPC, ModelConstants.T_IDXS, model_msg.orientationRate.z)
+                    / np.clip(v, 0.3, 100.0))
       max_v = np.sqrt(max_lat_accel / (np.abs(curvatures) + 1e-3)) - 2.0
       v = np.minimum(max_v, v)
+
+    # default throttle_prob to 1.0 if missing
     if len(model_msg.meta.disengagePredictions.gasPressProbs) > 1:
       throttle_prob = model_msg.meta.disengagePredictions.gasPressProbs[1]
     else:
       throttle_prob = 1.0
+
     return x, v, a, j, throttle_prob
 
   def update(self, classic_model, radarless_model, sm, frogpilot_toggles):
+    """
+    Called each cycle by the manager to:
+      1. Figure out min/max acceleration
+      2. Parse model or radar leads
+      3. Update self.mpc with all relevant constraints
+      4. Output short-horizon speed/accel trajectories
+      5. Decide if we trigger FCW or standstill logic
+    """
+    # Decide the mode for the MPC
     self.mpc.mode = "blended" if sm["controlsState"].experimentalMode else "acc"
+
+    # If we have orientationNED from CarControl, compute a 'coast accel' for downhill
     if len(sm["carControl"].orientationNED) == 3:
       accel_coast = get_coast_accel(sm["carControl"].orientationNED[1])
     else:
       accel_coast = ACCEL_MAX
+
     v_ego = sm["carState"].vEgo
+
+    # Handling cruise speed
     v_cruise_kph = min(sm["controlsState"].vCruise, V_CRUISE_MAX)
     v_cruise = v_cruise_kph * CV.KPH_TO_MS
     v_cruise_initialized = sm["controlsState"].vCruise != V_CRUISE_UNSET
-    long_control_off = sm["controlsState"].longControlState == LongCtrlState.off
+
+    # Are we controlling longitudinal or not?
+    long_control_off = (sm["controlsState"].longControlState == LongCtrlState.off)
     force_slow_decel = sm["controlsState"].forceDecel
-    reset_state = long_control_off if self.CP.openpilotLongitudinalControl else not sm["controlsState"].enabled
-    reset_state = reset_state or not v_cruise_initialized
+
+    # If openpilot Long is off or the user hasn't set cruise, reset the planner
+    if self.CP.openpilotLongitudinalControl:
+      reset_state = long_control_off or not v_cruise_initialized
+    else:
+      reset_state = not sm["controlsState"].enabled or not v_cruise_initialized
+
+    # Are we ignoring acceleration changes if car is standstill?
     prev_accel_constraint = not (reset_state or sm["carState"].standstill)
-    accel_limits = [sm["frogpilotPlan"].minAcceleration, sm["frogpilotPlan"].maxAcceleration]
+
+    # If in ACC mode, use your default table, else fallback to [-3,3] from ACCEL_MIN, ACCEL_MAX
     if self.mpc.mode == "acc":
       accel_limits = [A_CRUISE_MIN, get_max_accel(v_ego)]
       accel_limits_turns = [A_CRUISE_MIN, get_max_accel(v_ego)]
     else:
       accel_limits = [ACCEL_MIN, ACCEL_MAX]
       accel_limits_turns = [ACCEL_MIN, ACCEL_MAX]
+
+    # If we need a reset (OP is not controlling), set desired filter
     if reset_state:
       self.v_desired_filter.x = v_ego
       self.a_desired = clip(sm["carState"].aEgo, accel_limits[0], accel_limits[1])
+
+    # Update the speed filter for next iteration
     self.v_desired_filter.x = max(0.0, self.v_desired_filter.update(v_ego))
+
+    # Estimate speed error from model
     self.v_model_error = get_speed_error(sm["modelV2"], v_ego)
-    x, v, a, j, throttle_prob = self.parse_model(sm["modelV2"], self.v_model_error, v_ego, frogpilot_toggles.taco_tune)
-    self.allow_throttle = throttle_prob > ALLOW_THROTTLE_THRESHOLD or v_ego <= MIN_ALLOW_THROTTLE_SPEED
+
+    # Parse the model's predicted x, v, a, j, and see if we allow throttle
+    x, v, a, j, throttle_prob = self.parse_model(
+      sm["modelV2"],
+      self.v_model_error,
+      v_ego,
+      frogpilot_toggles.taco_tune
+    )
+
+    # If throttle_prob is below threshold, we might forcibly disallow throttle
+    self.allow_throttle = (throttle_prob > ALLOW_THROTTLE_THRESHOLD or v_ego <= MIN_ALLOW_THROTTLE_SPEED)
+
+    # If we do NOT allow throttle, clamp the upper accel limit to coast
     if not self.allow_throttle and not classic_model:
       clipped_accel_coast = max(accel_coast, accel_limits_turns[0])
       clipped_accel_coast_interp = interp(
@@ -196,26 +299,33 @@ class LongitudinalPlanner:
         [accel_limits_turns[1], clipped_accel_coast],
       )
       accel_limits_turns[1] = min(accel_limits_turns[1], clipped_accel_coast_interp)
+
+    # If forced slow decel, override cruise to 0.0
     if force_slow_decel:
       v_cruise = 0.0
+
+    # Gently limit the immediate acceleration step away from the current a_desired
     accel_limits_turns[0] = min(accel_limits_turns[0], self.a_desired + 0.05)
     accel_limits_turns[1] = max(accel_limits_turns[1], self.a_desired - 0.05)
+
+    # Update the leads (either from radar or from the model)
     if radarless_model:
       model_leads = list(sm["modelV2"].leadsV3)
       lead_states = [self.lead_one, self.lead_two]
       for index in range(len(lead_states)):
         if len(model_leads) > index:
           model_lead = model_leads[index]
+          # optional offset logic
           distance_offset = (
             max(
               frogpilot_toggles.increased_stopped_distance + min(10 - v_ego, 0),
               0,
-            )
-            if not sm["frogpilotCarState"].trafficModeActive
-            else 0
+            ) if not sm["frogpilotCarState"].trafficModeActive else 0
           )
+          # small speed-based offset
           speed_based_offset = min(v_ego, 30.0) * 0.1667
           distance_offset += speed_based_offset
+
           lead_states[index].update(
             model_lead.x[0] - distance_offset,
             model_lead.y[0],
@@ -228,36 +338,35 @@ class LongitudinalPlanner:
     else:
       self.lead_one = sm["radarState"].leadOne
       self.lead_two = sm["radarState"].leadTwo
-    accelerationJerk = sm["frogpilotPlan"].accelerationJerk
-    dangerJerk = sm["frogpilotPlan"].dangerJerk
-    speedJerk = sm["frogpilotPlan"].speedJerk
-    jerk_factor = 1.2
+
+    # Grab jerk from frogpilotPlan
     accelerationJerk = sm["frogpilotPlan"].accelerationJerk
     dangerJerk       = sm["frogpilotPlan"].dangerJerk
     speedJerk        = sm["frogpilotPlan"].speedJerk
 
-    # example scale factor
+    # Example scale factor for jerk
     jerk_factor = 1.2
     accelerationJerk *= jerk_factor
     dangerJerk       *= jerk_factor
     speedJerk        *= jerk_factor
 
-    prev_accel_constraint = not (reset_state or sm["carState"].standstill)
+    # prev_accel_constraint might be set above; reuse that
+    self.mpc.set_weights(
+      accelerationJerk,
+      dangerJerk,
+      speedJerk,
+      prev_accel_constraint,
+      personality=sm["controlsState"].personality
+    )
 
-    self.mpc.set_weights(accelerationJerk,
-                        dangerJerk,
-                        speedJerk,
-                        prev_accel_constraint,
-                        personality=sm["controlsState"].personality)
-
+    # Let the MPC know our final acceleration limits
     self.mpc.set_accel_limits(accel_limits_turns[0], accel_limits_turns[1])
     self.mpc.set_cur_state(self.v_desired_filter.x, self.a_desired)
 
-    v_ego = sm["carState"].vEgo
-    
-    # scale the plan's tFollow if desired
+    # Optionally scale tFollow for highway
     t_follow_scaled = _scale_t_follow(sm["frogpilotPlan"].tFollow, v_ego)
-    
+
+    # Provide all the relevant data to the MPC
     self.mpc.update(
       self.lead_one,
       self.lead_two,
@@ -267,35 +376,54 @@ class LongitudinalPlanner:
       a,
       j,
       radarless_model,
-      t_follow_scaled,  # pass the scaled version
+      t_follow_scaled,
       sm["frogpilotCarState"].trafficModeActive,
       personality=sm["controlsState"].personality,
     )
 
+    # Interpolate the MPC solution to a 20 Hz or 40 Hz timescale (CONTROL_N steps)
     self.v_desired_trajectory = np.interp(CONTROL_N_T_IDX, T_IDXS_MPC, self.mpc.v_solution)
     self.a_desired_trajectory = np.interp(CONTROL_N_T_IDX, T_IDXS_MPC, self.mpc.a_solution)
     self.a_desired_trajectory_full = np.interp(CONTROL_N_T_IDX, T_IDXS_MPC, self.mpc.a_solution)
     self.j_desired_trajectory = np.interp(CONTROL_N_T_IDX, T_IDXS_MPC[:-1], self.mpc.j_solution)
+
+    # FCW if the solver sees a crash scenario
     self.fcw = self.mpc.crash_cnt > 2 and not sm["carState"].standstill
     if self.fcw:
       cloudlog.info("FCW triggered")
+
+    # Update a_desired from the result
     a_prev = self.a_desired
     self.a_desired = float(interp(self.dt, CONTROL_N_T_IDX, self.a_desired_trajectory))
+
+    # Optionally, if your EV is super twitchy, you can filter a_desired further:
+    # e.g. self.a_desired = 0.9 * a_prev + 0.1 * self.a_desired
+    # or a more advanced filter. Disabled by default for backward compatibility.
+
+    # Update your v_desired_filter state
     self.v_desired_filter.x += self.dt * (self.a_desired + a_prev) / 2.0
 
   def publish(self, sm, pm):
+    """
+    Publish the computed plan (speed, accel, jerk) along with the final 'aTarget' for lat/long control.
+    """
     plan_send = messaging.new_message("longitudinalPlan")
     plan_send.valid = sm.all_checks(service_list=["carState", "controlsState"])
+
     longitudinalPlan = plan_send.longitudinalPlan
     longitudinalPlan.modelMonoTime = sm.logMonoTime["modelV2"]
     longitudinalPlan.processingDelay = (plan_send.logMonoTime / 1e9) - sm.logMonoTime["modelV2"]
     longitudinalPlan.solverExecutionTime = self.mpc.solve_time
+
     longitudinalPlan.speeds = self.v_desired_trajectory.tolist()
     longitudinalPlan.accels = self.a_desired_trajectory.tolist()
     longitudinalPlan.jerks = self.j_desired_trajectory.tolist()
+
     longitudinalPlan.hasLead = self.lead_one.status
     longitudinalPlan.longitudinalPlanSource = self.mpc.source
     longitudinalPlan.fcw = self.fcw
+
+    # Calculate short-horizon 'aTarget' for actual control usage
     action_t = self.CP.longitudinalActuatorDelay + DT_MDL
     a_target, should_stop = get_accel_from_plan(
       longitudinalPlan.speeds,
@@ -303,6 +431,8 @@ class LongitudinalPlanner:
       action_t=action_t,
       vEgoStopping=self.CP.vEgoStopping,
     )
+
+    # If in "blended" mode, compare e2e from the raw model as well
     if self.mpc.mode == "blended":
       e2e_speeds = list(sm["modelV2"].velocity.x)[:CONTROL_N]
       e2e_accels = list(sm["modelV2"].acceleration.x)[:CONTROL_N]
@@ -314,8 +444,10 @@ class LongitudinalPlanner:
       )
       a_target = min(a_target, a_target_e2e)
       should_stop = should_stop or should_stop_e2e
+
     longitudinalPlan.aTarget = a_target
     longitudinalPlan.shouldStop = should_stop
     longitudinalPlan.allowBrake = True
     longitudinalPlan.allowThrottle = self.allow_throttle
+
     pm.send("longitudinalPlan", plan_send)
