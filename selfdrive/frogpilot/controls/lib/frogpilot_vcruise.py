@@ -68,8 +68,8 @@ class FrogPilotVCruise:
         )
 
     def update(self, carControl, carState, controlsState,
-               frogpilotCarControl, frogpilotCarState, frogpilotNavigation,
-               v_cruise, v_ego, frogpilot_toggles):
+                frogpilotCarControl, frogpilotCarState, frogpilotNavigation,
+                v_cruise, v_ego, frogpilot_toggles):
 
         # -------------------------------------------------------------
         # Force Stop Logic (original)
@@ -135,7 +135,7 @@ class FrogPilotVCruise:
                 frogpilotCarState.dashboardSpeedLimit,
                 controlsState.enabled,
                 frogpilotNavigation.navigationSpeedLimitRealtime,
-                frogpilotNavigation.mapSpeedLimitRealtime,
+                frogpilotNavigation.mapSpeedLimitRealtime,  # Pass map_speed_limit_realtime here
                 v_cruise_cluster,
                 v_ego,
                 frogpilot_toggles

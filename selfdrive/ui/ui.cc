@@ -291,6 +291,7 @@ static void update_state(UIState *s) {
     auto frogpilotNavigation = sm["frogpilotNavigation"].getFrogpilotNavigation();
     scene.navigation_speed_limit = frogpilotNavigation.getNavigationSpeedLimitRealtime();
   }
+
   if (sm.updated("frogpilotPlan")) {
     auto frogpilotPlan = sm["frogpilotPlan"].getFrogpilotPlan();
     scene.acceleration_jerk = frogpilotPlan.getAccelerationJerk();
@@ -306,7 +307,7 @@ static void update_state(UIState *s) {
     scene.speed_jerk_difference = frogpilotPlan.getSpeedJerkStock() - scene.speed_jerk;
     scene.speed_limit = frogpilotPlan.getSlcSpeedLimit();
     scene.speed_limit_changed = scene.speed_limit_controller && frogpilotPlan.getSpeedLimitChanged();
-    scene.speed_limit_map = frogpilotPlan.getSlcMapSpeedLimit();
+    scene.speed_limit_map = frogpilotNavigation.getMapSpeedLimitRealtime();
     scene.speed_limit_offset = frogpilotPlan.getSlcSpeedLimitOffset();
     scene.speed_limit_overridden = frogpilotPlan.getSlcOverridden();
     scene.speed_limit_overridden_speed = frogpilotPlan.getSlcOverriddenSpeed();
