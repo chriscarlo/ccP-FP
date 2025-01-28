@@ -33,7 +33,7 @@ X_EGO_OBSTACLE_COST = 3.
 X_EGO_COST = 0.
 V_EGO_COST = 0.
 A_EGO_COST = 0.
-J_EGO_COST = 8.0
+J_EGO_COST = 12.0
 A_CHANGE_COST = 300.
 DANGER_ZONE_COST = 100.
 
@@ -152,7 +152,7 @@ def get_smooth_dynamic_j_ego_cost_array(
     t_follow,
     base_jerk_cost=J_EGO_COST,
     low_jerk_cost=0.5,
-    logistic_k_dist=8.0,
+    logistic_k_dist=5.0,
     logistic_k_speed=2.0,
     min_speed_for_closing=0.3,
     distance_smoothing=5.0,
@@ -214,8 +214,8 @@ def get_smooth_dynamic_j_ego_cost_array(
 def soft_approach_distance_factor(
     x_obstacle_i, x_ego_i, v_ego_i, v_lead_i, t_follow_i,
     approach_margin=10.0,
-    max_approach_mult=2.0,
-    logistic_k=1.0
+    max_approach_mult=1.5,
+    logistic_k=1.5
 ):
   """
   Increases distance cost if we are behind desired spacing but not drastically so.
@@ -236,7 +236,7 @@ def soft_approach_distance_factor(
 def dynamic_lead_constraint_weight(
     x_obstacle_i, x_ego_i, v_ego_i, v_lead_i,
     t_follow_i,
-    min_penalty=10.0,
+    min_penalty=5.0,
     max_penalty=1e6,
     dist_margin=2.0,
     speed_margin=2.0
@@ -252,7 +252,7 @@ def dynamic_lead_constraint_weight(
 
   # logistic approach
   z = (gap_error / dist_margin) + (closing_speed / speed_margin)
-  logistic_k = 2.0
+  logistic_k = 1.5
   z_scaled = logistic_k * (z - 0.5)
   logistic_val = 1.0 / (1.0 + np.exp(-z_scaled))
 
@@ -268,7 +268,7 @@ def dynamic_lead_pullaway_distance_cost(
     base_cost=3.0,
     pullaway_dist_margin=5.0,
     pullaway_speed_margin=2.0,
-    pullaway_max_factor=4.0
+    pullaway_max_factor=2.0
 ):
   """
   If the lead is pulling away and we are behind, we can reduce the cost so we accelerate a bit more.
@@ -489,7 +489,7 @@ class LongitudinalMpc:
     self.speed_jerk_factor = speed_jerk
 
     if self.mode == 'acc':
-      distance_error_cost = 3.0
+      distance_error_cost = 1.5
       a_change_cost = A_CHANGE_COST if prev_accel_constraint else 0.0
       # We incorporate self.acceleration_jerk_factor into the jerk cost:
       j_cost = J_EGO_COST * self.acceleration_jerk_factor
@@ -569,7 +569,7 @@ class LongitudinalMpc:
       # Keep the rest of the base cost weights the same, except we override index 5 (j_ego) below.
       dist_cost_base = self.base_cost_weights[0]
       a_change_cost = self.base_cost_weights[4]
-  
+
       # Build a dynamic jerk array *without* time taper to avoid big early swings.
       dyn_j_ego_array = get_smooth_dynamic_j_ego_cost_array(
         x_obstacle=self.params[:,2],
@@ -586,28 +586,28 @@ class LongitudinalMpc:
         time_taper=False,           # <--- Turned off time taper
         speed_factor=1.0,
       )
-  
+
       for i in range(N):
         # Start from the existing base cost matrix
         W_step = np.diag(self.base_cost_weights)
-  
+
         # Fade out a_change cost after 2s
         W_step[4,4] = a_change_cost * np.interp(T_IDXS[i], [0.0, 1.0, 2.0], [1.0, 1.0, 0.0])
-  
+
         # Apply dynamic jerk cost
         W_step[5,5] = dyn_j_ego_array[i]
-  
+
         # "Pullaway" logic, but clamp the factor to a smaller range
         x_sol_i = self.solver.get(i, 'x')
         x_ego_i, v_ego_i_iter, _ = x_sol_i
-  
+
         if i < lead_xv.shape[0]:
           x_lead_i, v_lead_i = lead_xv[i]
         else:
           x_lead_i, v_lead_i = lead_xv[-1]
-  
+
         t_follow_i = self.params[i,4]
-  
+
         # 1) Reduced pullaway factor from up to 4.0 --> 1.75
         pullaway_dist_cost = dynamic_lead_pullaway_distance_cost(
           x_ego_i, v_ego_i_iter,
@@ -616,21 +616,21 @@ class LongitudinalMpc:
           base_cost=dist_cost_base,
           pullaway_max_factor=1.75
         )
-  
+
         # 2) Soft approach with smaller margin and smaller max multiplier
         approach_factor = soft_approach_distance_factor(
           x_lead_i, x_ego_i, v_ego_i_iter, v_lead_i, t_follow_i,
           approach_margin=5.0,     # was 10.0
-          max_approach_mult=1.75,  # was 3.0
+          max_approach_mult=1.5,  # was 3.0
           logistic_k=1.0           # was 1.2
         )
-  
+
         combined_factor = pullaway_dist_cost * approach_factor
-  
+
         # Tighter clamp: [1.0, 1.3] or [1.0, 1.5] instead of [1.0, 2.0]
         clamped_factor = np.clip(combined_factor, 1.0, 1.5)
         W_step[0,0] = dist_cost_base * clamped_factor
-  
+
         # Also reduce the lead constraint penalty's aggressiveness
         last_constraint_penalty = dynamic_lead_constraint_weight(
           x_obstacle_i=self.params[i,2],
@@ -646,9 +646,9 @@ class LongitudinalMpc:
         # This sets how severely it penalizes pushing inside lead’s safe distance
         Zl = np.array([LIMIT_COST, LIMIT_COST, LIMIT_COST, last_constraint_penalty])
         self.solver.cost_set(i, 'Zl', Zl)
-  
+
         self.solver.cost_set(i, 'W', W_step)
-  
+
       # For terminal stage:
       W_e = np.copy(np.diag(self.base_cost_weights[:COST_E_DIM]))
       self.solver.cost_set(N, 'W', W_e)
