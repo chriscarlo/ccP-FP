@@ -365,7 +365,7 @@ static void update_state(UIState *s) {
 void ui_update_params(UIState *s) {
   auto params = Params();
   s->scene.is_metric = params.getBool("IsMetric");
-  s->scene.map_on_left = params.getBool("NavSettingLeft");
+  s->scene.map_on_left = params.getBool("NavSettingLeftSide");
 
   ui_update_frogpilot_params(s);
 }
