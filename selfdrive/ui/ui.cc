@@ -292,8 +292,12 @@ static void update_state(UIState *s) {
     scene.navigation_speed_limit = frogpilotNavigation.getNavigationSpeedLimitRealtime();
   }
 
+  // *** Fix: explicitly retrieve frogpilotNavigation in the frogpilotPlan block ***
   if (sm.updated("frogpilotPlan")) {
     auto frogpilotPlan = sm["frogpilotPlan"].getFrogpilotPlan();
+    // Retrieve the navigation message here so we can safely call .getMapSpeedLimitRealtime()
+    auto frogpilotNavigation = sm["frogpilotNavigation"].getFrogpilotNavigation();
+
     scene.acceleration_jerk = frogpilotPlan.getAccelerationJerk();
     scene.acceleration_jerk_difference = frogpilotPlan.getAccelerationJerkStock() - scene.acceleration_jerk;
     scene.desired_follow = frogpilotPlan.getDesiredFollowDistance();
@@ -307,7 +311,9 @@ static void update_state(UIState *s) {
     scene.speed_jerk_difference = frogpilotPlan.getSpeedJerkStock() - scene.speed_jerk;
     scene.speed_limit = frogpilotPlan.getSlcSpeedLimit();
     scene.speed_limit_changed = scene.speed_limit_controller && frogpilotPlan.getSpeedLimitChanged();
+    // Here is where we needed 'frogpilotNavigation':
     scene.speed_limit_map = frogpilotNavigation.getMapSpeedLimitRealtime();
+
     scene.speed_limit_offset = frogpilotPlan.getSlcSpeedLimitOffset();
     scene.speed_limit_overridden = frogpilotPlan.getSlcOverridden();
     scene.speed_limit_overridden_speed = frogpilotPlan.getSlcOverriddenSpeed();
@@ -318,7 +324,9 @@ static void update_state(UIState *s) {
     scene.vtsc_controlling_curve = frogpilotPlan.getVtscControllingCurve();
     scene.vtsc_speed = frogpilotPlan.getVtscSpeed();
     if (frogpilotPlan.getTogglesUpdated()) {
-      scene.frogpilot_toggles = QJsonDocument::fromJson(QString::fromStdString(s->params_memory.get("FrogPilotToggles", true)).toUtf8()).object();
+      scene.frogpilot_toggles = QJsonDocument::fromJson(
+          QString::fromStdString(s->params_memory.get("FrogPilotToggles", true)).toUtf8()
+      ).object();
       ui_update_params(s);
       if (frogpilotPlan.getThemeUpdated()) {
         ui_update_theme(s);
@@ -357,7 +365,7 @@ static void update_state(UIState *s) {
 void ui_update_params(UIState *s) {
   auto params = Params();
   s->scene.is_metric = params.getBool("IsMetric");
-  s->scene.map_on_left = params.getBool("NavSettingLeftSide");
+  s->scene.map_on_left = params.getBool("NavSettingLeft");
 
   ui_update_frogpilot_params(s);
 }
@@ -466,8 +474,10 @@ void ui_update_frogpilot_params(UIState *s) {
 void ui_update_theme(UIState *s) {
   UIScene &scene = s->scene;
 
-  scene.use_stock_colors = scene.frogpilot_toggles.value("color_scheme").toString() == "stock" && scene.frogpilot_toggles.value("current_holiday_theme").toString() == "stock";
-  scene.use_stock_wheel = scene.frogpilot_toggles.value("wheel_image").toString() == "stock" && scene.frogpilot_toggles.value("current_holiday_theme").toString() == "stock";
+  scene.use_stock_colors = scene.frogpilot_toggles.value("color_scheme").toString() == "stock"
+                           && scene.frogpilot_toggles.value("current_holiday_theme").toString() == "stock";
+  scene.use_stock_wheel = scene.frogpilot_toggles.value("wheel_image").toString() == "stock"
+                          && scene.frogpilot_toggles.value("current_holiday_theme").toString() == "stock";
 
   if (!scene.use_stock_colors) {
     scene.use_stock_colors |= !loadThemeColors("", true).isValid();
@@ -489,7 +499,8 @@ void UIState::updateStatus() {
     auto controls_state = (*sm)["controlsState"].getControlsState();
     auto state = controls_state.getState();
     auto previous_status = status;
-    if (state == cereal::ControlsState::OpenpilotState::PRE_ENABLED || state == cereal::ControlsState::OpenpilotState::OVERRIDING) {
+    if (state == cereal::ControlsState::OpenpilotState::PRE_ENABLED ||
+        state == cereal::ControlsState::OpenpilotState::OVERRIDING) {
       status = STATUS_OVERRIDE;
     } else if (scene.always_on_lateral_active) {
       status = STATUS_ALWAYS_ON_LATERAL_ACTIVE;
@@ -499,7 +510,8 @@ void UIState::updateStatus() {
       status = scene.enabled ? STATUS_ENGAGED : STATUS_DISENGAGED;
     }
 
-    scene.wake_up_screen = controls_state.getAlertStatus() != cereal::ControlsState::AlertStatus::NORMAL || status != previous_status;
+    scene.wake_up_screen = controls_state.getAlertStatus() != cereal::ControlsState::AlertStatus::NORMAL
+                           || status != previous_status;
   }
 
   scene.started |= scene.force_onroad;
@@ -546,7 +558,9 @@ UIState::UIState(QObject *parent) : QObject(parent) {
   // FrogPilot variables
   wifi = new WifiManager(this);
 
-  scene.frogpilot_toggles = QJsonDocument::fromJson(QString::fromStdString(params_memory.get("FrogPilotToggles", true)).toUtf8()).object();
+  scene.frogpilot_toggles = QJsonDocument::fromJson(
+      QString::fromStdString(params_memory.get("FrogPilotToggles", true)).toUtf8()
+  ).object();
   ui_update_params(this);
   ui_update_theme(this);
 }
@@ -562,8 +576,12 @@ void UIState::update() {
   emit uiUpdate(*this);
 
   // FrogPilot variables
-  scene.conditional_status = scene.conditional_experimental && scene.enabled ? params_memory.getInt("CEStatus") : 0;
-  scene.driver_camera_timer = scene.driver_camera_in_reverse && scene.reverse ? scene.driver_camera_timer + 1 : 0;
+  scene.conditional_status = scene.conditional_experimental && scene.enabled
+                            ? params_memory.getInt("CEStatus")
+                            : 0;
+  scene.driver_camera_timer = scene.driver_camera_in_reverse && scene.reverse
+                             ? scene.driver_camera_timer + 1
+                             : 0;
   scene.force_onroad = params_memory.getBool("ForceOnroad");
   scene.started_timer = scene.started || started_prev ? scene.started_timer + 1 : 0;
 
@@ -587,7 +605,8 @@ void UIState::setPrimeType(PrimeType type) {
   }
 }
 
-Device::Device(QObject *parent) : brightness_filter(BACKLIGHT_OFFROAD, BACKLIGHT_TS, BACKLIGHT_DT), QObject(parent) {
+Device::Device(QObject *parent)
+    : brightness_filter(BACKLIGHT_OFFROAD, BACKLIGHT_TS, BACKLIGHT_DT), QObject(parent) {
   setAwake(true);
   resetInteractiveTimeout();
 
