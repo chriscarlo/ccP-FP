@@ -47,6 +47,7 @@ struct FrogPilotNavigation @0xda96579883444c35 {
   navigationSpeedLimit @2 :Float32;
   navigationSpeedLimitRealtime @3 :Float32;
   mapSpeedLimitRealtime @4 :Float32;
+  upcomingSpeedLimitRealtime @5 :Float32;
 }
 
 struct FrogPilotPlan @0x80ae746ee2596b11 {
