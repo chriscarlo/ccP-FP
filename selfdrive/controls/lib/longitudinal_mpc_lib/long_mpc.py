@@ -499,12 +499,11 @@ class LongitudinalMpc:
     self.speed_jerk_factor = speed_jerk
 
     if self.mode == 'acc':
-      distance_error_cost = 1.5
       a_change_cost = A_CHANGE_COST if prev_accel_constraint else 0.0
       j_cost = J_EGO_COST * self.acceleration_jerk_factor
 
       self.base_cost_weights = [
-        distance_error_cost,
+        X_EGO_OBSTACLE_COST,
         X_EGO_COST,
         V_EGO_COST,
         A_EGO_COST,
@@ -512,7 +511,7 @@ class LongitudinalMpc:
         j_cost
       ]
       # keep lead constraint cost from the original, but handle dynamic in code
-      self.base_constraint_cost_weights = [LIMIT_COST, LIMIT_COST, LIMIT_COST, 50.0]
+      self.base_constraint_cost_weights = [LIMIT_COST, LIMIT_COST, LIMIT_COST, danger_jerk]
 
       self.set_cost_weights(self.base_cost_weights, self.base_constraint_cost_weights)
 
