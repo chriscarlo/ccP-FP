@@ -1,8 +1,7 @@
 import math
 import numpy as np
-# If you want to generate a plot or table, uncomment:
-# import matplotlib.pyplot as plt
 
+# from openpilot.common.realtime import DT_MDL (already included below)
 from openpilot.common.conversions import Conversions as CV
 from openpilot.common.numpy_fast import clip
 from openpilot.common.realtime import DT_MDL
@@ -26,32 +25,32 @@ class FrogPilotVCruise:
     def __init__(self, FrogPilotPlanner):
         self.frogpilot_planner = FrogPilotPlanner
 
-        # Sub-controllers (original)
+        # Sub-controllers
         self.mtsc = MapTurnSpeedController()
         self.slc = SpeedLimitController()
 
-        # Force-stop logic (original)
+        # Force-stop logic
         self.forcing_stop = False
         self.override_force_stop = False
         self.override_slc = False
         self.speed_limit_changed = False
 
-        # Timers (original)
+        # Timers
         self.force_stop_timer = 0
         self.override_force_stop_timer = 0
         self.speed_limit_timer = 0
 
-        # Targets (original)
+        # Targets
         self.mtsc_target = 0
         self.slc_target = 0
         self.vtsc_target = 0
         self.overridden_speed = 0
 
-        # Other references (original)
+        # Speed Limit tracking
         self.previous_speed_limit = 0
         self.tracked_model_length = 0
 
-        # Original user changes to detect turns sooner + lower CRUISING_SPEED
+        # Adjust turning threshold
         self.turn_lat_acc_threshold = 0.3  # was 0.5
         global CRUISING_SPEED
         CRUISING_SPEED = 6.7  # ~15 mph in m/s
@@ -68,12 +67,14 @@ class FrogPilotVCruise:
         )
 
     def update(self, carControl, carState, controlsState,
-                frogpilotCarControl, frogpilotCarState, frogpilotNavigation,
-                v_cruise, v_ego, frogpilot_toggles):
+               frogpilotCarControl, frogpilotCarState, frogpilotNavigation,
+               v_cruise, v_ego, frogpilot_toggles):
 
         # -------------------------------------------------------------
-        # Force Stop Logic (original)
+        # Force Stop Logic
         # -------------------------------------------------------------
+        from openpilot.common.realtime import DT_MDL
+
         force_stop = (
             frogpilot_toggles.force_stops
             and self.frogpilot_planner.cem.stop_light_detected
@@ -107,7 +108,7 @@ class FrogPilotVCruise:
         v_ego_diff = v_ego_cluster - v_ego
 
         # -------------------------------------------------------------
-        # Map Turn Speed Controller (original)
+        # Map Turn Speed Controller
         # -------------------------------------------------------------
         if frogpilot_toggles.map_turn_speed_controller and v_ego > CRUISING_SPEED and carControl.longActive:
             mtsc_active = self.mtsc_target < v_cruise
@@ -128,21 +129,22 @@ class FrogPilotVCruise:
             self.mtsc_target = v_cruise if v_cruise != V_CRUISE_UNSET else 0
 
         # -------------------------------------------------------------
-        # Speed Limit Controller (original)
+        # Speed Limit Controller (KEY FIX HERE)
         # -------------------------------------------------------------
         if frogpilot_toggles.show_speed_limits or frogpilot_toggles.speed_limit_controller:
             self.slc.update(
                 frogpilotCarState.dashboardSpeedLimit,
                 controlsState.enabled,
                 frogpilotNavigation.navigationSpeedLimitRealtime,
-                frogpilotNavigation.mapSpeedLimitRealtime,  # Pass map_speed_limit_realtime here
+                frogpilotNavigation.mapSpeedLimitRealtime,
+                frogpilotNavigation.upcomingSpeedLimitRealtime,
                 v_cruise_cluster,
                 v_ego,
                 frogpilot_toggles
             )
             unconfirmed_slc_target = self.slc.desired_speed_limit
 
-            # Optional user-confirmation logic
+            # Optional user-confirmation logic (unchanged)
             if ((frogpilot_toggles.speed_limit_changed_alert or frogpilot_toggles.speed_limit_confirmation)
                 and self.slc_target != 0):
                 self.speed_limit_changed = (
@@ -216,9 +218,9 @@ class FrogPilotVCruise:
         else:
             self.slc_target = 0
 
-        # ----------------------------------------------------------------
+        # -------------------------------------------------------------
         # Vision Turn Speed Controller
-        # ----------------------------------------------------------------
+        # -------------------------------------------------------------
         if frogpilot_toggles.vision_turn_controller and v_ego > CRUISING_SPEED and carControl.longActive:
             self.vtsc_target = self.vtsc.update(
                 v_ego,
@@ -226,12 +228,11 @@ class FrogPilotVCruise:
                 frogpilot_toggles.turn_aggressiveness
             )
         else:
-            # Reset the VTSC if off or under speed threshold
             self.vtsc.reset(v_ego)
             self.vtsc_target = v_cruise if v_cruise != V_CRUISE_UNSET else 0
 
         # -------------------------------------------------------------
-        # Force Standstill / Stop (original)
+        # Force Standstill / Stop
         # -------------------------------------------------------------
         if (frogpilot_toggles.force_standstill
             and carState.standstill
@@ -260,7 +261,7 @@ class FrogPilotVCruise:
             else:
                 targets = [self.mtsc_target, self.vtsc_target]
 
-            # Don't drop below CRUISING_SPEED unless needed
+            # Don’t drop below CRUISING_SPEED unless needed
             v_cruise = float(min([t if t > CRUISING_SPEED else v_cruise for t in targets]))
 
         # Keep everything in sync w/ cluster differences
