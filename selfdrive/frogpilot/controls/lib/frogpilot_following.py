@@ -34,6 +34,7 @@ class FrogPilotFollowing:
     # For reference by external code (logging, UI, etc.)
     self.desired_follow_distance = 0
     self.safe_obstacle_distance = 0
+    self.safe_obstacle_distance_stock = 0
     self.stopped_equivalence_factor = 0
 
   def update(self, aEgo, controlsState, frogpilotCarState,
@@ -41,8 +42,8 @@ class FrogPilotFollowing:
     """
     Picks a nominal t_follow and local jerk variables. The actual dynamic jerk
     constraints are handled by the MPC (we do NOT call mpc.set_weights() here).
-    This script also updates safe_obstacle_distance and stopped_equivalence_factor
-    for any other code that references them.
+    Also updates safe_obstacle_distance, safe_obstacle_distance_stock, etc. for
+    any external code that references them.
     """
     # -----------------------------------------------------------------------
     # 1) Determine the base jerk & t_follow from toggles/personality
@@ -128,16 +129,18 @@ class FrogPilotFollowing:
     )
 
     if self.frogpilot_planner.tracking_lead:
-      # Optionally do small local tweaks for “human_following”
+      # Possibly do small local tweaks for “human_following”
       self.update_follow_values(lead_distance, v_ego, v_lead, frogpilot_toggles)
 
-      # Provide references used by external code
+      # Provide references for external code
       self.desired_follow_distance = int(desired_follow_distance(v_ego, v_lead, self.t_follow))
       self.safe_obstacle_distance = int(get_safe_obstacle_distance(v_ego, self.t_follow))
+      self.safe_obstacle_distance_stock = self.safe_obstacle_distance  # or modify if you have a different logic
       self.stopped_equivalence_factor = int(get_stopped_equivalence_factor(v_lead))
     else:
       self.desired_follow_distance = 0
       self.safe_obstacle_distance = 0
+      self.safe_obstacle_distance_stock = 0
       self.stopped_equivalence_factor = 0
 
   def update_follow_values(self, lead_distance, v_ego, v_lead, frogpilot_toggles):
@@ -147,9 +150,8 @@ class FrogPilotFollowing:
     """
     # Example: if we want to slightly reduce follow distance for a faster lead
     if frogpilot_toggles.human_following and v_lead > v_ego:
-      # keep any big multipliers smaller than the old script to avoid oscillation
       distance_factor = max(lead_distance - (v_ego * self.t_follow), 1.0)
-      # a tiny offset factor: e.g. clamp to ±10%
+      # a tiny offset factor: clamp to ±10%
       acceleration_offset = clip(
         (v_lead - v_ego) - COMFORT_BRAKE,
         0.9, 1.1
