@@ -2,44 +2,53 @@
 import math
 from openpilot.common.numpy_fast import clip, interp
 from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import (
-    COMFORT_BRAKE, STOP_DISTANCE,
-    desired_follow_distance, get_jerk_factor, get_T_FOLLOW
+    COMFORT_BRAKE,
+    STOP_DISTANCE,
+    desired_follow_distance,
+    get_jerk_factor,
+    get_T_FOLLOW,
+    get_safe_obstacle_distance,
+    get_stopped_equivalence_factor
 )
 from openpilot.selfdrive.frogpilot.frogpilot_variables import CITY_SPEED_LIMIT, CRUISING_SPEED
 
-TRAFFIC_MODE_BP = [0., CITY_SPEED_LIMIT]
+TRAFFIC_MODE_BP = [0.0, CITY_SPEED_LIMIT]
 
 class FrogPilotFollowing:
   def __init__(self, FrogPilotPlanner):
     self.frogpilot_planner = FrogPilotPlanner
 
-    # Tracking flags
+    # State flags
     self.following_lead = False
     self.slower_lead = False
 
-    # Jerk parameters (for reference/logging; we do *not* push them to MPC)
+    # Jerk/follow parameters (just stored locally, not pushed into MPC)
     self.acceleration_jerk = 0.0
     self.base_acceleration_jerk = 0.0
     self.base_speed_jerk = 0.0
     self.base_danger_jerk = 0.0
     self.speed_jerk = 0.0
     self.danger_jerk = 0.0
+    self.t_follow = 1.45  # default, updated dynamically
 
-    # Following distance
-    self.t_follow = 1.45  # Just a default placeholder
-    self.desired_follow_distance = 0.0
+    # For reference by external code (logging, UI, etc.)
+    self.desired_follow_distance = 0
+    self.safe_obstacle_distance = 0
+    self.stopped_equivalence_factor = 0
 
-  def update(self, aEgo, controlsState, frogpilotCarState, lead_distance, v_ego, v_lead, frogpilot_toggles):
+  def update(self, aEgo, controlsState, frogpilotCarState,
+             lead_distance, v_ego, v_lead, frogpilot_toggles):
     """
-    Main update to pick a 'nominal' t_follow and store local jerk values.
-    This script no longer modifies the MPC solver directly. The MPC's own
-    dynamic cost logic handles detailed jerk constraints and lead approach.
+    Picks a nominal t_follow and local jerk variables. The actual dynamic jerk
+    constraints are handled by the MPC (we do NOT call mpc.set_weights() here).
+    This script also updates safe_obstacle_distance and stopped_equivalence_factor
+    for any other code that references them.
     """
-    # -------------------------------------------------------------
-    # 1) Determine base jerk & T_FOLLOW from toggles or personalities
-    # -------------------------------------------------------------
+    # -----------------------------------------------------------------------
+    # 1) Determine the base jerk & t_follow from toggles/personality
+    # -----------------------------------------------------------------------
     if frogpilotCarState.trafficModeActive:
-      # Traffic mode => speed-based interpolation
+      # Traffic mode => speed-based interpolation for jerk & t_follow
       if aEgo >= 0:
         self.base_acceleration_jerk = interp(
           v_ego, TRAFFIC_MODE_BP, frogpilot_toggles.traffic_mode_jerk_acceleration
@@ -63,35 +72,39 @@ class FrogPilotFollowing:
       )
 
     else:
-      # Personalities => get_jerk_factor & get_T_FOLLOW
+      # Personalities => get_jerk_factor() + get_T_FOLLOW()
       if aEgo >= 0:
-        self.base_acceleration_jerk, self.base_danger_jerk, self.base_speed_jerk = get_jerk_factor(
-          frogpilot_toggles.aggressive_jerk_acceleration,
-          frogpilot_toggles.aggressive_jerk_danger,
-          frogpilot_toggles.aggressive_jerk_speed,
-          frogpilot_toggles.standard_jerk_acceleration,
-          frogpilot_toggles.standard_jerk_danger,
-          frogpilot_toggles.standard_jerk_speed,
-          frogpilot_toggles.relaxed_jerk_acceleration,
-          frogpilot_toggles.relaxed_jerk_danger,
-          frogpilot_toggles.relaxed_jerk_speed,
-          frogpilot_toggles.custom_personalities,
-          controlsState.personality
-        )
+        (self.base_acceleration_jerk,
+         self.base_danger_jerk,
+         self.base_speed_jerk) = get_jerk_factor(
+           frogpilot_toggles.aggressive_jerk_acceleration,
+           frogpilot_toggles.aggressive_jerk_danger,
+           frogpilot_toggles.aggressive_jerk_speed,
+           frogpilot_toggles.standard_jerk_acceleration,
+           frogpilot_toggles.standard_jerk_danger,
+           frogpilot_toggles.standard_jerk_speed,
+           frogpilot_toggles.relaxed_jerk_acceleration,
+           frogpilot_toggles.relaxed_jerk_danger,
+           frogpilot_toggles.relaxed_jerk_speed,
+           frogpilot_toggles.custom_personalities,
+           controlsState.personality
+         )
       else:
-        self.base_acceleration_jerk, self.base_danger_jerk, self.base_speed_jerk = get_jerk_factor(
-          frogpilot_toggles.aggressive_jerk_deceleration,
-          frogpilot_toggles.aggressive_jerk_danger,
-          frogpilot_toggles.aggressive_jerk_speed_decrease,
-          frogpilot_toggles.standard_jerk_deceleration,
-          frogpilot_toggles.standard_jerk_danger,
-          frogpilot_toggles.standard_jerk_speed_decrease,
-          frogpilot_toggles.relaxed_jerk_deceleration,
-          frogpilot_toggles.relaxed_jerk_danger,
-          frogpilot_toggles.relaxed_jerk_speed_deceleration,
-          frogpilot_toggles.custom_personalities,
-          controlsState.personality
-        )
+        (self.base_acceleration_jerk,
+         self.base_danger_jerk,
+         self.base_speed_jerk) = get_jerk_factor(
+           frogpilot_toggles.aggressive_jerk_deceleration,
+           frogpilot_toggles.aggressive_jerk_danger,
+           frogpilot_toggles.aggressive_jerk_speed_decrease,
+           frogpilot_toggles.standard_jerk_deceleration,
+           frogpilot_toggles.standard_jerk_danger,
+           frogpilot_toggles.standard_jerk_speed_decrease,
+           frogpilot_toggles.relaxed_jerk_deceleration,
+           frogpilot_toggles.relaxed_jerk_danger,
+           frogpilot_toggles.relaxed_jerk_speed_decrease,
+           frogpilot_toggles.custom_personalities,
+           controlsState.personality
+         )
 
       self.t_follow = get_T_FOLLOW(
         frogpilot_toggles.aggressive_follow,
@@ -101,59 +114,58 @@ class FrogPilotFollowing:
         controlsState.personality
       )
 
-    # Copy them to local variables, but DO NOT push them to MPC
+    # Store them for reference only
     self.acceleration_jerk = self.base_acceleration_jerk
     self.danger_jerk = self.base_danger_jerk
     self.speed_jerk = self.base_speed_jerk
 
-    # -------------------------------------------------------------
-    # 2) Lead detection
-    # -------------------------------------------------------------
+    # -----------------------------------------------------------------------
+    # 2) Are we following a lead? If so, possibly do a mild tweak to t_follow
+    # -----------------------------------------------------------------------
     self.following_lead = (
-      self.frogpilot_planner.tracking_lead
-      and lead_distance < (self.t_follow + 1.0) * v_ego
+      self.frogpilot_planner.tracking_lead and
+      (lead_distance < (self.t_follow + 1.0) * v_ego)
     )
 
     if self.frogpilot_planner.tracking_lead:
-      # Possibly do small local adjustments for "human_following"
+      # Optionally do small local tweaks for “human_following”
       self.update_follow_values(lead_distance, v_ego, v_lead, frogpilot_toggles)
 
-      # Calculate a reference distance just for logging/UI
-      self.desired_follow_distance = int(
-        desired_follow_distance(v_ego, v_lead, self.t_follow)
-      )
+      # Provide references used by external code
+      self.desired_follow_distance = int(desired_follow_distance(v_ego, v_lead, self.t_follow))
+      self.safe_obstacle_distance = int(get_safe_obstacle_distance(v_ego, self.t_follow))
+      self.stopped_equivalence_factor = int(get_stopped_equivalence_factor(v_lead))
     else:
       self.desired_follow_distance = 0
+      self.safe_obstacle_distance = 0
+      self.stopped_equivalence_factor = 0
 
   def update_follow_values(self, lead_distance, v_ego, v_lead, frogpilot_toggles):
     """
-    If you want small adjustments to T_FOLLOW for 'human' or 'conditional' logic,
-    do them gently here. Avoid big changes each frame, or you may still get
-    see-sawing. And do NOT call mpc.set_weights() or manipulate solver params
-    directly. Let the MPC handle jerk constraints internally.
+    Mild additional logic for faster/slower lead, but do NOT override the MPC’s
+    jerk or constraints. Just gently tweak t_follow to emulate 'human' approach.
     """
-
-    # Example: if "human_following" is on and lead is faster, reduce t_follow a bit
+    # Example: if we want to slightly reduce follow distance for a faster lead
     if frogpilot_toggles.human_following and v_lead > v_ego:
-      # Provide some small, mild factor. Avoid huge changes to t_follow every frame.
-      # For instance, clamp to a 10% reduction at most:
+      # keep any big multipliers smaller than the old script to avoid oscillation
       distance_factor = max(lead_distance - (v_ego * self.t_follow), 1.0)
-      # This is the old approach, but we reduce how strong it is:
+      # a tiny offset factor: e.g. clamp to ±10%
       acceleration_offset = clip(
-        (v_lead - v_ego) - COMFORT_BRAKE,   # was (v_lead - v_ego)*standstill_offset - COMFORT_BRAKE
-        0.9, 1.1  # keep within ±10%
+        (v_lead - v_ego) - COMFORT_BRAKE,
+        0.9, 1.1
       )
-      self.t_follow *= 1.0 / acceleration_offset
+      # reduce t_follow just a bit if lead is significantly faster
+      self.t_follow *= (1.0 / acceleration_offset)
 
-    # Similarly, if lead is slower and we're above cruising speed
-    if (frogpilot_toggles.conditional_slower_lead or frogpilot_toggles.human_following) \
-       and v_lead < v_ego > CRUISING_SPEED:
-      # Tiny nudge to t_follow, not large leaps
+    # If lead is slower and we’re above cruising speed
+    if ((frogpilot_toggles.conditional_slower_lead or frogpilot_toggles.human_following)
+        and v_lead < v_ego > CRUISING_SPEED):
+
       braking_offset = clip(
         (v_ego - v_lead) - COMFORT_BRAKE,
         0.9, 1.1
       )
-      # If 'human_following' is true, you might slightly increase t_follow
       if frogpilot_toggles.human_following:
         self.t_follow *= braking_offset
+
       self.slower_lead = (braking_offset > 1.0)
