@@ -235,7 +235,8 @@ def soft_approach_distance_factor(
   z = gap_deficit / max(1e-6, approach_margin)
   z_scaled = logistic_k * (z - 0.5)
   factor = 1.0 + (max_approach_mult - 1.0)/(1.0 + np.exp(-z_scaled))
-  return factor
+  # return factor
+  return 1.0
 
 
 def dynamic_lead_constraint_weight(
@@ -298,7 +299,8 @@ def dynamic_lead_pullaway_distance_cost(
   factor = 1.0 + z * (pullaway_max_factor - 1.0)
   factor = np.clip(factor, 1.0, pullaway_max_factor)
 
-  return base_cost * factor
+  # return base_cost * factor
+  return 1.0
 
 
 # -------------------------------------------------------------------------
