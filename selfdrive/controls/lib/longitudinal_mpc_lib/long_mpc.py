@@ -220,7 +220,7 @@ def soft_approach_distance_factor(
     x_obstacle_i, x_ego_i, v_ego_i, v_lead_i, t_follow_i,
     approach_margin=10.0,
     max_approach_mult=1.5,
-    logistic_k=1.5
+    logistic_k=0.8
 ):
   """
   Increases distance cost if we're behind desired spacing, but not drastically so.
@@ -233,7 +233,7 @@ def soft_approach_distance_factor(
     return 1.0
 
   z = gap_deficit / max(1e-6, approach_margin)
-  z_scaled = logistic_k * (z - 0.5)
+  z_scaled = logistic_k * (z - 2.0)
   factor = 1.0 + (max_approach_mult - 1.0)/(1.0 + np.exp(-z_scaled))
   # return factor
   return 1.0
@@ -257,8 +257,8 @@ def dynamic_lead_constraint_weight(
   closing_speed = v_ego_i - v_lead_i
 
   z = (gap_error / dist_margin) + (closing_speed / speed_margin)
-  logistic_k = 1.5
-  z_scaled = logistic_k * (z - 0.5)
+  logistic_k = 0.8
+  z_scaled = logistic_k * (z - 1.5)
   logistic_val = 1.0 / (1.0 + np.exp(-z_scaled))
 
   safe_upper = 10000.0
@@ -299,8 +299,7 @@ def dynamic_lead_pullaway_distance_cost(
   factor = 1.0 + z * (pullaway_max_factor - 1.0)
   factor = np.clip(factor, 1.0, pullaway_max_factor)
 
-  # return base_cost * factor
-  return 1.0
+  return base_cost * factor
 
 
 # -------------------------------------------------------------------------
