@@ -29,13 +29,13 @@ COST_E_DIM = 5
 COST_DIM = COST_E_DIM + 1
 CONSTR_DIM = 4
 
-X_EGO_OBSTACLE_COST = 3.
-X_EGO_COST = 0.
-V_EGO_COST = 0.
-A_EGO_COST = 0.
-J_EGO_COST = 5.0     # Slightly higher base jerk cost to help dampen fast oscillations
-A_CHANGE_COST = 150.
-DANGER_ZONE_COST = 100.
+X_EGO_OBSTACLE_COST = 3.0
+X_EGO_COST = 0.0
+V_EGO_COST = 0.0
+A_EGO_COST = 0.0
+J_EGO_COST = 5.0     # Base jerk cost (further scaled dynamically)
+A_CHANGE_COST = 150.0
+DANGER_ZONE_COST = 100.0
 
 CRASH_DISTANCE = 0.25
 LEAD_DANGER_FACTOR = 0.75
@@ -196,14 +196,15 @@ def get_smooth_dynamic_j_ego_cost_array(
   dist_activation = 2.0 / (1.0 + np.exp(-logistic_k_dist * np.abs(dist_ratio))) - 1.0
 
   closing_speed = v_ego_arr - v_lead_arr
-  a_ego_arr = np.gradient(v_ego_arr, T_IDXS[:n_steps])  # Calculate acceleration from velocity
+  # Compute acceleration from velocity using the time grid T_IDXS
+  a_ego_arr = np.gradient(v_ego_arr, T_IDXS[:n_steps])
   anticipated_closing = closing_speed + (a_ego_arr * decel_anticipation_factor * T_IDXS[:n_steps])
 
   # Linear danger factor with some smoothing
   danger_factor = np.interp(anticipated_closing, danger_response_range, [1.0, danger_jerk_boost])
   danger_factor = np.clip(danger_factor, 1.0, danger_jerk_boost)
 
-  # mild smoothing so danger_factor doesn't jump down too fast
+  # Mild smoothing so danger_factor doesn't jump down too fast
   prev_df = 1.0
   for i in range(n_steps):
     if i > 0 and danger_factor[i] < prev_df:
@@ -218,14 +219,14 @@ def get_smooth_dynamic_j_ego_cost_array(
   combined_factor = dist_activation * speed_logistic
   jerk_cost_array = low_jerk_cost + combined_factor * (base_jerk_cost - low_jerk_cost)
 
-  # Mild time taper: reduce big jerk near the start
+  # --- TWEAK: Extended time taper for smoother initial jerk cost ---
   if time_taper:
     taper_factors = []
     for t in T_IDXS[:n_steps]:
-      # Goes from ~1.2 at t=0 down to 1.0 by t=2
-      if t <= 2.0:
-        alpha = t / 2.0
-        factor_t = 1.2 + (1.0 - 1.2) * alpha
+      # Taper from ~1.3 at t=0 down to 1.0 by t=2.5 seconds
+      if t <= 2.5:
+        alpha_t = t / 2.5
+        factor_t = 1.3 + (1.0 - 1.3) * alpha_t
       else:
         factor_t = 1.0
       taper_factors.append(factor_t)
@@ -377,10 +378,10 @@ def gen_long_ocp():
   ocp.cost.yref = np.zeros((COST_DIM, ))
   ocp.cost.yref_e = np.zeros((COST_E_DIM, ))
 
-  # distance error with mild speed weighting
+  # --- TWEAK: Increase alpha from 0.6 to 0.7 for centering in the safe gap ---
   desired_dist_comfort = get_safe_obstacle_distance(v_ego, lead_t_follow)
   small_speed_offset = 5.0
-  alpha = 0.6
+  alpha = 0.7
   raw_gap = ((x_obstacle - x_ego) - desired_dist_comfort)
   dist_err_mixed = alpha * raw_gap + (1.0 - alpha) * (raw_gap / (v_ego + small_speed_offset))
 
@@ -440,7 +441,7 @@ def gen_long_ocp():
 # -------------------------------------------------------------------------
 class LongitudinalMpc:
   def __init__(self, mode='acc', dt=DT_MDL):
-    self._approach_factor_last = 1.0
+    self._approach_factor_last = 1.0  # For smoothing dynamic multiplier changes
     self.mode = mode
     self.dt = dt
 
@@ -584,6 +585,7 @@ class LongitudinalMpc:
     """
     base_j_cost = 12.0 * (self.acceleration_jerk_factor or 1.0)
 
+    # --- TWEAK: Increase deceleration anticipation factor from 0.4 to 0.5 for high delta_v ---
     dyn_j_ego_array = get_smooth_dynamic_j_ego_cost_array(
       x_obstacle=self.params[:,2],
       x_ego=self.x_sol[:,0],
@@ -599,7 +601,7 @@ class LongitudinalMpc:
       speed_factor=1.0,
       danger_response_range=(3.0, 6.0),
       danger_jerk_boost=3.0,
-      decel_anticipation_factor=0.4
+      decel_anticipation_factor=0.5  # increased from 0.4
     )
 
     dist_cost_base = self.base_cost_weights[0]
@@ -623,38 +625,42 @@ class LongitudinalMpc:
 
       t_follow_i = self.params[i,4]
 
-      # Pullaway logic, clamp final factor to ~1.3
+      # --- TWEAK: Use a slightly higher pullaway maximum multiplier (2.2 instead of 2.0)
       pullaway_dist_cost = dynamic_lead_pullaway_distance_cost(
-        x_ego_i, v_ego_i_iter,
-        x_lead_i, v_lead_i,
-        t_follow_i,
-        base_cost=dist_cost_base,
-        pullaway_max_factor=2.0
+          x_ego_i, v_ego_i_iter,
+          x_lead_i, v_lead_i,
+          t_follow_i,
+          base_cost=dist_cost_base,
+          pullaway_max_factor=2.2
       )
 
       # Soft approach with smaller multiplier
       approach_factor = soft_approach_distance_factor(
-        x_lead_i, x_ego_i, v_ego_i_iter, v_lead_i, t_follow_i,
-        approach_margin=5.0,
-        max_approach_mult=1.5,
-        logistic_k=1.0
+          x_lead_i, x_ego_i, v_ego_i_iter, v_lead_i, t_follow_i,
+          approach_margin=5.0,
+          max_approach_mult=1.5,
+          logistic_k=1.0
       )
 
       combined_factor = pullaway_dist_cost * approach_factor
       clamped_factor = np.clip(combined_factor, 1.0, 1.3)
-      W_step[0,0] = dist_cost_base * clamped_factor
+
+      # --- TWEAK: Smooth out the dynamic distance multiplier to reduce oscillations ---
+      smoothed_factor = 0.8 * self._approach_factor_last + 0.2 * clamped_factor
+      self._approach_factor_last = smoothed_factor
+      W_step[0,0] = dist_cost_base * smoothed_factor
 
       # Dynamic lead constraint penalty
       last_constraint_penalty = dynamic_lead_constraint_weight(
-        x_obstacle_i=self.params[i,2],
-        x_ego_i=x_ego_i,
-        v_ego_i=v_ego_i_iter,
-        v_lead_i=v_lead_i,
-        t_follow_i=t_follow_i,
-        min_penalty=5.0,
-        max_penalty=1e5,
-        dist_margin=2.0,
-        speed_margin=2.0
+          x_obstacle_i=self.params[i,2],
+          x_ego_i=x_ego_i,
+          v_ego_i=v_ego_i_iter,
+          v_lead_i=v_lead_i,
+          t_follow_i=t_follow_i,
+          min_penalty=5.0,
+          max_penalty=1e5,
+          dist_margin=2.0,
+          speed_margin=2.0
       )
 
       Zl = np.array([LIMIT_COST, LIMIT_COST, LIMIT_COST, last_constraint_penalty])
