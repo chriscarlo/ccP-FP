@@ -148,8 +148,8 @@ def get_smooth_dynamic_j_ego_cost_array(
     t_follow,
     base_jerk_cost=12.0,
     low_jerk_cost=0.3,
-    deadzone_ratio=0.1,
-    logistic_k_dist=3.0,
+    deadzone_ratio=0.25,  # Increased to allow symmetric buffer
+    logistic_k_dist=8.0,   # Sharper transition at boundaries
     logistic_k_speed=1.5,
     min_speed_for_closing=0.3,
     distance_smoothing=5.0,
@@ -162,7 +162,7 @@ def get_smooth_dynamic_j_ego_cost_array(
   """
   Returns an array of jerk costs that typically increase when we are too close or
   rapidly closing on the lead. The key fix is ensuring we don't blow up the cost
-  if we’re already at or beyond the desired distance (below we clamp dist_ratio to 0).
+  if we're already at or beyond the desired distance (below we clamp dist_ratio to 0).
   """
   if not isinstance(x_obstacle, np.ndarray):
     x_obstacle = np.array([float(x_obstacle)])
@@ -184,13 +184,16 @@ def get_smooth_dynamic_j_ego_cost_array(
   def logistic(z):
     return 1.0 / (1.0 + np.exp(-z))
 
-  # ----------------------------------------------------------------
-  # FIX: clamp from 0.0 up to deadzone_threshold so we don’t explode
-  # the cost if we’re already at or beyond the desired gap
-  # ----------------------------------------------------------------
-  dist_ratio = (desired_dist - current_dist) / (desired_dist + distance_smoothing)
+  # Revised distance ratio calculation with symmetric deadzone
   deadzone_threshold = deadzone_ratio * desired_dist
-  dist_ratio = np.clip(dist_ratio, 0.0, deadzone_threshold)   # <-- FIXED HERE
+  dist_error = desired_dist - current_dist
+  dist_ratio = (dist_error - 0.5*deadzone_threshold) / (desired_dist + distance_smoothing)
+
+  # Allow symmetric buffer around desired distance
+  dist_ratio = np.clip(dist_ratio, -deadzone_threshold, deadzone_threshold)
+
+  # Sigmoid-shaped cost activation
+  dist_activation = 2.0 / (1.0 + np.exp(-logistic_k_dist * np.abs(dist_ratio))) - 1.0
 
   closing_speed = v_ego_arr - v_lead_arr
   a_ego_arr = np.gradient(v_ego_arr, T_IDXS[:n_steps])  # Calculate acceleration from velocity
@@ -212,7 +215,7 @@ def get_smooth_dynamic_j_ego_cost_array(
   closing_shifted = closing_speed - min_speed_for_closing
   speed_logistic = logistic(logistic_k_speed * closing_shifted)
 
-  combined_factor = dist_logistic * speed_logistic
+  combined_factor = dist_activation * speed_logistic
   jerk_cost_array = low_jerk_cost + combined_factor * (base_jerk_cost - low_jerk_cost)
 
   # Mild time taper: reduce big jerk near the start
@@ -234,24 +237,34 @@ def get_smooth_dynamic_j_ego_cost_array(
 
 def soft_approach_distance_factor(
     x_obstacle_i, x_ego_i, v_ego_i, v_lead_i, t_follow_i,
-    approach_margin=10.0,
-    deadzone_margin=2.0,
-    max_approach_mult=1.3,
-    logistic_k=0.5
+    approach_margin=6.0,
+    deadzone_margin=1.5,
+    max_approach_mult=1.6,
+    logistic_k=0.4,
+    time_horizon=4.0,  # Internal scaling factor (seconds), NOT tied to T_IDXS
+    closing_speed_weight=0.3
 ):
-  desired_dist = desired_follow_distance(v_ego_i, v_lead_i, t_follow_i)
-  actual_gap = x_obstacle_i - x_ego_i
-  gap_deficit = desired_dist - actual_gap
+    # Sigmoid helper function definition
+    def sigmoid(x, k=1.0, x0=0.0):
+        return 1.0 / (1.0 + np.exp(-k * (x - x0)))
 
-  if gap_deficit <= deadzone_margin:
-    return 1.0
+    desired_dist = desired_follow_distance(v_ego_i, v_lead_i, t_follow_i)
+    actual_gap = x_obstacle_i - x_ego_i
 
-  effective_deficit = gap_deficit - deadzone_margin
-  z = effective_deficit / max(1e-6, approach_margin - deadzone_margin)
+    closing_speed = v_ego_i - v_lead_i
+    anticipated_gap = actual_gap - closing_speed * time_horizon * closing_speed_weight
 
-  z_scaled = logistic_k * (z - 1.5)
-  factor = 1.0 + (max_approach_mult - 1.0)/(1.0 + np.exp(-z_scaled))
-  return np.clip(factor, 1.0, max_approach_mult)
+    # Safety clamp to prevent negative gaps
+    anticipated_gap = np.clip(anticipated_gap, 0.0, None)
+
+    approach_ratio = (anticipated_gap - desired_dist) / (approach_margin + deadzone_margin)
+    approach_factor = 1.0 + (max_approach_mult - 1.0) * sigmoid(
+        -approach_ratio,
+        k=logistic_k,
+        x0=deadzone_margin/(approach_margin + deadzone_margin)
+    )
+
+    return approach_factor
 
 def dynamic_lead_constraint_weight(
     x_obstacle_i, x_ego_i, v_ego_i, v_lead_i,
@@ -566,8 +579,8 @@ class LongitudinalMpc:
 
   def _apply_dynamic_costs(self, lead_xv):
     """
-    Unified dynamic cost logic, referencing the previous iteration’s solution
-    so we don’t chase ourselves mid-iteration.
+    Unified dynamic cost logic, referencing the previous iteration's solution
+    so we don't chase ourselves mid-iteration.
     """
     base_j_cost = 12.0 * (self.acceleration_jerk_factor or 1.0)
 
