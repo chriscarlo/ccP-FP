@@ -19,41 +19,37 @@ MAPBOX_API_FILE = "/persist/mapbox/mapbox_api.txt"
 MAPBOX_HOST = "https://api.mapbox.com"
 
 def load_mapbox_keys() -> tuple[Optional[str], Optional[str]]:
-  """
-  Load Mapbox API keys from the persist file: expects JSON like:
-    {
-      "public_key": "pk.xxx",
-      "secret_key": "sk.xxx"
-    }
-  """
-  try:
-    if os.path.exists(MAPBOX_API_FILE):
-      with open(MAPBOX_API_FILE, 'r') as f:
-        keys = json.load(f)
-        return keys.get("public_key"), keys.get("secret_key")
-  except Exception as e:
-    cloudlog.exception(f"Failed to load Mapbox API keys: {e}")
-  return None, None
+    """Load Mapbox API keys from persistent storage"""
+    try:
+        if os.path.exists(MAPBOX_API_FILE):
+            with open(MAPBOX_API_FILE, 'r') as f:
+                keys = json.load(f)
+                return keys.get("public_key"), keys.get("secret_key")
+        cloudlog.error("Mapbox API file not found at %s", MAPBOX_API_FILE)
+    except json.JSONDecodeError:
+        cloudlog.error("Invalid JSON format in Mapbox API file")
+    except Exception as e:
+        cloudlog.error("Failed to load Mapbox keys: %s", e)
+    return None, None
 
 def maxspeed_to_ms(maxspeed: dict) -> float:
-  """
-  Convert a Mapbox maxspeed dict into m/s. Example maxspeed dict:
-    { "speed": 35, "unit": "mph" }
-  Return 0.0 if invalid.
-  """
-  if not maxspeed or 'speed' not in maxspeed or 'unit' not in maxspeed:
-    return 0.0
+    """Convert Mapbox maxspeed dict to m/s with data validation"""
+    if not maxspeed or 'speed' not in maxspeed:
+        return 0.0
 
-  speed = float(maxspeed['speed'])
-  unit = maxspeed['unit']
+    try:
+        speed = float(maxspeed['speed'])
+        unit = maxspeed.get('unit', 'km/h').lower()
+    except (TypeError, ValueError):
+        cloudlog.debug("Invalid speed value: %s", maxspeed.get('speed'))
+        return 0.0
 
-  if unit == 'km/h':
-    return speed * (1000.0 / 3600.0)  # ~0.27778
-  elif unit == 'mph':
-    return speed * 0.44704
-  else:
-    # Unknown unit -> fallback 0
-    return 0.0
+    conversion_factors = {
+        'km/h': 0.27778,
+        'mph': 0.44704
+    }
+
+    return speed * conversion_factors.get(unit, 0.0)
 
 def project_coordinate(lat: float, lon: float, heading_deg: float, distance_m: float = 100.0):
   """
@@ -128,51 +124,44 @@ class SpeedLimitService:
     return distance > self.MIN_DISTANCE_CHANGE
 
   def query_mapbox_speed_limit(self, lat: float, lon: float, heading_deg: float) -> float:
-    """
-    Query Mapbox Directions for a route from (lat, lon) to a second point
-    ~100m in front of us. Return speed limit in m/s if found, else 0.0.
-    """
+    """Query Mapbox Directions API for current speed limit"""
     if not self.secret_key:
-      return 0.0
+        cloudlog.debug("Mapbox secret key not available")
+        return 0.0
 
-    lat2, lon2 = project_coordinate(lat, lon, heading_deg, distance_m=100.0)
-    url = f"{MAPBOX_HOST}/directions/v5/mapbox/driving/{lon},{lat};{lon2},{lat2}"
-    params = {
-      'access_token': self.secret_key,
-      'annotations': 'maxspeed',
-    }
+    # Project 1000 meters ahead for better API results
+    lat2, lon2 = project_coordinate(lat, lon, heading_deg, 1000.0)
 
     try:
-      resp = requests.get(url, params=params, timeout=5)
-      if resp.status_code != 200:
-        cloudlog.error(f"Mapbox speed limit query failed with code {resp.status_code}")
-        return 0.0
+        url = f"{MAPBOX_HOST}/directions/v5/mapbox/driving/{lon},{lat};{lon2},{lat2}"
+        params = {
+            'access_token': self.secret_key,
+            'annotations': 'maxspeed',
+            'overview': 'full'  # Required parameter for speed data
+        }
 
-      data = resp.json()
-      routes = data.get('routes', [])
-      if len(routes) == 0:
-        return 0.0
+        resp = requests.get(url, params=params, timeout=3)
+        resp.raise_for_status()
 
-      route = routes[0]
-      legs = route.get('legs', [])
-      if len(legs) == 0:
-        return 0.0
+        data = resp.json()
+        route = data.get('routes', [{}])[0]
+        leg = route.get('legs', [{}])[0]
+        annotation = leg.get('annotation', {})
+        maxspeeds = annotation.get('maxspeed', [])
 
-      annotation = legs[0].get('annotation', {})
-      maxspeeds = annotation.get('maxspeed', [])
-      if not maxspeeds:
-        return 0.0
+        if not maxspeeds:
+            return 0.0
 
-      ms = maxspeeds[0]
-      # Check for unknown/none
-      if 'unknown' in str(ms).lower() or 'none' in str(ms).lower():
-        return 0.0
+        # Handle API returning 'unknown' as first value
+        valid_speeds = [ms for ms in maxspeeds if not isinstance(ms, str) or ms.lower() not in ('unknown', 'none')]
+        return maxspeed_to_ms(valid_speeds[0]) if valid_speeds else 0.0
 
-      return maxspeed_to_ms(ms)
+    except requests.exceptions.RequestException as e:
+        cloudlog.debug("Mapbox API request failed: %s", e)
+    except json.JSONDecodeError:
+        cloudlog.debug("Invalid JSON response from Mapbox")
 
-    except Exception as e:
-      cloudlog.exception(f"Speed limit (Mapbox) query failed: {e}")
-      return 0.0
+    return 0.0
 
   def update(self) -> None:
     """
