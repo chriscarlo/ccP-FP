@@ -194,20 +194,40 @@ class VisionTurnSpeedController:
 
         # If no cluster bump-up, do symmetrical jerk-limit as usual
         if final_target_speed is None:
-            accel_cmd = (raw_target - self.prev_target_speed) / dt
+            # -------------------------------
+            # PATCH: Compute an extra boost factor for acceleration ramp-up
+            # when the planned speeds indicate a straight exit from a turn.
+            # If the planned trajectory’s maximum speed is much higher than our
+            # current target, then we allow a higher positive acceleration and jerk.
+            # -------------------------------
+            planned_max = np.max(self.planned_speeds)
+            if v_cruise_cluster > self.prev_target_speed:
+                # Compute how far we can go relative to the dash set speed.
+                ratio = (planned_max - self.prev_target_speed) / max((v_cruise_cluster - self.prev_target_speed), 1e-3)
+                # Clamp ratio between 0 and 1 so that boost_factor goes from 1.0 to 2.0.
+                ratio = clip(ratio, 0.0, 1.0)
+                boost_factor = 1.0 + ratio
+            else:
+                boost_factor = 1.0
 
-            # DYNAMIC SCALING
+            # --------------------------------------
+            # Use dynamic scaling as before, but now allow extra boost on the positive side.
+            # --------------------------------------
             scale_decel = dynamic_decel_scale(v_ego)
             scale_jerk = dynamic_jerk_scale(v_ego)
 
-            accel_cmd = clip(accel_cmd,
-                             -self.MAX_DECEL * scale_decel,
-                              self.MAX_DECEL * scale_decel)
+            # Compute the acceleration command (m/s^2)
+            accel_cmd = (raw_target - self.prev_target_speed) / dt
 
-            # jerk-limit
+            # Allow a higher positive acceleration if exiting a curve;
+            # deceleration (negative accel) remains capped by MAX_DECEL*scale_decel.
+            pos_limit = self.MAX_DECEL * scale_decel * boost_factor
+            neg_limit = self.MAX_DECEL * scale_decel
+            accel_cmd = clip(accel_cmd, -neg_limit, pos_limit)
+
+            # Jerk-limit the change in acceleration.
+            max_delta = (self.MAX_JERK * scale_jerk * boost_factor) * dt
             accel_diff = accel_cmd - self.current_accel
-            max_delta = (self.MAX_JERK * scale_jerk) * dt
-
             if accel_diff > max_delta:
                 self.current_accel += max_delta
             elif accel_diff < -max_delta:
@@ -330,7 +350,6 @@ class VisionTurnSpeedController:
         # we skip capping that upward acceleration. Otherwise, do normal limit.
         if skip_accel_limit and err0 > 0:
             # No positive acceleration capping
-            # We just clamp to ensure we don't exceed a huge negative decel
             accel0 = clip(err0 / dt_0, -self.MAX_DECEL, 9999.0)
         else:
             # Normal symmetrical limit
