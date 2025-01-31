@@ -235,7 +235,8 @@ class VisionTurnSpeedController:
     ) -> np.ndarray:
         """
         Build a future speed plan based on curvature. If skip_accel_limit=True,
-        we skip forward passes that would normally limit acceleration.
+        we skip *positive* acceleration capping in the forward pass, but still
+        allow negative acceleration (slowing down) so we can prepare for turns.
         """
         n = len(orientation_rate)
         eps = 1e-9
@@ -260,7 +261,6 @@ class VisionTurnSpeedController:
         planned = safe_speeds.copy()
         for apex_i in apex_idxs:
             # Example logic to shape speeds around apex
-            # (You can adjust spool/decel factors if needed)
             apex_speed = planned[apex_i]
 
             decel_factor = 0.15
@@ -319,26 +319,39 @@ class VisionTurnSpeedController:
             feasible_speed = v_next - desired_acc * dt_i
             new_planned[i] = min(new_planned[i], feasible_speed, planned[i])
 
-        # Forward pass is where we typically limit upward acceleration.
-        # If skip_accel_limit=True, skip this pass so we do NOT clamp how quickly speed can ramp up.
-        if not skip_accel_limit:
-            new_planned[0] = min(new_planned[0], planned[0])
-            dt_0 = dt_array[0] if dt_len > 0 else 0.05
-            err0 = new_planned[0] - init_speed
-            accel0 = clip(err0 / dt_0, -self.MAX_DECEL, self.MAX_DECEL)
-            new_planned[0] = init_speed + accel0 * dt_0
+        # Forward pass: we normally limit how quickly we can accelerate or decelerate
+        # from one point to the next. If skip_accel_limit=True, we skip *positive*
+        # acceleration limiting but still allow decel.
+        new_planned[0] = min(new_planned[0], planned[0])
+        dt_0 = dt_array[0] if dt_len > 0 else 0.05
+        err0 = new_planned[0] - init_speed
 
-            for i in range(1, n):
-                dt_i = dt_array[i - 1] if (i - 1 < dt_len) else 0.05
-                v_prev = new_planned[i - 1]
-                err = new_planned[i] - v_prev
-                desired_acc = clip(err / dt_i, -self.MAX_DECEL, self.MAX_DECEL)
-                feasible_speed = v_prev + desired_acc * dt_i
-                new_planned[i] = min(new_planned[i], feasible_speed, planned[i])
+        # If err0 < 0, we do normal decel limit. If err0 > 0 and skip_accel_limit is True,
+        # we skip capping that upward acceleration. Otherwise, do normal limit.
+        if skip_accel_limit and err0 > 0:
+            # No positive acceleration capping
+            # We just clamp to ensure we don't exceed a huge negative decel
+            accel0 = clip(err0 / dt_0, -self.MAX_DECEL, 9999.0)
         else:
-            # If skipping accel limit, ensure we don't drop below current speed inadvertently
-            new_planned[0] = max(new_planned[0], init_speed)
-            # We do no forward pass to limit upward speed
+            # Normal symmetrical limit
+            accel0 = clip(err0 / dt_0, -self.MAX_DECEL, self.MAX_DECEL)
+
+        new_planned[0] = init_speed + accel0 * dt_0
+
+        for i in range(1, n):
+            dt_i = dt_array[i - 1] if (i - 1 < dt_len) else 0.05
+            v_prev = new_planned[i - 1]
+            err = new_planned[i] - v_prev
+
+            if skip_accel_limit and err > 0:
+                # skip positive accel limiting, but still clamp decel
+                desired_acc = clip(err / dt_i, -self.MAX_DECEL, 9999.0)
+            else:
+                # normal symmetrical limit
+                desired_acc = clip(err / dt_i, -self.MAX_DECEL, self.MAX_DECEL)
+
+            feasible_speed = v_prev + desired_acc * dt_i
+            new_planned[i] = min(new_planned[i], feasible_speed, planned[i])
 
         return new_planned
 
