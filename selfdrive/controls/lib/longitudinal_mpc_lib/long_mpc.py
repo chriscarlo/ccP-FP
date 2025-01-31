@@ -33,8 +33,8 @@ X_EGO_OBSTACLE_COST = 3.
 X_EGO_COST = 0.
 V_EGO_COST = 0.
 A_EGO_COST = 0.
-J_EGO_COST = 12.0     # Slightly higher base jerk cost to help dampen fast oscillations
-A_CHANGE_COST = 300.
+J_EGO_COST = 5.0     # Slightly higher base jerk cost to help dampen fast oscillations
+A_CHANGE_COST = 150.
 DANGER_ZONE_COST = 100.
 
 CRASH_DISTANCE = 0.25
@@ -155,14 +155,18 @@ def fuck_this_follow_distance(v_ego, v_lead, t_follow=None):
 def get_smooth_dynamic_j_ego_cost_array(
     x_obstacle, x_ego, v_ego, v_lead,
     t_follow,
-    base_jerk_cost=J_EGO_COST,
-    low_jerk_cost=0.5,
-    logistic_k_dist=5.0,
-    logistic_k_speed=2.0,
+    base_jerk_cost=12.0,
+    low_jerk_cost=0.3,
+    deadzone_ratio=0.1,
+    logistic_k_dist=3.0,
+    logistic_k_speed=1.5,
     min_speed_for_closing=0.3,
     distance_smoothing=5.0,
-    time_taper=True,    # re-default to True for mild damping near t=0
+    time_taper=True,
     speed_factor=1.0,
+    danger_response_range=(3.0, 6.0),
+    danger_jerk_boost=3.0,
+    decel_anticipation_factor=0.4
 ):
   """
   Returns an array of jerk costs that typically increase when we are too close or rapidly closing on the lead.
@@ -189,9 +193,27 @@ def get_smooth_dynamic_j_ego_cost_array(
     return 1.0 / (1.0 + np.exp(-z))
 
   dist_ratio = (desired_dist - current_dist) / (desired_dist + distance_smoothing)
-  dist_logistic = logistic(logistic_k_dist * dist_ratio)
+  deadzone_threshold = deadzone_ratio * desired_dist
+  dist_ratio = np.clip(dist_ratio, None, deadzone_threshold)
 
   closing_speed = v_ego_arr - v_lead_arr
+  a_ego_arr = np.gradient(v_ego_arr, T_IDXS[:n_steps])  # Calculate acceleration from velocity
+  anticipated_closing = closing_speed + (a_ego_arr * decel_anticipation_factor * T_IDXS[:n_steps])
+
+  # Linear danger factor with anticipation
+  danger_factor = np.interp(anticipated_closing,
+                          danger_response_range,
+                          [1.0, danger_jerk_boost])
+  danger_factor = np.clip(danger_factor, 1.0, danger_jerk_boost)
+
+  prev_df = 1.0
+  for i in range(n_steps):
+      if i > 0 and danger_factor[i] < prev_df:
+          danger_factor[i] = max(danger_factor[i], prev_df - 0.5/T_DIFFS[i])
+      prev_df = danger_factor[i]
+
+  dist_logistic = logistic(logistic_k_dist * dist_ratio)
+
   closing_shifted = closing_speed - min_speed_for_closing
   speed_logistic = logistic(logistic_k_speed * closing_shifted)
 
@@ -219,24 +241,23 @@ def get_smooth_dynamic_j_ego_cost_array(
 def soft_approach_distance_factor(
     x_obstacle_i, x_ego_i, v_ego_i, v_lead_i, t_follow_i,
     approach_margin=10.0,
-    max_approach_mult=1.5,
-    logistic_k=0.8
+    deadzone_margin=2.0,
+    max_approach_mult=1.3,
+    logistic_k=0.5
 ):
-  """
-  Increases distance cost if we're behind desired spacing, but not drastically so.
-  """
-  desired_dist = desired_follow_distance(v_ego_i, v_lead_i, t_follow_i)
-  actual_gap = x_obstacle_i - x_ego_i
-  gap_deficit = desired_dist - actual_gap
+    desired_dist = desired_follow_distance(v_ego_i, v_lead_i, t_follow_i)
+    actual_gap = x_obstacle_i - x_ego_i
+    gap_deficit = desired_dist - actual_gap
 
-  if gap_deficit <= 0:
-    return 1.0
+    if gap_deficit <= deadzone_margin:
+        return 1.0
 
-  z = gap_deficit / max(1e-6, approach_margin)
-  z_scaled = logistic_k * (z - 2.0)
-  factor = 1.0 + (max_approach_mult - 1.0)/(1.0 + np.exp(-z_scaled))
-  # return factor
-  return 1.0
+    effective_deficit = gap_deficit - deadzone_margin
+    z = effective_deficit / max(1e-6, approach_margin - deadzone_margin)
+
+    z_scaled = logistic_k * (z - 1.5)
+    factor = 1.0 + (max_approach_mult - 1.0)/(1.0 + np.exp(-z_scaled))
+    return np.clip(factor, 1.0, max_approach_mult)
 
 
 def dynamic_lead_constraint_weight(
@@ -247,10 +268,6 @@ def dynamic_lead_constraint_weight(
     dist_margin=2.0,
     speed_margin=2.0
 ):
-  """
-  Adjusts lead-distance constraint weight more dynamically.
-  Higher penalty if dangerously close or closing fast.
-  """
   desired_dist = get_safe_obstacle_distance(v_ego_i, t_follow_i)
   actual_gap = x_obstacle_i - x_ego_i
   gap_error = desired_dist - actual_gap
@@ -271,35 +288,25 @@ def dynamic_lead_pullaway_distance_cost(
     x_lead_i, v_lead_i,
     t_follow_i,
     base_cost=3.0,
-    pullaway_dist_margin=5.0,
-    pullaway_speed_margin=2.0,
-    pullaway_max_factor=2.0
+    pullaway_dist_margin=7.0,
+    pullaway_speed_margin=3.0,
+    pullaway_max_factor=1.15
 ):
-  """
-  If lead is pulling away and we are behind, we originally multiplied cost by up to pullaway_max_factor.
-  That made the distance-error cost go UP, forcing stronger acceleration (risking bucking).
-  Now we clamp to 1.3 to keep it from overshooting and causing short-time whiplash.
-  """
-  # Ensure we do not exceed a safer factor
-  pullaway_max_factor = min(1.3, pullaway_max_factor)
+    desired_dist = desired_follow_distance(v_ego_i, v_lead_i, t_follow_i)
+    actual_gap = x_lead_i - x_ego_i
 
-  desired_dist = desired_follow_distance(v_ego_i, v_lead_i, t_follow_i)
-  actual_gap = x_lead_i - x_ego_i
+    gap_excess = actual_gap - desired_dist
+    speed_diff = v_lead_i - v_ego_i
 
-  gap_excess = actual_gap - desired_dist
-  speed_diff = v_lead_i - v_ego_i
+    if gap_excess <= 0 or speed_diff <= 0:
+        return base_cost
 
-  if gap_excess <= 0 or speed_diff <= 0:
-    # No special pullaway factor if lead not actually pulling away
-    return base_cost
+    z_dist = np.sqrt(gap_excess / pullaway_dist_margin)
+    z_speed = np.sqrt(speed_diff / pullaway_speed_margin)
+    z = min(z_dist, z_speed)
 
-  z_dist = gap_excess / pullaway_dist_margin
-  z_speed = speed_diff / pullaway_speed_margin
-  z = min(z_dist, z_speed)
-  factor = 1.0 + z * (pullaway_max_factor - 1.0)
-  factor = np.clip(factor, 1.0, pullaway_max_factor)
-
-  return base_cost * factor
+    factor = 1.0 + (pullaway_max_factor - 1.0) * (z ** 2)
+    return base_cost * np.clip(factor, 1.0, pullaway_max_factor)
 
 
 # -------------------------------------------------------------------------
@@ -589,6 +596,9 @@ class LongitudinalMpc:
       distance_smoothing=4.0,
       time_taper=True,   # re-enable mild taper
       speed_factor=1.0,
+      danger_response_range=(3.0, 6.0),
+      danger_jerk_boost=3.0,
+      decel_anticipation_factor=0.4
     )
 
     dist_cost_base = self.base_cost_weights[0]
@@ -647,7 +657,7 @@ class LongitudinalMpc:
         dist_margin=2.0,
         speed_margin=2.0
       )
-      # sets how severely it penalizes pushing inside lead’s safe distance
+      # sets how severely it penalizes pushing inside lead's safe distance
       Zl = np.array([LIMIT_COST, LIMIT_COST, LIMIT_COST, last_constraint_penalty])
       self.solver.cost_set(i, 'Zl', Zl)
 
@@ -725,7 +735,7 @@ class LongitudinalMpc:
     self.params[:,3] = np.copy(self.prev_a)
     self.params[:,4] = t_follow
 
-    # choose a single lead’s extrapolation for cost shaping
+    # choose a single lead's extrapolation for cost shaping
     chosen_lead_xv = lead_xv_0
 
     # Dynamic cost logic

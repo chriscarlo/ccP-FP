@@ -287,8 +287,17 @@ class LongitudinalPlanner:
       frogpilot_toggles.taco_tune
     )
 
-    # If throttle_prob is below threshold, we might forcibly disallow throttle
-    self.allow_throttle = (throttle_prob > ALLOW_THROTTLE_THRESHOLD or v_ego <= MIN_ALLOW_THROTTLE_SPEED)
+    # Modified jerk scaling to match MPC's new dynamic weights
+    jerk_factor = 1.0  # Reduced from 1.2 to match smoother MPC dynamics
+    accelerationJerk = sm["frogpilotPlan"].accelerationJerk * jerk_factor
+    dangerJerk       = sm["frogpilotPlan"].dangerJerk * jerk_factor
+    speedJerk        = sm["frogpilotPlan"].speedJerk * jerk_factor
+
+    # Modified throttle allowance logic to match MPC's gentler transitions
+    MIN_ALLOW_THROTTLE_SPEED = 1.5  # Reduced from 2.5
+    ALLOW_THROTTLE_THRESHOLD = 0.4   # Reduced from 0.5
+    self.allow_throttle = (throttle_prob > ALLOW_THROTTLE_THRESHOLD or
+                          v_ego <= MIN_ALLOW_THROTTLE_SPEED)
 
     # If we do NOT allow throttle, clamp the upper accel limit to coast
     if not self.allow_throttle and not classic_model:
@@ -315,15 +324,18 @@ class LongitudinalPlanner:
       for index in range(len(lead_states)):
         if len(model_leads) > index:
           model_lead = model_leads[index]
-          # optional offset logic
-          distance_offset = (
-            max(
-              frogpilot_toggles.increased_stopped_distance + min(10 - v_ego, 0),
-              0,
-            ) if not sm["frogpilotCarState"].trafficModeActive else 0
-          )
-          # small speed-based offset
-          speed_based_offset = min(v_ego, 30.0) * 0.1667
+          # Harmonized lead distance offset with MPC's deadzone
+          distance_offset = max(
+            frogpilot_toggles.increased_stopped_distance + min(10 - v_ego, 0),
+            0,
+          ) if not sm["frogpilotCarState"].trafficModeActive else 0
+
+          # Add maximum offset to stay within MPC's deadzone
+          max_offset = 2.0  # Matches MPC's deadzone_margin
+          distance_offset = min(distance_offset, max_offset)
+
+          # Speed-based offset now uses smoother interpolation
+          speed_based_offset = interp(v_ego, [0., 10., 30.], [0., 0.5, 1.0])
           distance_offset += speed_based_offset
 
           lead_states[index].update(
@@ -343,12 +355,6 @@ class LongitudinalPlanner:
     accelerationJerk = sm["frogpilotPlan"].accelerationJerk
     dangerJerk       = sm["frogpilotPlan"].dangerJerk
     speedJerk        = sm["frogpilotPlan"].speedJerk
-
-    # Example scale factor for jerk
-    jerk_factor = 1.2
-    accelerationJerk *= jerk_factor
-    dangerJerk       *= jerk_factor
-    speedJerk        *= jerk_factor
 
     # prev_accel_constraint might be set above; reuse that
     self.mpc.set_weights(
