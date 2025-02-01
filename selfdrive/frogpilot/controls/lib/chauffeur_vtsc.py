@@ -76,7 +76,7 @@ def dynamic_decel_scale(v_ego_ms: float) -> float:
     if v_ego_ms <= min_speed:
         return 8.0
     elif v_ego_ms >= max_speed:
-        return 1.0
+        return 2.0
     else:
         # linear interpolation from 8.0 -> 1.0
         ratio = (v_ego_ms - min_speed) / (max_speed - min_speed)
