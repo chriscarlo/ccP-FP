@@ -143,7 +143,7 @@ def fuck_this_follow_distance(v_ego, v_lead, t_follow=None):
 # -------------------------------------------------------------------------
 # Dynamic Cost Modifiers
 # -------------------------------------------------------------------------
-# PATCHED: Modified dynamic jerk cost to use a piecewise deadzone and smoother transition.
+# PATCHED: Modified dynamic jerk cost to use a continuous deadzone and smoother transition.
 def get_smooth_dynamic_j_ego_cost_array(
     x_obstacle, x_ego, v_ego, v_lead,
     t_follow,
@@ -162,8 +162,7 @@ def get_smooth_dynamic_j_ego_cost_array(
 ):
   """
   Returns an array of jerk costs that typically increase when we are too close or
-  rapidly closing on the lead. Uses a piecewise dead zone to reduce aggressive cost
-  when near the desired gap.
+  rapidly closing on the lead. Uses a continuous deadzone and smoother transition.
   """
   if not isinstance(x_obstacle, np.ndarray):
     x_obstacle = np.array([float(x_obstacle)])
@@ -182,23 +181,16 @@ def get_smooth_dynamic_j_ego_cost_array(
   desired_dist = desired_follow_distance(v_ego_arr, v_lead_arr, t_follow_arr)
   current_dist = (x_obstacle - x_ego_arr)
 
-  # Piecewise dead zone logic for distance error
+  # Continuous dead zone logic for distance error
   deadzone_threshold = deadzone_ratio * desired_dist
   dist_error = desired_dist - current_dist
-  dist_activation = np.zeros(n_steps)
-  for i in range(n_steps):
-    if np.abs(dist_error[i]) < deadzone_threshold[i]:
-      dist_activation[i] = 0.0
-    else:
-      excess_error = np.abs(dist_error[i]) - deadzone_threshold[i]
-      dist_activation[i] = 2.0 / (1.0 + np.exp(-logistic_k_dist * excess_error)) - 1.0
+  delta = np.maximum(np.abs(dist_error) - deadzone_threshold, 0.0)
+  dist_activation = 2.0 * (1.0/(1.0 + np.exp(-logistic_k_dist * delta)) - 0.5)
 
   closing_speed = v_ego_arr - v_lead_arr
-  # Compute acceleration from velocity using the time grid T_IDXS
   a_ego_arr = np.gradient(v_ego_arr, T_IDXS[:n_steps])
   anticipated_closing = closing_speed + (a_ego_arr * decel_anticipation_factor * T_IDXS[:n_steps])
 
-  # Linear danger factor with smoothing
   danger_factor = np.interp(anticipated_closing, danger_response_range, [1.0, danger_jerk_boost])
   danger_factor = np.clip(danger_factor, 1.0, danger_jerk_boost)
   prev_df = 1.0
@@ -215,15 +207,8 @@ def get_smooth_dynamic_j_ego_cost_array(
 
   # Extended time taper for smoother initial jerk cost
   if time_taper:
-    taper_factors = []
-    for t in T_IDXS[:n_steps]:
-      if t <= 2.5:
-        alpha_t = t / 2.5
-        factor_t = 1.3 + (1.0 - 1.3) * alpha_t
-      else:
-        factor_t = 1.0
-      taper_factors.append(factor_t)
-    taper_factors = np.array(taper_factors)
+    # New linear taper: from 1.3 at t=0 to 1.0 at t=4.0 seconds
+    taper_factors = np.interp(T_IDXS[:n_steps], [0.0, 4.0], [1.3, 1.0])
     jerk_cost_array *= taper_factors
 
   jerk_cost_array *= speed_factor
@@ -651,8 +636,8 @@ class LongitudinalMpc:
       combined_factor = pullaway_dist_cost * approach_factor
       clamped_factor = np.clip(combined_factor, 1.0, 1.3)
 
-      # Smooth out the dynamic distance multiplier to reduce oscillations
-      smoothed_factor = 0.8 * self._approach_factor_last + 0.2 * clamped_factor
+      # Increase smoothing on the dynamic multiplier to further slow transitions
+      smoothed_factor = 0.9 * self._approach_factor_last + 0.1 * clamped_factor
       self._approach_factor_last = smoothed_factor
       W_step[0,0] = dist_cost_base * smoothed_factor
 
