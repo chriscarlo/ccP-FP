@@ -149,16 +149,16 @@ def get_smooth_dynamic_j_ego_cost_array(
     t_follow,
     base_jerk_cost=10.0,       # Reduced base cost from 12.0 to 10.0
     low_jerk_cost=0.5,         # Increased low cost from 0.3 to 0.5
-    deadzone_ratio=0.5,        # Wider dead zone (increased from 0.25)
-    logistic_k_dist=4.0,       # Softer distance error transition (reduced from 8.0)
-    logistic_k_speed=1.0,      # Softer speed activation (reduced from 1.5)
+    deadzone_ratio=0.5,        # Wider dead zone
+    logistic_k_dist=4.0,       # Softer distance error transition
+    logistic_k_speed=1.0,      # Softer speed activation
     min_speed_for_closing=0.3,
     distance_smoothing=5.0,
     time_taper=True,
     speed_factor=1.0,
     danger_response_range=(3.0, 6.0),
     danger_jerk_boost=3.0,
-    decel_anticipation_factor=0.35  # Reduced from 0.4 to 0.35
+    decel_anticipation_factor=0.35
 ):
   """
   Returns an array of jerk costs that typically increase when we are too close or
@@ -270,7 +270,7 @@ def dynamic_lead_pullaway_distance_cost(
     pullaway_dist_margin=7.0,
     pullaway_speed_margin=3.0,
     pullaway_max_factor=1.15,
-    exponent=1.0  # New parameter for smoother linear ramp (1.0 for linear)
+    exponent=1.0
 ):
   desired_dist = desired_follow_distance(v_ego_i, v_lead_i, t_follow_i)
   actual_gap = x_lead_i - x_ego_i
@@ -288,6 +288,36 @@ def dynamic_lead_pullaway_distance_cost(
 
   factor = 1.0 + (pullaway_max_factor - 1.0) * z
   return base_cost * np.clip(factor, 1.0, pullaway_max_factor)
+
+def dynamic_lead_constraint_weight(
+    x_obstacle_i, x_ego_i, v_ego_i, v_lead_i, t_follow_i,
+    min_penalty=5.0,
+    max_penalty=1e5,
+    dist_margin=2.0,
+    speed_margin=2.0
+):
+  """
+  Returns a penalty factor for the lead-distance constraint. The penalty
+  grows if we are too close to the desired following distance (plus a
+  margin) or if we are closing on the lead too quickly. Clamped between
+  min_penalty and max_penalty.
+  """
+  desired_dist = desired_follow_distance(v_ego_i, v_lead_i, t_follow_i)
+  actual_gap = x_obstacle_i - x_ego_i
+  dist_gap_below = (desired_dist + dist_margin) - actual_gap  # >0 => too close
+
+  speed_diff = v_ego_i - (v_lead_i + speed_margin)           # >0 => closing quickly
+
+  penalty_activation = 0.0
+  if dist_gap_below > 0.0:
+    penalty_activation += dist_gap_below
+  if speed_diff > 0.0:
+    # Weight speed closing a bit so it doesn’t dominate
+    penalty_activation += speed_diff * 0.5
+
+  # Quadratic scaling on the combined “over-limit” amounts
+  penalty_raw = min_penalty + 100.0 * (penalty_activation ** 2)
+  return float(np.clip(penalty_raw, min_penalty, max_penalty))
 
 # -------------------------------------------------------------------------
 # ACADOS Model + OCP Setup
@@ -553,7 +583,7 @@ class LongitudinalMpc:
     self.cruise_min_a = min_a
     self.max_a = max_a
 
-  def _apply_dynamic_costs(self, lead_xv):
+  def _apply_dynamic_costs(self, chosen_lead_xv):
     """
     Unified dynamic cost logic, referencing the previous iteration's solution
     so we don't chase ourselves mid-iteration.
@@ -567,7 +597,7 @@ class LongitudinalMpc:
       x_obstacle=self.params[:,2],
       x_ego=self.x_sol[:,0],
       v_ego=self.x_sol[:,1],
-      v_lead=lead_xv[:,1] if lead_xv.shape[1] > 1 else self.x_sol[:,1],
+      v_lead=chosen_lead_xv[:,1] if chosen_lead_xv.shape[1] > 1 else self.x_sol[:,1],
       t_follow=self.params[:,4],
       base_jerk_cost=scaled_base_j_cost,
       low_jerk_cost=0.5,
@@ -594,10 +624,10 @@ class LongitudinalMpc:
       W_step[5,5] = dyn_j_ego_array[i]
 
       x_ego_i, v_ego_i_iter, _ = self.x_sol[i]
-      if i < lead_xv.shape[0]:
-        x_lead_i, v_lead_i = lead_xv[i]
+      if i < chosen_lead_xv.shape[0]:
+        x_lead_i, v_lead_i = chosen_lead_xv[i]
       else:
-        x_lead_i, v_lead_i = lead_xv[-1]
+        x_lead_i, v_lead_i = chosen_lead_xv[-1]
 
       t_follow_i = self.params[i,4]
 
@@ -626,6 +656,7 @@ class LongitudinalMpc:
       self._approach_factor_last = smoothed_factor
       W_step[0,0] = dist_cost_base * smoothed_factor
 
+      # This call now succeeds because the function is defined above
       last_constraint_penalty = dynamic_lead_constraint_weight(
           x_obstacle_i=self.params[i,2],
           x_ego_i=x_ego_i,
