@@ -260,28 +260,8 @@ def soft_approach_distance_factor(
 
     return approach_factor
 
-def dynamic_lead_constraint_weight(
-    x_obstacle_i, x_ego_i, v_ego_i, v_lead_i,
-    t_follow_i,
-    min_penalty=5.0,
-    max_penalty=1e6,
-    dist_margin=2.0,
-    speed_margin=2.0
-):
-  desired_dist = get_safe_obstacle_distance(v_ego_i, t_follow_i)
-  actual_gap = x_obstacle_i - x_ego_i
-  gap_error = desired_dist - actual_gap
-  closing_speed = v_ego_i - v_lead_i
-
-  z = (gap_error / dist_margin) + (closing_speed / speed_margin)
-  logistic_k = 0.8
-  z_scaled = logistic_k * (z - 1.5)
-  logistic_val = 1.0 / (1.0 + np.exp(-z_scaled))
-
-  safe_upper = 10000.0
-  penalty = min_penalty + logistic_val * (safe_upper - min_penalty)
-  return penalty
-
+# PATCHED: Smoothed pull-away acceleration ramp by using a linear ramp (exponent=1.0)
+# instead of a squared ramp, and reducing the maximum multiplier.
 def dynamic_lead_pullaway_distance_cost(
     x_ego_i, v_ego_i,
     x_lead_i, v_lead_i,
@@ -289,7 +269,8 @@ def dynamic_lead_pullaway_distance_cost(
     base_cost=3.0,
     pullaway_dist_margin=7.0,
     pullaway_speed_margin=3.0,
-    pullaway_max_factor=1.15
+    pullaway_max_factor=1.15,
+    exponent=1.0  # New parameter for smoother linear ramp (1.0 for linear)
 ):
   desired_dist = desired_follow_distance(v_ego_i, v_lead_i, t_follow_i)
   actual_gap = x_lead_i - x_ego_i
@@ -300,11 +281,12 @@ def dynamic_lead_pullaway_distance_cost(
   if gap_excess <= 0 or speed_diff <= 0:
     return base_cost
 
-  z_dist = np.sqrt(gap_excess / pullaway_dist_margin)
-  z_speed = np.sqrt(speed_diff / pullaway_speed_margin)
+  # Use a linear ramp (exponent=1.0) for smoother pull-away behavior.
+  z_dist = (gap_excess / pullaway_dist_margin) ** exponent
+  z_speed = (speed_diff / pullaway_speed_margin) ** exponent
   z = min(z_dist, z_speed)
 
-  factor = 1.0 + (pullaway_max_factor - 1.0) * (z ** 2)
+  factor = 1.0 + (pullaway_max_factor - 1.0) * z
   return base_cost * np.clip(factor, 1.0, pullaway_max_factor)
 
 # -------------------------------------------------------------------------
@@ -575,7 +557,7 @@ class LongitudinalMpc:
     """
     Unified dynamic cost logic, referencing the previous iteration's solution
     so we don't chase ourselves mid-iteration.
-    PATCHED: Updated parameters to use smoother jerk cost behavior.
+    PATCHED: Updated parameters to use smoother jerk cost behavior and a smoother pull-away ramp.
     """
     base_j_cost = 12.0 * (self.acceleration_jerk_factor or 1.0)
     # Scale base_j_cost to match new default (10.0 instead of 12.0)
@@ -619,12 +601,14 @@ class LongitudinalMpc:
 
       t_follow_i = self.params[i,4]
 
+      # PATCHED: Use a smoother pull-away ramp with a linear exponent and reduced maximum factor.
       pullaway_dist_cost = dynamic_lead_pullaway_distance_cost(
           x_ego_i, v_ego_i_iter,
           x_lead_i, v_lead_i,
           t_follow_i,
           base_cost=dist_cost_base,
-          pullaway_max_factor=2.2
+          pullaway_max_factor=1.15,
+          exponent=1.0
       )
 
       approach_factor = soft_approach_distance_factor(
