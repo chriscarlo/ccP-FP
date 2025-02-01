@@ -1,416 +1,771 @@
+#!/usr/bin/env python3
+import os
+import time
 import math
 import numpy as np
-import cereal.messaging as messaging
-
-from openpilot.common.conversions import Conversions as CV
+from cereal import log
 from openpilot.common.numpy_fast import clip
-from openpilot.selfdrive.modeld.constants import ModelConstants
+from openpilot.common.realtime import DT_MDL
+from openpilot.common.swaglog import cloudlog
+from openpilot.selfdrive.modeld.constants import index_function
+from openpilot.selfdrive.car.interfaces import ACCEL_MIN
+if __name__ == '__main__':
+  from openpilot.third_party.acados.acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
+else:
+  from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.c_generated_code.acados_ocp_solver_pyx import AcadosOcpSolverCython
+from casadi import SX, vertcat
 
-CRUISING_SPEED = 5.0  # m/s
+MODEL_NAME = 'long'
+LONG_MPC_DIR = os.path.dirname(os.path.abspath(__file__))
+EXPORT_DIR = os.path.join(LONG_MPC_DIR, "c_generated_code")
+JSON_FILE = os.path.join(LONG_MPC_DIR, "acados_ocp_long.json")
 
+SOURCES = ['lead0', 'lead1', 'cruise', 'e2e']
 
-def nonlinear_lat_accel(v_ego_ms: float, turn_aggressiveness: float = 1.0) -> float:
-    """
-    Compute lateral acceleration limit based on speed and an aggressiveness factor.
-    """
-    v_ego_mph = v_ego_ms * CV.MS_TO_MPH
-    base = 1.5
-    span = 2.2
-    center = 35.0
-    k = 0.10
+X_DIM = 3
+U_DIM = 1
+PARAM_DIM = 6
+COST_E_DIM = 5
+COST_DIM = COST_E_DIM + 1
+CONSTR_DIM = 4
 
-    lat_acc = base + span / (1.0 + math.exp(-k * (v_ego_mph - center)))
-    lat_acc = min(lat_acc, 2.8)
-    return lat_acc * turn_aggressiveness
+X_EGO_OBSTACLE_COST = 3.0
+X_EGO_COST = 0.0
+V_EGO_COST = 0.0
+A_EGO_COST = 0.0
+J_EGO_COST = 5.0     # Base jerk cost (further scaled dynamically)
+A_CHANGE_COST = 150.0
+DANGER_ZONE_COST = 100.0
 
+CRASH_DISTANCE = 0.25
+LEAD_DANGER_FACTOR = 0.75
 
-def margin_time_fn(v_ego_ms: float) -> float:
-    """
-    Returns a 'margin time' used in backward-pass speed planning.
-    The faster you go, the more margin time is used.
-    """
-    v_low = 0.0
-    t_low = 1.0
-    v_med = 15.0     # ~34 mph
-    t_med = 3.0
-    v_high = 31.3    # ~70 mph
-    t_high = 5.0
+LIMIT_COST = 1e6
 
-    if v_ego_ms <= v_low:
-        return t_low
-    elif v_ego_ms >= v_high:
-        return t_high
-    elif v_ego_ms <= v_med:
-        ratio = (v_ego_ms - v_low) / (v_med - v_low)
-        return t_low + ratio * (t_med - t_low)
+ACADOS_SOLVER_TYPE = 'SQP_RTI'
+
+LEAD_ACCEL_TAU = 1.5
+
+N = 12
+MAX_T = 10.0
+T_IDXS_LST = [index_function(idx, max_val=MAX_T, max_idx=N) for idx in range(N+1)]
+T_IDXS = np.array(T_IDXS_LST)
+FCW_IDXS = T_IDXS < 5.0
+T_DIFFS = np.diff(T_IDXS, prepend=[0.])
+
+COMFORT_BRAKE = 2.5
+STOP_DISTANCE = 6.0
+
+DISCOMFORT_BRAKE = 5.5
+OHSHIT_STOP_DISTANCE = 2.0
+
+# -------------------------------------------------------------------------
+# Personality / Following Distance Helpers
+# -------------------------------------------------------------------------
+def get_jerk_factor(aggressive_jerk_acceleration=0.5, aggressive_jerk_danger=0.5, aggressive_jerk_speed=0.5,
+                    standard_jerk_acceleration=1.0, standard_jerk_danger=1.0, standard_jerk_speed=1.0,
+                    relaxed_jerk_acceleration=1.0, relaxed_jerk_danger=1.0, relaxed_jerk_speed=1.0,
+                    custom_personalities=False, personality=log.LongitudinalPersonality.standard):
+  """
+  Backward-compatible function signature for jerk factor by personality.
+  """
+  if custom_personalities:
+    if personality == log.LongitudinalPersonality.relaxed:
+      return relaxed_jerk_acceleration, relaxed_jerk_danger, relaxed_jerk_speed
+    elif personality == log.LongitudinalPersonality.standard:
+      return standard_jerk_acceleration, standard_jerk_danger, standard_jerk_speed
+    elif personality == log.LongitudinalPersonality.aggressive:
+      return aggressive_jerk_acceleration, aggressive_jerk_danger, aggressive_jerk_speed
     else:
-        ratio = (v_ego_ms - v_med) / (v_high - v_med)
-        return t_med + ratio * (t_high - t_med)
-
-
-def find_apexes(curv_array: np.ndarray, threshold: float = 5e-5) -> list:
-    """
-    Identify indices where curvature spikes above a threshold and is a local maximum.
-    """
-    apex_indices = []
-    for i in range(1, len(curv_array) - 1):
-        if (
-            curv_array[i] > threshold
-            and curv_array[i] >= curv_array[i + 1]
-            and curv_array[i] > curv_array[i - 1]
-        ):
-            apex_indices.append(i)
-    return apex_indices
-
-
-# --------------------
-# DYNAMIC SCALING LOGIC
-# --------------------
-def dynamic_decel_scale(v_ego_ms: float) -> float:
-    """
-    Originally was 4.0 -> 1.0 from ~5 m/s to ~25 m/s.
-    Now we double it for lower speeds: 8.0 -> 1.0.
-    """
-    min_speed = 5.0   # below this speed => max scaling
-    max_speed = 25.0  # above this speed => 1.0
-    if v_ego_ms <= min_speed:
-        return 8.0
-    elif v_ego_ms >= max_speed:
-        return 2.0
+      raise NotImplementedError("Longitudinal personality not supported")
+  else:
+    # Original default: same for all except aggressive gets half jerk cost
+    if personality == log.LongitudinalPersonality.relaxed:
+      return 1.0, 1.0, 1.0
+    elif personality == log.LongitudinalPersonality.standard:
+      return 1.0, 1.0, 1.0
+    elif personality == log.LongitudinalPersonality.aggressive:
+      return 0.5, 0.5, 0.5
     else:
-        # linear interpolation from 8.0 -> 1.0
-        ratio = (v_ego_ms - min_speed) / (max_speed - min_speed)
-        return 8.0 + (1.0 - 8.0) * ratio
+      raise NotImplementedError("Longitudinal personality not supported")
 
+def get_T_FOLLOW(aggressive_follow=1.25,
+                 standard_follow=1.45,
+                 relaxed_follow=1.75,
+                 custom_personalities=False, personality=log.LongitudinalPersonality.standard):
+  """
+  Backward-compatible function signature for time gap by personality.
+  """
+  if custom_personalities:
+    if personality == log.LongitudinalPersonality.relaxed:
+      return relaxed_follow
+    elif personality == log.LongitudinalPersonality.standard:
+      return standard_follow
+    elif personality == log.LongitudinalPersonality.aggressive:
+      return aggressive_follow
+    else:
+      raise NotImplementedError("Longitudinal personality not supported")
+  else:
+    if personality == log.LongitudinalPersonality.relaxed:
+      return 1.75
+    elif personality == log.LongitudinalPersonality.standard:
+      return 1.45
+    elif personality == log.LongitudinalPersonality.aggressive:
+      return 1.25
+    else:
+      raise NotImplementedError("Longitudinal personality not supported")
 
-def dynamic_jerk_scale(v_ego_ms: float) -> float:
-    """
-    Same doubling logic for jerk scaling.
-    """
-    return dynamic_decel_scale(v_ego_ms)
+def get_stopped_equivalence_factor(v_lead):
+  return (v_lead**2) / (2 * COMFORT_BRAKE)
 
+def get_safe_obstacle_distance(v_ego, t_follow):
+  return (v_ego**2) / (2 * COMFORT_BRAKE) + t_follow * v_ego + STOP_DISTANCE
 
-class VisionTurnSpeedController:
-    def __init__(
-        self,
-        turn_smoothing_alpha=0.3,
-        reaccel_alpha=0.2,
-        low_lat_acc=0.20,
-        high_lat_acc=0.40,
-        max_decel=3.0,
-        max_jerk=6.0
-    ):
-        self.turn_smoothing_alpha = turn_smoothing_alpha
-        self.reaccel_alpha = reaccel_alpha
-        self.LOW_LAT_ACC = low_lat_acc
-        self.HIGH_LAT_ACC = high_lat_acc
+def desired_follow_distance(v_ego, v_lead, t_follow=None):
+  if t_follow is None:
+    t_follow = get_T_FOLLOW()
+  return get_safe_obstacle_distance(v_ego, t_follow) - get_stopped_equivalence_factor(v_lead)
 
-        self.MAX_DECEL = max_decel
-        self.MAX_JERK = max_jerk
+def get_ohshit_equivalence_factor(v_lead):
+  return (v_lead**2) / (2 * DISCOMFORT_BRAKE)
 
-        self.current_accel = 0.0
-        self.prev_target_speed = 0.0
+def get_unsafe_obstacle_distance(v_ego, t_follow):
+  return (v_ego**2) / (2 * DISCOMFORT_BRAKE) + t_follow * v_ego + OHSHIT_STOP_DISTANCE
 
-        self.planned_speeds = np.zeros(33, dtype=float)
-        self.sm = messaging.SubMaster(['modelV2'])
+def fuck_this_follow_distance(v_ego, v_lead, t_follow=None):
+  """
+  Original function name unchanged for backward compatibility.
+  """
+  if t_follow is None:
+    t_follow = get_T_FOLLOW()
+  return get_unsafe_obstacle_distance(v_ego, t_follow) - get_ohshit_equivalence_factor(v_lead)
 
-        self.prev_v_cruise_cluster = 0.0
+# -------------------------------------------------------------------------
+# Dynamic Cost Modifiers
+# -------------------------------------------------------------------------
+def get_smooth_dynamic_j_ego_cost_array(
+    x_obstacle, x_ego, v_ego, v_lead,
+    t_follow,
+    base_jerk_cost=10.0,
+    low_jerk_cost=0.5,
+    deadzone_ratio=0.5,
+    logistic_k_dist=4.0,
+    logistic_k_speed=1.0,
+    min_speed_for_closing=0.3,
+    distance_smoothing=5.0,
+    time_taper=True,
+    speed_factor=1.0,
+    danger_response_range=(3.0, 6.0),
+    danger_jerk_boost=3.0,
+    decel_anticipation_factor=0.35
+):
+  """
+  Returns an array of jerk costs that typically increase when we are too close or
+  rapidly closing on the lead. Uses a piecewise dead zone to reduce aggressive cost
+  when near the desired gap.
+  """
+  if not isinstance(x_obstacle, np.ndarray):
+    x_obstacle = np.array([float(x_obstacle)])
+  n_steps = x_obstacle.shape[0]
 
-    def reset(self, v_ego: float) -> None:
-        """
-        Reset internal state so the controller is ready for fresh speed planning.
-        """
-        self.prev_target_speed = v_ego
-        self.current_accel = 0.0
-        self.planned_speeds[:] = v_ego
+  def ensure_array(val):
+    if not isinstance(val, np.ndarray):
+      return np.full(n_steps, float(val))
+    return val
 
-    def update(self, v_ego: float, v_cruise_cluster: float, turn_aggressiveness=1.0) -> float:
-        """
-        Main entry point for the turn speed controller logic. Called every cycle.
-        """
-        self.sm.update()
-        modelData = self.sm['modelV2']
+  x_ego_arr = ensure_array(x_ego)
+  v_ego_arr = ensure_array(v_ego)
+  v_lead_arr = ensure_array(v_lead)
+  t_follow_arr = ensure_array(t_follow)
 
-        # If below a certain speed, just reset and do nothing fancy
-        if v_ego < CRUISING_SPEED:
-            self.reset(v_ego)
-            self.prev_v_cruise_cluster = v_cruise_cluster
-            return v_ego
+  desired_dist = desired_follow_distance(v_ego_arr, v_lead_arr, t_follow_arr)
+  current_dist = (x_obstacle - x_ego_arr)
 
-        orientation_rate_raw = modelData.orientationRate.z
-        velocity_pred_raw = modelData.velocity.x
+  # Piecewise dead zone logic for distance error
+  deadzone_threshold = deadzone_ratio * desired_dist
+  dist_error = desired_dist - current_dist
+  dist_activation = np.zeros(n_steps)
+  for i in range(n_steps):
+    if np.abs(dist_error[i]) < deadzone_threshold[i]:
+      dist_activation[i] = 0.0
+    else:
+      excess_error = np.abs(dist_error[i]) - deadzone_threshold[i]
+      dist_activation[i] = 2.0 / (1.0 + np.exp(-logistic_k_dist * excess_error)) - 1.0
 
-        MIN_POINTS = 3
-        if (
-            orientation_rate_raw is None or velocity_pred_raw is None
-            or len(orientation_rate_raw) < MIN_POINTS
-            or len(velocity_pred_raw) < MIN_POINTS
-        ):
-            # Fallback if the model data isn't available
-            raw_target = self._single_step_fallback(v_ego, 0.0, turn_aggressiveness)
-        else:
-            orientation_rate = np.abs(np.array(orientation_rate_raw, dtype=float))
-            velocity_pred = np.array(velocity_pred_raw, dtype=float)
+  closing_speed = v_ego_arr - v_lead_arr
+  # Compute acceleration from velocity using the time grid T_IDXS
+  a_ego_arr = np.gradient(v_ego_arr, T_IDXS[:n_steps])
+  anticipated_closing = closing_speed + (a_ego_arr * decel_anticipation_factor * T_IDXS[:n_steps])
 
-            n_points = min(len(orientation_rate), len(velocity_pred))
-            # Interpolate or slice to exactly 33 points
-            if n_points < 33:
-                src_indices = np.linspace(0, n_points - 1, n_points)
-                dst_indices = np.linspace(0, n_points - 1, 33)
-                orientation_rate_33 = np.interp(dst_indices, src_indices, orientation_rate[:n_points])
-                velocity_pred_33 = np.interp(dst_indices, src_indices, velocity_pred[:n_points])
-            else:
-                orientation_rate_33 = orientation_rate[:33]
-                velocity_pred_33 = velocity_pred[:33]
+  # Linear danger factor with smoothing
+  danger_factor = np.interp(anticipated_closing, danger_response_range, [1.0, danger_jerk_boost])
+  danger_factor = np.clip(danger_factor, 1.0, danger_jerk_boost)
+  prev_df = 1.0
+  for i in range(n_steps):
+    if i > 0 and danger_factor[i] < prev_df:
+      danger_factor[i] = max(danger_factor[i], prev_df - 0.5 / T_DIFFS[i])
+    prev_df = danger_factor[i]
 
-            times_33 = np.array(ModelConstants.T_IDXS[:33], dtype=float)
+  closing_shifted = closing_speed - min_speed_for_closing
+  speed_logistic = 1.0 / (1.0 + np.exp(-logistic_k_speed * closing_shifted))
 
-            # Check if the driver just bumped up
-            is_bump_up = (v_cruise_cluster > self.prev_v_cruise_cluster)
+  combined_factor = dist_activation * speed_logistic
+  jerk_cost_array = low_jerk_cost + combined_factor * (base_jerk_cost - low_jerk_cost)
 
-            self.planned_speeds = self._plan_speed_trajectory(
-                orientation_rate_33,
-                velocity_pred_33,
-                times_33,
-                init_speed=self.prev_target_speed,
-                turn_aggressiveness=turn_aggressiveness,
-                skip_accel_limit=is_bump_up
-            )
-            raw_target = self.planned_speeds[0]
+  # Extended time taper for smoother initial jerk cost
+  if time_taper:
+    taper_factors = []
+    for t in T_IDXS[:n_steps]:
+      if t <= 2.5:
+        alpha_t = t / 2.5
+        factor_t = 1.3 + (1.0 - 1.3) * alpha_t
+      else:
+        factor_t = 1.0
+      taper_factors.append(factor_t)
+    taper_factors = np.array(taper_factors)
+    jerk_cost_array *= taper_factors
 
-        # Always clamp raw_target to at most v_cruise_cluster
-        raw_target = min(raw_target, v_cruise_cluster)
+  jerk_cost_array *= speed_factor
+  return jerk_cost_array
 
-        dt = 0.05  # ~20Hz
-        final_target_speed = None
+def soft_approach_distance_factor(
+    x_obstacle_i, x_ego_i, v_ego_i, v_lead_i, t_follow_i,
+    approach_margin=6.0,
+    deadzone_margin=1.5,
+    max_approach_mult=1.6,
+    logistic_k=0.4,
+    time_horizon=4.0,
+    closing_speed_weight=0.3
+):
+    def sigmoid(x, k=1.0, x0=0.0):
+        return 1.0 / (1.0 + np.exp(-k * (x - x0)))
 
-        # ----------------------------------------------------
-        # If the driver just increased the set speed:
-        # We skip symmetrical jerk-limiting on acceleration up
-        # ----------------------------------------------------
-        if v_cruise_cluster > self.prev_v_cruise_cluster:
-            final_target_speed = min(raw_target, v_cruise_cluster)
-            self.current_accel = 0.0  # optional "reset"
+    desired_dist = desired_follow_distance(v_ego_i, v_lead_i, t_follow_i)
+    actual_gap = x_obstacle_i - x_ego_i
 
-        # If no cluster bump-up, do symmetrical jerk-limit as usual
-        if final_target_speed is None:
-            # -------------------------------
-            # PATCH: Compute an extra boost factor for acceleration ramp-up
-            # when the planned speeds indicate a straight exit from a turn.
-            # If the planned trajectory’s maximum speed is much higher than our
-            # current target, then we allow a higher positive acceleration and jerk.
-            # -------------------------------
-            planned_max = np.max(self.planned_speeds)
-            if v_cruise_cluster > self.prev_target_speed:
-                # Compute how far we can go relative to the dash set speed.
-                ratio = (planned_max - self.prev_target_speed) / max((v_cruise_cluster - self.prev_target_speed), 1e-3)
-                # Clamp ratio between 0 and 1 so that boost_factor goes from 1.0 to 2.0.
-                ratio = clip(ratio, 0.0, 1.0)
-                boost_factor = 1.0 + ratio
-            else:
-                boost_factor = 1.0
+    closing_speed = v_ego_i - v_lead_i
+    anticipated_gap = actual_gap - closing_speed * time_horizon * closing_speed_weight
 
-            # --------------------------------------
-            # Use dynamic scaling as before, but now allow extra boost on the positive side.
-            # --------------------------------------
-            scale_decel = dynamic_decel_scale(v_ego)
-            scale_jerk = dynamic_jerk_scale(v_ego)
+    # Safety clamp to prevent negative gaps
+    anticipated_gap = np.clip(anticipated_gap, 0.0, None)
 
-            # Compute the acceleration command (m/s^2)
-            accel_cmd = (raw_target - self.prev_target_speed) / dt
+    approach_ratio = (anticipated_gap - desired_dist) / (approach_margin + deadzone_margin)
+    approach_factor = 1.0 + (max_approach_mult - 1.0) * sigmoid(
+        -approach_ratio,
+        k=logistic_k,
+        x0=deadzone_margin/(approach_margin + deadzone_margin)
+    )
 
-            # Allow a higher positive acceleration if exiting a curve;
-            # deceleration (negative accel) remains capped by MAX_DECEL*scale_decel.
-            pos_limit = self.MAX_DECEL * scale_decel * boost_factor
-            neg_limit = self.MAX_DECEL * scale_decel
-            accel_cmd = clip(accel_cmd, -neg_limit, pos_limit)
+    return approach_factor
 
-            # Jerk-limit the change in acceleration.
-            max_delta = (self.MAX_JERK * scale_jerk * boost_factor) * dt
-            accel_diff = accel_cmd - self.current_accel
-            if accel_diff > max_delta:
-                self.current_accel += max_delta
-            elif accel_diff < -max_delta:
-                self.current_accel -= max_delta
-            else:
-                self.current_accel = accel_cmd
+def dynamic_lead_pullaway_distance_cost(
+    x_ego_i, v_ego_i,
+    x_lead_i, v_lead_i,
+    t_follow_i,
+    base_cost=3.0,
+    pullaway_dist_margin=7.0,
+    pullaway_speed_margin=3.0,
+    pullaway_max_factor=1.15,
+    exponent=1.0
+):
+  desired_dist = desired_follow_distance(v_ego_i, v_lead_i, t_follow_i)
+  actual_gap = x_lead_i - x_ego_i
 
-            final_target_speed = self.prev_target_speed + self.current_accel * dt
+  gap_excess = actual_gap - desired_dist
+  speed_diff = v_lead_i - v_ego_i
 
-        # Always clamp final to the dash set speed
-        final_target_speed = min(final_target_speed, v_cruise_cluster)
+  if gap_excess <= 0 or speed_diff <= 0:
+    return base_cost
 
-        self.prev_target_speed = final_target_speed
-        self.prev_v_cruise_cluster = v_cruise_cluster
-        return final_target_speed
+  z_dist = (gap_excess / pullaway_dist_margin) ** exponent
+  z_speed = (speed_diff / pullaway_speed_margin) ** exponent
+  z = min(z_dist, z_speed)
 
-    def _plan_speed_trajectory(
-        self,
-        orientation_rate: np.ndarray,
-        velocity_pred: np.ndarray,
-        times: np.ndarray,
-        init_speed: float,
-        turn_aggressiveness: float,
-        skip_accel_limit: bool = False
-    ) -> np.ndarray:
-        """
-        Build a future speed plan based on curvature. If skip_accel_limit=True,
-        we skip *positive* acceleration capping in the forward pass, but still
-        allow negative acceleration (slowing down) so we can prepare for turns.
-        """
-        n = len(orientation_rate)
-        eps = 1e-9
-        dt_array = np.diff(times)
+  factor = 1.0 + (pullaway_max_factor - 1.0) * z
+  return base_cost * np.clip(factor, 1.0, pullaway_max_factor)
 
-        # Compute curvature
-        curvature = np.array([
-            orientation_rate[i] / max(velocity_pred[i], eps)
-            for i in range(n)
-        ], dtype=float)
+def dynamic_lead_constraint_weight(
+    x_obstacle_i, x_ego_i, v_ego_i, v_lead_i, t_follow_i,
+    min_penalty=5.0,
+    max_penalty=1e5,
+    dist_margin=2.0,
+    speed_margin=2.0
+):
+  """
+  Returns a penalty factor for the lead-distance constraint. The penalty
+  grows if we are too close to the desired following distance (plus a
+  margin) or if we are closing on the lead too quickly. Clamped between
+  min_penalty and max_penalty.
+  """
+  desired_dist = desired_follow_distance(v_ego_i, v_lead_i, t_follow_i)
+  actual_gap = x_obstacle_i - x_ego_i
+  dist_gap_below = (desired_dist + dist_margin) - actual_gap  # >0 => too close
 
-        # Compute the safe speed for each future point based on lat accel
-        safe_speeds = np.zeros(n, dtype=float)
-        for i in range(n):
-            lat_acc_limit = nonlinear_lat_accel(velocity_pred[i], turn_aggressiveness)
-            c = max(curvature[i], 1e-9)
-            safe_speeds[i] = math.sqrt(lat_acc_limit / c) if c > 1e-9 else 70.0
-            safe_speeds[i] = clip(safe_speeds[i], 0.0, 70.0)
+  speed_diff = v_ego_i - (v_lead_i + speed_margin)           # >0 => closing quickly
 
-        # Identify apex indices and shape speeds around them
-        apex_idxs = find_apexes(curvature, threshold=5e-5)
-        planned = safe_speeds.copy()
-        for apex_i in apex_idxs:
-            # Example logic to shape speeds around apex
-            apex_speed = planned[apex_i]
+  penalty_activation = 0.0
+  if dist_gap_below > 0.0:
+    penalty_activation += dist_gap_below
+  if speed_diff > 0.0:
+    penalty_activation += speed_diff * 0.5
 
-            decel_factor = 0.15
-            spool_factor = 0.08
+  penalty_raw = min_penalty + 100.0 * (penalty_activation ** 2)
+  return float(np.clip(penalty_raw, min_penalty, max_penalty))
 
-            decel_sec = velocity_pred[apex_i] * decel_factor
-            spool_sec = velocity_pred[apex_i] * spool_factor
+# -------------------------------------------------------------------------
+# ACADOS Model + OCP Setup
+# -------------------------------------------------------------------------
+def gen_long_model():
+  from openpilot.third_party.acados.acados_template import AcadosModel
 
-            decel_start = self._find_time_index(times, times[apex_i] - decel_sec)
-            spool_start = self._find_time_index(times, times[apex_i] - spool_sec)
-            spool_end   = self._find_time_index(times, times[apex_i] + spool_sec, clip_high=True)
+  model = AcadosModel()
+  model.name = MODEL_NAME
 
-            if spool_start > decel_start:
-                v_decel_start = planned[decel_start]
-                steps_decel = spool_start - decel_start
-                for idx in range(decel_start, spool_start):
-                    f = (idx - decel_start) / float(steps_decel)
-                    planned[idx] = v_decel_start * (1 - f) + apex_speed * f
+  x_ego = SX.sym('x_ego')
+  v_ego = SX.sym('v_ego')
+  a_ego = SX.sym('a_ego')
+  model.x = vertcat(x_ego, v_ego, a_ego)
 
-            for idx in range(spool_start, apex_i + 1):
-                planned[idx] = min(planned[idx], apex_speed)
+  j_ego = SX.sym('j_ego')
+  model.u = vertcat(j_ego)
 
-            if spool_end > apex_i:
-                steps_spool = spool_end - apex_i
-                v_spool_end = planned[spool_end - 1]
-                for idx in range(apex_i, spool_end):
-                    f = (idx - apex_i) / float(steps_spool)
-                    spool_val = apex_speed * (1 - f) + v_spool_end * f
-                    planned[idx] = min(planned[idx], spool_val)
+  x_ego_dot = SX.sym('x_ego_dot')
+  v_ego_dot = SX.sym('v_ego_dot')
+  a_ego_dot = SX.sym('a_ego_dot')
+  model.xdot = vertcat(x_ego_dot, v_ego_dot, a_ego_dot)
 
-        # We'll do margin-based deceleration shaping
-        new_planned = planned.copy()
-        margin_t = margin_time_fn(init_speed)
+  a_min = SX.sym('a_min')
+  a_max = SX.sym('a_max')
+  x_obstacle = SX.sym('x_obstacle')
+  prev_a = SX.sym('prev_a')
+  lead_t_follow = SX.sym('lead_t_follow')
+  lead_danger_factor = SX.sym('lead_danger_factor')
+  model.p = vertcat(a_min, a_max, x_obstacle, prev_a, lead_t_follow, lead_danger_factor)
 
-        # Margin-based backward pass
-        for i in range(n - 2, -1, -1):
-            j = self._find_time_index(times, times[i] + margin_t, clip_high=True)
-            if j <= i:
-                continue
-            dt_ij = times[j] - times[i]
-            if dt_ij < 0.001:
-                continue
-            v_future = new_planned[j]
-            err = new_planned[i] - v_future
-            desired_acc = clip(err / dt_ij, -self.MAX_DECEL, self.MAX_DECEL)
-            feasible_speed = v_future - desired_acc * dt_ij
-            new_planned[i] = min(new_planned[i], feasible_speed, planned[i])
+  f_expl = vertcat(v_ego, a_ego, j_ego)
+  model.f_impl_expr = model.xdot - f_expl
+  model.f_expl_expr = f_expl
 
-        # Standard backward pass for decel limiting
-        dt_len = len(dt_array)
-        for i in range(n - 2, -1, -1):
-            dt_i = dt_array[i] if i < dt_len else 0.05
-            v_next = new_planned[i + 1]
-            err = new_planned[i] - v_next
-            desired_acc = clip(err / dt_i, -self.MAX_DECEL, self.MAX_DECEL)
-            feasible_speed = v_next - desired_acc * dt_i
-            new_planned[i] = min(new_planned[i], feasible_speed, planned[i])
+  return model
 
-        # Forward pass: we normally limit how quickly we can accelerate or decelerate
-        # from one point to the next. If skip_accel_limit=True, we skip *positive*
-        # acceleration limiting but still allow decel.
-        new_planned[0] = min(new_planned[0], planned[0])
-        dt_0 = dt_array[0] if dt_len > 0 else 0.05
-        err0 = new_planned[0] - init_speed
+def gen_long_ocp():
+  from openpilot.third_party.acados.acados_template import AcadosOcp
 
-        # If err0 < 0, we do normal decel limit. If err0 > 0 and skip_accel_limit is True,
-        # we skip capping that upward acceleration. Otherwise, do normal limit.
-        if skip_accel_limit and err0 > 0:
-            # No positive acceleration capping
-            accel0 = clip(err0 / dt_0, -self.MAX_DECEL, 9999.0)
-        else:
-            # Normal symmetrical limit
-            accel0 = clip(err0 / dt_0, -self.MAX_DECEL, self.MAX_DECEL)
+  ocp = AcadosOcp()
+  ocp.model = gen_long_model()
+  Tf = T_IDXS[-1]
+  ocp.dims.N = N
 
-        new_planned[0] = init_speed + accel0 * dt_0
+  ocp.cost.cost_type = 'NONLINEAR_LS'
+  ocp.cost.cost_type_e = 'NONLINEAR_LS'
 
-        for i in range(1, n):
-            dt_i = dt_array[i - 1] if (i - 1 < dt_len) else 0.05
-            v_prev = new_planned[i - 1]
-            err = new_planned[i] - v_prev
+  QR = np.zeros((COST_DIM, COST_DIM))
+  Q = np.zeros((COST_E_DIM, COST_E_DIM))
+  ocp.cost.W = QR
+  ocp.cost.W_e = Q
 
-            if skip_accel_limit and err > 0:
-                # skip positive accel limiting, but still clamp decel
-                desired_acc = clip(err / dt_i, -self.MAX_DECEL, 9999.0)
-            else:
-                # normal symmetrical limit
-                desired_acc = clip(err / dt_i, -self.MAX_DECEL, self.MAX_DECEL)
+  x_ego, v_ego, a_ego = ocp.model.x[0], ocp.model.x[1], ocp.model.x[2]
+  j_ego = ocp.model.u[0]
 
-            feasible_speed = v_prev + desired_acc * dt_i
-            new_planned[i] = min(new_planned[i], feasible_speed, planned[i])
+  a_min, a_max = ocp.model.p[0], ocp.model.p[1]
+  x_obstacle = ocp.model.p[2]
+  prev_a = ocp.model.p[3]
+  lead_t_follow = ocp.model.p[4]
+  lead_danger_factor = ocp.model.p[5]
 
-        return new_planned
+  ocp.cost.yref = np.zeros((COST_DIM, ))
+  ocp.cost.yref_e = np.zeros((COST_E_DIM, ))
 
-    def _find_time_index(self, times: np.ndarray, target_time: float, clip_high=False) -> int:
-        """
-        Helper to find an index in 'times' that is closest to 'target_time'.
-        If clip_high=True, we clamp to the last index if target_time > times[-1].
-        """
-        n = len(times)
-        if target_time <= times[0]:
-            return 0
-        if target_time >= times[-1] and clip_high:
-            return n - 1
-        for i in range(n - 1):
-            if times[i] <= target_time < times[i + 1]:
-                # Return whichever is closer
-                if (target_time - times[i]) < (times[i + 1] - target_time):
-                    return i
-                else:
-                    return i + 1
-        return n - 1 if clip_high else n - 2
+  desired_dist_comfort = get_safe_obstacle_distance(v_ego, lead_t_follow)
+  small_speed_offset = 5.0
+  alpha = 0.7
+  raw_gap = ((x_obstacle - x_ego) - desired_dist_comfort)
+  dist_err_mixed = alpha * raw_gap + (1.0 - alpha) * (raw_gap / (v_ego + small_speed_offset))
 
-    def _single_step_fallback(self, v_ego, curvature, turn_aggressiveness):
-        """
-        Used if we have no valid model data. A basic approach to clamp speed if lat_acc is too high.
-        """
-        lat_acc = nonlinear_lat_accel(v_ego, turn_aggressiveness)
-        c = max(curvature, 1e-9)
-        safe_speed = math.sqrt(lat_acc / c) if c > 1e-9 else 70.0
-        safe_speed = clip(safe_speed, 0.0, 70.0)
+  costs = [
+    dist_err_mixed,         # 0
+    x_ego,                  # 1
+    v_ego,                  # 2
+    a_ego,                  # 3
+    a_ego - prev_a,         # 4
+    j_ego,                  # 5
+  ]
+  ocp.model.cost_y_expr = vertcat(*costs)
+  ocp.model.cost_y_expr_e = vertcat(*costs[:-1])  # omit j_ego for final stage
 
-        current_lat_acc = curvature * (v_ego ** 2)
-        if current_lat_acc > self.LOW_LAT_ACC:
-            if current_lat_acc < self.HIGH_LAT_ACC:
-                alpha = 0.1
-            else:
-                alpha = self.turn_smoothing_alpha
-            raw_target = alpha * self.prev_target_speed + (1 - alpha) * safe_speed
-        else:
-            alpha = self.reaccel_alpha
-            raw_target = alpha * self.prev_target_speed + (1 - alpha) * safe_speed
+  constraints = vertcat(
+    v_ego,
+    (a_ego - a_min),
+    (a_max - a_ego),
+    (x_obstacle - x_ego) - lead_danger_factor * desired_dist_comfort
+  )
+  ocp.model.con_h_expr = constraints
 
-        return raw_target
+  x0 = np.zeros(X_DIM)
+  ocp.constraints.x0 = x0
+  ocp.parameter_values = np.array([
+    -1.2, 1.2, 0.0, 0.0,
+    get_T_FOLLOW(),
+    LEAD_DANGER_FACTOR
+  ])
+
+  cost_weights = np.zeros(CONSTR_DIM)
+  ocp.cost.zl = cost_weights
+  ocp.cost.Zl = cost_weights
+  ocp.cost.Zu = cost_weights
+  ocp.cost.zu = cost_weights
+
+  ocp.constraints.lh = np.zeros(CONSTR_DIM)
+  ocp.constraints.uh = 1e4 * np.ones(CONSTR_DIM)
+  ocp.constraints.idxsh = np.arange(CONSTR_DIM)
+
+  ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
+  ocp.solver_options.hessian_approx = 'GAUSS_NEWTON'
+  ocp.solver_options.integrator_type = 'ERK'
+  ocp.solver_options.nlp_solver_type = ACADOS_SOLVER_TYPE
+  ocp.solver_options.qp_solver_cond_N = 1
+  ocp.solver_options.qp_solver_iter_max = 10
+  ocp.solver_options.qp_tol = 1e-3
+  ocp.solver_options.tf = Tf
+  ocp.solver_options.shooting_nodes = T_IDXS
+
+  ocp.code_export_directory = EXPORT_DIR
+  return ocp
+
+# -------------------------------------------------------------------------
+# The MPC Class
+# -------------------------------------------------------------------------
+class LongitudinalMpc:
+  def __init__(self, mode='acc', dt=DT_MDL):
+    self._approach_factor_last = 1.0
+    self.mode = mode
+    self.dt = dt
+
+    self.solver = AcadosOcpSolverCython(MODEL_NAME, ACADOS_SOLVER_TYPE, N)
+    self.reset()
+    self.source = SOURCES[2]
+
+  def reset(self):
+    self.solver.reset()
+    self.v_solution = np.zeros(N+1)
+    self.a_solution = np.zeros(N+1)
+    self.prev_a = np.array(self.a_solution)
+    self.j_solution = np.zeros(N)
+    self.yref = np.zeros((N+1, COST_DIM))
+
+    for i in range(N):
+      self.solver.cost_set(i, "yref", self.yref[i])
+    self.solver.cost_set(N, "yref", self.yref[N][:COST_E_DIM])
+
+    self.x_sol = np.zeros((N+1, X_DIM))
+    self.u_sol = np.zeros((N, 1))
+    self.params = np.zeros((N+1, PARAM_DIM))
+
+    for i in range(N+1):
+      self.solver.set(i, 'x', np.zeros(X_DIM))
+
+    self.last_cloudlog_t = 0
+    self.status = False
+    self.crash_cnt = 0.0
+    self.solution_status = 0
+    self.solve_time = 0.0
+    self.time_qp_solution = 0.0
+    self.time_linearization = 0.0
+    self.time_integrator = 0.0
+
+    self.x0 = np.zeros(X_DIM)
+
+    # Default cost multipliers
+    self.acceleration_jerk_factor = 1.0
+    self.danger_jerk_factor = 1.0
+    self.speed_jerk_factor = 1.0
+
+    self.set_weights()
+
+  def set_cost_weights(self, cost_weights, constraint_cost_weights):
+    W = np.asfortranarray(np.diag(cost_weights))
+    for i in range(N):
+      W[4,4] = cost_weights[4] * np.interp(T_IDXS[i], [0.0, 1.0, 2.0], [1.0, 1.0, 0.3])
+      self.solver.cost_set(i, 'W', W)
+    self.solver.cost_set(N, 'W', np.copy(W[:COST_E_DIM, :COST_E_DIM]))
+
+    Zl = np.array(constraint_cost_weights)
+    for i in range(N):
+      self.solver.cost_set(i, 'Zl', Zl)
+
+  def set_weights(self, acceleration_jerk=1.0, danger_jerk=1.0, speed_jerk=1.0,
+                  prev_accel_constraint=True, personality=log.LongitudinalPersonality.standard,
+                  speed_scaling=1.0):
+    self.acceleration_jerk_factor = acceleration_jerk
+    self.danger_jerk_factor = danger_jerk
+    self.speed_jerk_factor = speed_jerk
+
+    if self.mode == 'acc':
+      a_change_cost = A_CHANGE_COST if prev_accel_constraint else 0.0
+      j_cost = J_EGO_COST * self.acceleration_jerk_factor
+
+      self.base_cost_weights = [
+        X_EGO_OBSTACLE_COST,
+        X_EGO_COST,
+        V_EGO_COST,
+        A_EGO_COST,
+        a_change_cost,
+        j_cost
+      ]
+      self.base_constraint_cost_weights = [LIMIT_COST, LIMIT_COST, LIMIT_COST, danger_jerk]
+      self.set_cost_weights(self.base_cost_weights, self.base_constraint_cost_weights)
+
+    elif self.mode == 'blended':
+      a_change_cost = 40.0 if prev_accel_constraint else 0.0
+      j_cost = 1.0 * self.acceleration_jerk_factor
+      cost_weights = [0., 0.1, 0.2, 5.0, a_change_cost, j_cost]
+      constraint_cost_weights = [LIMIT_COST, LIMIT_COST, LIMIT_COST, 50.0]
+      self.base_cost_weights = cost_weights
+      self.base_constraint_cost_weights = constraint_cost_weights
+      self.set_cost_weights(cost_weights, constraint_cost_weights)
+
+    else:
+      raise NotImplementedError(f'Planner mode {self.mode} not recognized')
+
+  def set_cur_state(self, v, a):
+    v_prev = self.x0[1]
+    self.x0[1] = v
+    self.x0[2] = a
+    if abs(v_prev - v) > 2.:
+      for i in range(N+1):
+        self.solver.set(i, 'x', self.x0)
+
+  @staticmethod
+  def extrapolate_lead(x_lead, v_lead, a_lead, a_lead_tau):
+    a_lead_traj = a_lead * np.exp(-a_lead_tau * (T_IDXS**2)/2.)
+    v_lead_traj = np.clip(v_lead + np.cumsum(T_DIFFS * a_lead_traj), 0.0, 1e8)
+    x_lead_traj = x_lead + np.cumsum(T_DIFFS * v_lead_traj)
+    return np.column_stack((x_lead_traj, v_lead_traj))
+
+  def process_lead(self, lead):
+    v_ego = self.x0[1]
+    if lead is not None and lead.status:
+      x_lead = lead.dRel
+      v_lead = lead.vLead
+      a_lead = lead.aLeadK
+      a_lead_tau = lead.aLeadTau
+    else:
+      x_lead = 50.0
+      v_lead = v_ego + 10.0
+      a_lead = 0.0
+      a_lead_tau = LEAD_ACCEL_TAU
+
+    min_x_lead = ((v_ego + v_lead)/2) * (v_ego - v_lead) / (-ACCEL_MIN * 2)
+    x_lead = clip(x_lead, min_x_lead, 1e8)
+    v_lead = clip(v_lead, 0.0, 1e8)
+    a_lead = clip(a_lead, -10., 5.)
+
+    return self.extrapolate_lead(x_lead, v_lead, a_lead, a_lead_tau)
+
+  def set_accel_limits(self, min_a, max_a):
+    self.cruise_min_a = min_a
+    self.max_a = max_a
+
+  def _apply_dynamic_costs(self, chosen_lead_xv):
+    base_j_cost = 12.0 * (self.acceleration_jerk_factor or 1.0)
+    scaled_base_j_cost = base_j_cost * (10.0/12.0)
+
+    dyn_j_ego_array = get_smooth_dynamic_j_ego_cost_array(
+      x_obstacle=self.params[:,2],
+      x_ego=self.x_sol[:,0],
+      v_ego=self.x_sol[:,1],
+      v_lead=chosen_lead_xv[:,1] if chosen_lead_xv.shape[1] > 1 else self.x_sol[:,1],
+      t_follow=self.params[:,4],
+      base_jerk_cost=scaled_base_j_cost,
+      low_jerk_cost=0.5,
+      deadzone_ratio=0.5,
+      logistic_k_dist=4.0,
+      logistic_k_speed=1.0,
+      distance_smoothing=4.0,
+      time_taper=True,
+      speed_factor=1.0,
+      danger_response_range=(3.0, 6.0),
+      danger_jerk_boost=3.0,
+      decel_anticipation_factor=0.35
+    )
+
+    dist_cost_base = self.base_cost_weights[0]
+    a_change_cost = self.base_cost_weights[4]
+
+    for i in range(N):
+      W_step = np.diag(self.base_cost_weights)
+      W_step[4,4] = a_change_cost * np.interp(T_IDXS[i], [0.0, 1.0, 2.0], [1.0, 1.0, 0.3])
+      W_step[5,5] = dyn_j_ego_array[i]
+
+      x_ego_i, v_ego_i_iter, _ = self.x_sol[i]
+      if i < chosen_lead_xv.shape[0]:
+        x_lead_i, v_lead_i = chosen_lead_xv[i]
+      else:
+        x_lead_i, v_lead_i = chosen_lead_xv[-1]
+
+      t_follow_i = self.params[i,4]
+
+      pullaway_dist_cost = dynamic_lead_pullaway_distance_cost(
+          x_ego_i, v_ego_i_iter,
+          x_lead_i, v_lead_i,
+          t_follow_i,
+          base_cost=dist_cost_base,
+          pullaway_max_factor=1.15,
+          exponent=1.0
+      )
+
+      approach_factor = soft_approach_distance_factor(
+          x_lead_i, x_ego_i, v_ego_i_iter, v_lead_i, t_follow_i,
+          approach_margin=5.0,
+          max_approach_mult=1.5,
+          logistic_k=1.0
+      )
+
+      combined_factor = pullaway_dist_cost * approach_factor
+      clamped_factor = np.clip(combined_factor, 1.0, 1.3)
+
+      smoothed_factor = 0.8 * self._approach_factor_last + 0.2 * clamped_factor
+      self._approach_factor_last = smoothed_factor
+      W_step[0,0] = dist_cost_base * smoothed_factor
+
+      last_constraint_penalty = dynamic_lead_constraint_weight(
+          x_obstacle_i=self.params[i,2],
+          x_ego_i=x_ego_i,
+          v_ego_i=v_ego_i_iter,
+          v_lead_i=v_lead_i,
+          t_follow_i=t_follow_i,
+          min_penalty=5.0,
+          max_penalty=1e5,
+          dist_margin=2.0,
+          speed_margin=2.0
+      )
+
+      Zl = np.array([LIMIT_COST, LIMIT_COST, LIMIT_COST, last_constraint_penalty])
+      self.solver.cost_set(i, 'Zl', Zl)
+      self.solver.cost_set(i, 'W', W_step)
+
+    # Terminal stage
+    W_e = np.copy(np.diag(self.base_cost_weights[:COST_E_DIM]))
+    self.solver.cost_set(N, 'W', W_e)
+
+  def update(self, lead_one, lead_two, v_cruise, x, v, a, j, radarless_model, t_follow,
+             trafficModeActive, personality=log.LongitudinalPersonality.standard):
+    v_ego = self.x0[1]
+    self.status = lead_one.status or lead_two.status
+
+    # Process leads
+    lead_xv_0 = self.process_lead(lead_one)
+    lead_xv_1 = self.process_lead(lead_two)
+
+    lead_0_obstacle = lead_xv_0[:,0] + get_stopped_equivalence_factor(lead_xv_0[:,1])
+    lead_1_obstacle = lead_xv_1[:,0] + get_stopped_equivalence_factor(lead_xv_1[:,1])
+
+    # Set final min_a / max_a
+    self.params[:,0] = self.cruise_min_a
+    self.params[:,1] = self.max_a
+
+    if self.mode == 'acc':
+      self.params[:,5] = LEAD_DANGER_FACTOR
+
+      # --- NEW lines to reduce target speed 10% around 30‑45 mph smoothly:
+      mph_cruise = v_cruise * 2.23694
+      scale = 1.0 - 0.1 / (1.0 + np.exp(-0.3*(mph_cruise - 37.5)))
+      v_cruise_scaled = v_cruise * scale
+
+      v_lower = v_ego + (T_IDXS * self.cruise_min_a * 1.05)
+      v_upper = v_ego + (T_IDXS * self.max_a * 1.05)
+      v_cruise_clipped = np.clip(v_cruise_scaled * np.ones(N+1), v_lower, v_upper)
+
+      cruise_obstacle = (
+        np.cumsum(T_DIFFS * v_cruise_clipped)
+        + get_safe_obstacle_distance(v_cruise_clipped, t_follow)
+      )
+
+      x_obstacles = np.column_stack([lead_0_obstacle, lead_1_obstacle, cruise_obstacle])
+      self.source = SOURCES[np.argmin(x_obstacles[0])]
+
+      x[:] = 0.0
+      v[:] = 0.0
+      a[:] = 0.0
+      j[:] = 0.0
+
+    elif self.mode == 'blended':
+      self.params[:,5] = 1.0
+      x_obstacles = np.column_stack([lead_0_obstacle, lead_1_obstacle])
+
+      cruise_target = T_IDXS * np.clip(v_cruise, v_ego - 2.0, 1e3) + x[0]
+      xforward = ((v[1:] + v[:-1]) / 2) * (T_IDXS[1:] - T_IDXS[:-1])
+      x = np.cumsum(np.insert(xforward, 0, x[0]))
+      x_and_cruise = np.column_stack([x, cruise_target])
+      x = np.min(x_and_cruise, axis=1)
+
+      self.source = 'e2e' if x_and_cruise[1,0] < x_and_cruise[1,1] else 'cruise'
+
+    else:
+      raise NotImplementedError(f'Planner mode {self.mode} not recognized')
+
+    self.yref[:,1] = x
+    self.yref[:,2] = v
+    self.yref[:,3] = a
+    self.yref[:,5] = j
+    for i in range(N):
+      self.solver.cost_set(i, "yref", self.yref[i])
+    self.solver.cost_set(N, "yref", self.yref[N][:COST_E_DIM])
+
+    self.params[:,2] = np.min(x_obstacles, axis=1)
+    self.params[:,3] = np.copy(self.prev_a)
+    self.params[:,4] = t_follow
+
+    chosen_lead_xv = lead_xv_0
+    self._apply_dynamic_costs(chosen_lead_xv)
+
+    self.run()
+
+    lead_probability = lead_one.prob if radarless_model else lead_one.modelProb
+    if (np.any(lead_xv_0[FCW_IDXS,0] - self.x_sol[FCW_IDXS,0] < CRASH_DISTANCE) and lead_probability > 0.9):
+      self.crash_cnt += 1
+    else:
+      self.crash_cnt = 0
+
+    if self.mode == 'blended':
+      if any((lead_0_obstacle - get_safe_obstacle_distance(self.x_sol[:,1], t_follow)) - self.x_sol[:,0] < 0.0):
+        self.source = 'lead0'
+      if any((lead_1_obstacle - get_safe_obstacle_distance(self.x_sol[:,1], t_follow)) - self.x_sol[:,0] < 0.0) and \
+         (lead_1_obstacle[0] - lead_0_obstacle[0]):
+        self.source = 'lead1'
+
+  def run(self):
+    for i in range(N+1):
+      self.solver.set(i, 'p', self.params[i])
+
+    self.solver.constraints_set(0, "lbx", self.x0)
+    self.solver.constraints_set(0, "ubx", self.x0)
+
+    self.solution_status = self.solver.solve()
+    self.solve_time = float(self.solver.get_stats('time_tot')[0])
+    self.time_qp_solution = float(self.solver.get_stats('time_qp')[0])
+    self.time_linearization = float(self.solver.get_stats('time_lin')[0])
+    self.time_integrator = float(self.solver.get_stats('time_sim')[0])
+
+    for i in range(N+1):
+      self.x_sol[i] = self.solver.get(i, 'x')
+    for i in range(N):
+      self.u_sol[i] = self.solver.get(i, 'u')
+
+    self.v_solution = self.x_sol[:,1]
+    self.a_solution = self.x_sol[:,2]
+    self.j_solution = self.u_sol[:,0]
+
+    self.prev_a = np.interp(T_IDXS + self.dt, T_IDXS, self.a_solution)
+
+    t = time.monotonic()
+    if self.solution_status != 0:
+      if t > self.last_cloudlog_t + 5.0:
+        self.last_cloudlog_t = t
+        cloudlog.warning(f"Long MPC reset, solution_status: {self.solution_status}")
+      self.reset()
+
+if __name__ == "__main__":
+  from openpilot.third_party.acados.acados_template import AcadosOcp, AcadosOcpSolver
+  ocp = gen_long_ocp()
+  AcadosOcpSolver.generate(ocp, json_file=JSON_FILE)
