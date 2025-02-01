@@ -19,17 +19,17 @@ class CarControllerParams:
   def __init__(self, CP):
     self.STEER_DELTA_UP = 7
     self.STEER_DELTA_DOWN = 10
-    self.STEER_DRIVER_ALLOWANCE = 450
+    self.STEER_DRIVER_ALLOWANCE = 250
     self.STEER_DRIVER_MULTIPLIER = 2
     self.STEER_DRIVER_FACTOR = 1
-    self.STEER_THRESHOLD = 150
+    self.STEER_THRESHOLD = 250
     self.STEER_STEP = 1  # 100 Hz
 
     if CP.carFingerprint in CANFD_CAR:
       self.STEER_MAX = 409
-      self.STEER_DRIVER_ALLOWANCE = 450
+      self.STEER_DRIVER_ALLOWANCE = 250
       self.STEER_DRIVER_MULTIPLIER = 2
-      self.STEER_THRESHOLD = 350
+      self.STEER_THRESHOLD = 250
       self.STEER_DELTA_UP = 7
       self.STEER_DELTA_DOWN = 10
 
@@ -44,7 +44,7 @@ class CarControllerParams:
     elif CP.flags & HyundaiFlags.ALT_LIMITS:
       self.STEER_MAX = 270
       self.STEER_DELTA_UP = 7
-      self.STEER_DELTA_DOWN = 9
+      self.STEER_DELTA_DOWN = 10
 
     # Default for most HKG
     else:
