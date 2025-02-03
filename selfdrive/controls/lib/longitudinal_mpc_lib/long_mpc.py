@@ -147,7 +147,7 @@ def fuck_this_follow_distance(v_ego, v_lead, t_follow=None):
 def get_smooth_dynamic_j_ego_cost_array(
     x_obstacle, x_ego, v_ego, v_lead,
     t_follow,
-    base_jerk_cost=10.0,
+    base_jerk_cost=1.2,
     low_jerk_cost=0.5,
     deadzone_ratio=0.5,
     # Lower logistic_k_dist => gentler ramp around distance error
@@ -560,8 +560,8 @@ class LongitudinalMpc:
     self.max_a = max_a
 
   def _apply_dynamic_costs(self, chosen_lead_xv):
-    base_j_cost = 12.0 * (self.acceleration_jerk_factor or 1.0)
-    scaled_base_j_cost = base_j_cost * (10.0/12.0)
+    base_j_cost = 1.2 * (self.acceleration_jerk_factor or 1.0)
+    scaled_base_j_cost = base_j_cost
 
     dyn_j_ego_array = get_smooth_dynamic_j_ego_cost_array(
       x_obstacle=self.params[:,2],
@@ -610,15 +610,15 @@ class LongitudinalMpc:
       approach_factor = soft_approach_distance_factor(
           x_lead_i, x_ego_i, v_ego_i_iter, v_lead_i, t_follow_i,
           approach_margin=5.0,
-          max_approach_mult=1.5,
-          logistic_k=1.0
+          max_approach_mult=1.05,
+          logistic_k=0.8
       )
 
       combined_factor = pullaway_dist_cost * approach_factor
       clamped_factor = np.clip(combined_factor, 1.0, 1.3)
 
       # Slow down changes in the approach factor to avoid cost oscillations.  MODIFIED
-      smoothed_factor = 0.95 * self._approach_factor_last + 0.05 * clamped_factor
+      smoothed_factor = 0.99 * self._approach_factor_last + 0.05 * clamped_factor
       self._approach_factor_last = smoothed_factor
       W_step[0,0] = dist_cost_base * smoothed_factor
 
