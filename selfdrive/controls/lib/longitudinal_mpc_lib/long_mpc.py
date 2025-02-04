@@ -1,7 +1,16 @@
 #!/usr/bin/env python3
 """
-Revised MPC script (backward compatible) with dynamic tuning improvements.
-This version keeps the same import style and generated solver interface as the upstream version.
+Revised MPC script (backward compatible) with dynamic tuning adjustments.
+
+Changes from the previous version:
+  • The follow behavior remains as before.
+  • In dynamic_lead_pullaway_distance_cost(), if the lead is decelerating (speed_diff <= 0)
+    then a higher cost multiplier (e.g. 1.5×) is returned so that the MPC is compelled
+    to decelerate more decisively.
+  • All imports and module names are kept exactly as in the upstream version.
+  
+This should make the controller very smooth in steady follow yet “snappy” (and safe)
+when the lead slows or stops.
 """
 
 import os
@@ -48,7 +57,7 @@ A_CHANGE_COST = 150.0
 
 CRASH_DISTANCE = 0.25
 LEAD_DANGER_FACTOR = 0.75
-DANGER_ZONE_COST = 100.0  # For backward compatibility
+DANGER_ZONE_COST = 100.0  # Reintroduced for backward compatibility
 LIMIT_COST = 1e6
 
 ACADOS_SOLVER_TYPE = 'SQP_RTI'
@@ -172,12 +181,17 @@ def dynamic_lead_pullaway_distance_cost(
     pullaway_max_factor=1.10,
     exponent=1.0
 ):
+    """
+    Modified: If the lead is decelerating (speed_diff <= 0), increase the cost multiplier
+    to encourage a more aggressive deceleration.
+    """
     desired_dist = desired_follow_distance(v_ego_i, v_lead_i, t_follow_i)
     actual_gap = x_lead_i - x_ego_i
     gap_excess = actual_gap - desired_dist
     speed_diff = v_lead_i - v_ego_i
+    # If the lead is decelerating or the gap is negative, increase the cost significantly.
     if gap_excess <= 0 or speed_diff <= 0:
-        return base_cost
+        return base_cost * 1.5
     z_dist = (gap_excess / pullaway_dist_margin) ** exponent
     z_speed = (speed_diff / pullaway_speed_margin) ** exponent
     z = 0.5 * (z_dist + z_speed)
@@ -226,16 +240,20 @@ def gen_long_model():
     from openpilot.third_party.acados.acados_template import AcadosModel
     model = AcadosModel()
     model.name = MODEL_NAME
+
     x_ego = SX.sym('x_ego')
     v_ego = SX.sym('v_ego')
     a_ego = SX.sym('a_ego')
     model.x = vertcat(x_ego, v_ego, a_ego)
+
     j_ego = SX.sym('j_ego')
     model.u = vertcat(j_ego)
+
     x_ego_dot = SX.sym('x_ego_dot')
     v_ego_dot = SX.sym('v_ego_dot')
     a_ego_dot = SX.sym('a_ego_dot')
     model.xdot = vertcat(x_ego_dot, v_ego_dot, a_ego_dot)
+
     a_min = SX.sym('a_min')
     a_max = SX.sym('a_max')
     x_obstacle = SX.sym('x_obstacle')
@@ -243,9 +261,11 @@ def gen_long_model():
     lead_t_follow = SX.sym('lead_t_follow')
     lead_danger_factor = SX.sym('lead_danger_factor')
     model.p = vertcat(a_min, a_max, x_obstacle, prev_a, lead_t_follow, lead_danger_factor)
+
     f_expl = vertcat(v_ego, a_ego, j_ego)
     model.f_impl_expr = model.xdot - f_expl
     model.f_expl_expr = f_expl
+
     return model
 
 def gen_long_ocp():
@@ -254,23 +274,30 @@ def gen_long_ocp():
     ocp.model = gen_long_model()
     Tf = T_IDXS[-1]
     ocp.dims.N = N
+
     ocp.cost.cost_type = 'NONLINEAR_LS'
     ocp.cost.cost_type_e = 'NONLINEAR_LS'
+
     QR = np.zeros((COST_DIM, COST_DIM))
     Q = np.zeros((COST_E_DIM, COST_E_DIM))
     ocp.cost.W = QR
     ocp.cost.W_e = Q
+
     x_ego, v_ego, a_ego = ocp.model.x[0], ocp.model.x[1], ocp.model.x[2]
     j_ego = ocp.model.u[0]
+
     a_min, a_max = ocp.model.p[0], ocp.model.p[1]
     x_obstacle = ocp.model.p[2]
     prev_a = ocp.model.p[3]
     lead_t_follow = ocp.model.p[4]
     lead_danger_factor = ocp.model.p[5]
+
     ocp.cost.yref = np.zeros((COST_DIM, ))
     ocp.cost.yref_e = np.zeros((COST_E_DIM, ))
+
     desired_dist_comfort = get_safe_obstacle_distance(v_ego, lead_t_follow)
     cost_distance = ((x_obstacle - x_ego) - desired_dist_comfort) / (v_ego + 10.0)
+
     costs = [
         cost_distance,
         x_ego,
@@ -281,6 +308,7 @@ def gen_long_ocp():
     ]
     ocp.model.cost_y_expr = vertcat(*costs)
     ocp.model.cost_y_expr_e = vertcat(*costs[:-1])
+
     constraints = vertcat(
         v_ego,
         (a_ego - a_min),
@@ -288,6 +316,7 @@ def gen_long_ocp():
         ((x_obstacle - x_ego) - lead_danger_factor * desired_dist_comfort) / (v_ego + 10.0)
     )
     ocp.model.con_h_expr = constraints
+
     x0 = np.zeros(X_DIM)
     ocp.constraints.x0 = x0
     ocp.parameter_values = np.array([
@@ -295,14 +324,17 @@ def gen_long_ocp():
         get_T_FOLLOW(),
         LEAD_DANGER_FACTOR
     ])
+
     cost_weights = np.zeros(CONSTR_DIM)
     ocp.cost.zl = cost_weights
     ocp.cost.Zl = cost_weights
     ocp.cost.Zu = cost_weights
     ocp.cost.zu = cost_weights
+
     ocp.constraints.lh = np.zeros(CONSTR_DIM)
     ocp.constraints.uh = 1e4 * np.ones(CONSTR_DIM)
     ocp.constraints.idxsh = np.arange(CONSTR_DIM)
+
     ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
     ocp.solver_options.hessian_approx = 'GAUSS_NEWTON'
     ocp.solver_options.integrator_type = 'ERK'
@@ -312,6 +344,7 @@ def gen_long_ocp():
     ocp.solver_options.qp_tol = 1e-3
     ocp.solver_options.tf = Tf
     ocp.solver_options.shooting_nodes = T_IDXS
+
     ocp.code_export_directory = EXPORT_DIR
     return ocp
 
