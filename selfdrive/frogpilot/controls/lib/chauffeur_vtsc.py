@@ -1,14 +1,3 @@
-#!/usr/bin/env python3
-"""
-Vision Turn Speed Controller Script
-
-This script computes a planned speed trajectory for turning maneuvers based on model
-predictions. It includes additional logic to handle curvy roads—delaying braking,
-increasing deceleration when needed, and boosting acceleration on short straight
-segments—without changing the lateral acceleration targets. This patched version is
-100% backward compatible.
-"""
-
 import math
 import numpy as np
 import cereal.messaging as messaging
@@ -74,6 +63,32 @@ def find_apexes(curv_array: np.ndarray, threshold: float = 5e-5) -> list:
     return apex_indices
 
 
+def detect_curvy_road(apex_idxs: list, times: np.ndarray, 
+                      min_apex_count: int = 2, time_window: float = 3.0) -> bool:
+    """
+    Determine if we have multiple apexes within a short time window, implying a curvy road.
+      - min_apex_count: at least this many apexes must fall within 'time_window' seconds
+      - time_window: how quickly apexes must occur to qualify as a "curvy" segment
+
+    Returns True if the road is deemed curvy, otherwise False.
+    """
+    if len(apex_idxs) < min_apex_count:
+        return False
+
+    # Sort apex indices (should already be in ascending order, but just to be safe).
+    apex_sorted = sorted(apex_idxs)
+    # Check if there's at least two apexes within 'time_window' seconds
+    for i in range(len(apex_sorted) - (min_apex_count - 1)):
+        t_start = times[apex_sorted[i]]
+        t_end = times[apex_sorted[i + min_apex_count - 1]]
+        if (t_end - t_start) <= time_window:
+            return True
+    return False
+
+
+# --------------------
+# DYNAMIC SCALING LOGIC
+# --------------------
 def dynamic_decel_scale(v_ego_ms: float) -> float:
     """
     Originally was 4.0 -> 1.0 from ~5 m/s to ~25 m/s.
@@ -86,7 +101,7 @@ def dynamic_decel_scale(v_ego_ms: float) -> float:
     elif v_ego_ms >= max_speed:
         return 2.0
     else:
-        # Linear interpolation from 8.0 -> 1.0
+        # linear interpolation from 8.0 -> 1.0
         ratio = (v_ego_ms - min_speed) / (max_speed - min_speed)
         return 8.0 + (1.0 - 8.0) * ratio
 
@@ -124,9 +139,6 @@ class VisionTurnSpeedController:
 
         self.prev_v_cruise_cluster = 0.0
 
-        # NEW: Attribute to record if the recent road segment was curvy.
-        self.last_is_curvy = False
-
     def reset(self, v_ego: float) -> None:
         """
         Reset internal state so the controller is ready for fresh speed planning.
@@ -142,7 +154,7 @@ class VisionTurnSpeedController:
         self.sm.update()
         modelData = self.sm['modelV2']
 
-        # If below a certain speed, just reset and do nothing fancy.
+        # If below a certain speed, just reset and do nothing fancy
         if v_ego < CRUISING_SPEED:
             self.reset(v_ego)
             self.prev_v_cruise_cluster = v_cruise_cluster
@@ -157,14 +169,14 @@ class VisionTurnSpeedController:
             or len(orientation_rate_raw) < MIN_POINTS
             or len(velocity_pred_raw) < MIN_POINTS
         ):
-            # Fallback if the model data isn't available.
+            # Fallback if the model data isn't available
             raw_target = self._single_step_fallback(v_ego, 0.0, turn_aggressiveness)
         else:
             orientation_rate = np.abs(np.array(orientation_rate_raw, dtype=float))
             velocity_pred = np.array(velocity_pred_raw, dtype=float)
 
             n_points = min(len(orientation_rate), len(velocity_pred))
-            # Interpolate or slice to exactly 33 points.
+            # Interpolate or slice to exactly 33 points
             if n_points < 33:
                 src_indices = np.linspace(0, n_points - 1, n_points)
                 dst_indices = np.linspace(0, n_points - 1, 33)
@@ -176,7 +188,7 @@ class VisionTurnSpeedController:
 
             times_33 = np.array(ModelConstants.T_IDXS[:33], dtype=float)
 
-            # Check if the driver just bumped up.
+            # Check if the driver just bumped up the cruise set speed
             is_bump_up = (v_cruise_cluster > self.prev_v_cruise_cluster)
 
             self.planned_speeds = self._plan_speed_trajectory(
@@ -189,19 +201,26 @@ class VisionTurnSpeedController:
             )
             raw_target = self.planned_speeds[0]
 
-        # Always clamp raw_target to at most v_cruise_cluster.
+        # Always clamp raw_target to at most v_cruise_cluster
         raw_target = min(raw_target, v_cruise_cluster)
 
-        dt = 0.05  # ~20Hz update rate
+        dt = 0.05  # ~20Hz
         final_target_speed = None
 
-        # If the driver just increased the set speed, skip symmetrical jerk-limiting on acceleration.
+        # ----------------------------------------------------
+        # If the driver just increased the set speed:
+        # We skip symmetrical jerk-limiting on the acceleration up
+        # ----------------------------------------------------
         if v_cruise_cluster > self.prev_v_cruise_cluster:
             final_target_speed = min(raw_target, v_cruise_cluster)
-            self.current_accel = 0.0  # Optional reset.
-        
+            self.current_accel = 0.0  # optional "reset"
+
+        # If no cluster bump-up, do symmetrical jerk-limit as usual
         if final_target_speed is None:
-            # Compute an extra boost factor for acceleration ramp-up.
+            # -------------------------------
+            # Compute an extra "boost factor" for accelerating out of turns
+            # if there's a big difference between the planned max speed and our current speed.
+            # -------------------------------
             planned_max = np.max(self.planned_speeds)
             if v_cruise_cluster > self.prev_target_speed:
                 ratio = (planned_max - self.prev_target_speed) / max((v_cruise_cluster - self.prev_target_speed), 1e-3)
@@ -210,24 +229,19 @@ class VisionTurnSpeedController:
             else:
                 boost_factor = 1.0
 
-            # NEW: On a curvy road, apply an additional boost to help regain speed on short straights.
-            if self.last_is_curvy:
-                boost_factor *= 1.2
-
-            # Use dynamic scaling as before, but now allow extra boost on the positive side.
             scale_decel = dynamic_decel_scale(v_ego)
             scale_jerk = dynamic_jerk_scale(v_ego)
 
-            # Compute the acceleration command (m/s^2).
+            # Compute acceleration command
             accel_cmd = (raw_target - self.prev_target_speed) / dt
 
-            # Allow a higher positive acceleration if exiting a curve;
-            # deceleration (negative accel) remains capped by MAX_DECEL * scale_decel.
+            # Negative accel remains capped by self.MAX_DECEL * scale_decel
+            # Positive accel is allowed more headroom via boost_factor
             pos_limit = self.MAX_DECEL * scale_decel * boost_factor
             neg_limit = self.MAX_DECEL * scale_decel
             accel_cmd = clip(accel_cmd, -neg_limit, pos_limit)
 
-            # Jerk-limit the change in acceleration.
+            # Jerk-limit the change in acceleration
             max_delta = (self.MAX_JERK * scale_jerk * boost_factor) * dt
             accel_diff = accel_cmd - self.current_accel
             if accel_diff > max_delta:
@@ -239,11 +253,13 @@ class VisionTurnSpeedController:
 
             final_target_speed = self.prev_target_speed + self.current_accel * dt
 
-        # Always clamp the final target speed to the dash set speed.
+        # Always clamp final to the dash set speed
         final_target_speed = min(final_target_speed, v_cruise_cluster)
 
+        # Save states
         self.prev_target_speed = final_target_speed
         self.prev_v_cruise_cluster = v_cruise_cluster
+
         return final_target_speed
 
     def _plan_speed_trajectory(
@@ -256,69 +272,61 @@ class VisionTurnSpeedController:
         skip_accel_limit: bool = False
     ) -> np.ndarray:
         """
-        Build a future speed plan based on curvature. If skip_accel_limit=True,
-        we skip *positive* acceleration capping in the forward pass but still
-        allow negative acceleration (slowing down) to prepare for turns.
+        Build a future speed plan based on curvature. 
+        If skip_accel_limit=True, skip *positive* accel limiting in forward pass (but still allow decel).
         """
         n = len(orientation_rate)
         eps = 1e-9
         dt_array = np.diff(times)
 
-        # Compute curvature for each lookahead point.
+        # Compute curvature
         curvature = np.array([
             orientation_rate[i] / max(velocity_pred[i], eps)
             for i in range(n)
         ], dtype=float)
 
-        # NEW: Compute a "curviness" metric using the mean absolute curvature.
-        curviness = np.mean(np.abs(curvature))
-        curvy_threshold = 0.02  # (1/m) Tunable threshold.
-        is_curvy = curviness > curvy_threshold
-        self.last_is_curvy = is_curvy  # Save flag for use in update().
-
-        # Set multipliers based on whether the road is curvy.
-        if is_curvy:
-            # On a curvy road: delay braking by reducing deceleration/spool times,
-            # and shorten the deceleration margin window.
-            decel_factor_multiplier = 0.7
-            spool_factor_multiplier = 0.7
-            margin_multiplier = 0.7
-        else:
-            decel_factor_multiplier = 1.0
-            spool_factor_multiplier = 1.0
-            margin_multiplier = 1.0
-
-        # Compute safe speeds for each future point based on lateral acceleration limits.
+        # Compute the safe speed at each horizon point, based on lateral acceleration limit
         safe_speeds = np.zeros(n, dtype=float)
         for i in range(n):
             lat_acc_limit = nonlinear_lat_accel(velocity_pred[i], turn_aggressiveness)
             c = max(curvature[i], 1e-9)
             safe_speeds[i] = math.sqrt(lat_acc_limit / c) if c > 1e-9 else 70.0
             safe_speeds[i] = clip(safe_speeds[i], 0.0, 70.0)
-            # PATCH: Reduce safe speed by 7% if within ~30–45 mph (13.4–20.1 m/s)
+            # Light patch: reduce safe speed by 7% if within ~30–45 mph range
             if 13.4 <= safe_speeds[i] <= 20.1:
                 safe_speeds[i] *= 0.93
 
-        # Identify apex indices and shape speeds around them.
+        # Identify apex indices
         apex_idxs = find_apexes(curvature, threshold=5e-5)
         planned = safe_speeds.copy()
+
+        # ----------------------------------------------------
+        # Detect if the road is "curvy" (multiple apexes close).
+        # Adjust margin time and apex shaping if so.
+        # ----------------------------------------------------
+        is_curvy = detect_curvy_road(apex_idxs, times)
+        if is_curvy:
+            # On a windy road, we want to brake later & accelerate harder around apexes
+            margin_factor = 0.75      # reduce margin time
+            apex_decel_factor = 0.20  # brake a bit harder when we do
+            apex_spool_factor = 0.12  # accelerate harder out of apex
+        else:
+            margin_factor = 1.0
+            apex_decel_factor = 0.15
+            apex_spool_factor = 0.08
+
+        # Shape speeds around apexes
         for apex_i in apex_idxs:
             apex_speed = planned[apex_i]
 
-            # Base factors for shaping speeds around the apex.
-            base_decel_factor = 0.15
-            base_spool_factor = 0.08
-            # Adjust factors based on curvy conditions.
-            decel_factor = base_decel_factor * decel_factor_multiplier
-            spool_factor = base_spool_factor * spool_factor_multiplier
-
-            decel_sec = velocity_pred[apex_i] * decel_factor
-            spool_sec = velocity_pred[apex_i] * spool_factor
+            decel_sec = velocity_pred[apex_i] * apex_decel_factor
+            spool_sec = velocity_pred[apex_i] * apex_spool_factor
 
             decel_start = self._find_time_index(times, times[apex_i] - decel_sec)
             spool_start = self._find_time_index(times, times[apex_i] - spool_sec)
             spool_end = self._find_time_index(times, times[apex_i] + spool_sec, clip_high=True)
 
+            # Interpolate from decel_start to spool_start
             if spool_start > decel_start:
                 v_decel_start = planned[decel_start]
                 steps_decel = spool_start - decel_start
@@ -326,9 +334,11 @@ class VisionTurnSpeedController:
                     f = (idx - decel_start) / float(steps_decel)
                     planned[idx] = v_decel_start * (1 - f) + apex_speed * f
 
+            # Ensure apex zone is clamped to apex_speed
             for idx in range(spool_start, apex_i + 1):
                 planned[idx] = min(planned[idx], apex_speed)
 
+            # Spool up after the apex
             if spool_end > apex_i:
                 steps_spool = spool_end - apex_i
                 v_spool_end = planned[spool_end - 1]
@@ -337,10 +347,12 @@ class VisionTurnSpeedController:
                     spool_val = apex_speed * (1 - f) + v_spool_end * f
                     planned[idx] = min(planned[idx], spool_val)
 
-        # Margin-based deceleration shaping: backward pass.
+        # Margin-based deceleration shaping
         new_planned = planned.copy()
-        margin_t = margin_time_fn(init_speed) * margin_multiplier
+        base_margin = margin_time_fn(init_speed)
+        margin_t = base_margin * margin_factor
 
+        # (1) Backward pass using margin time
         for i in range(n - 2, -1, -1):
             j = self._find_time_index(times, times[i] + margin_t, clip_high=True)
             if j <= i:
@@ -354,7 +366,7 @@ class VisionTurnSpeedController:
             feasible_speed = v_future - desired_acc * dt_ij
             new_planned[i] = min(new_planned[i], feasible_speed, planned[i])
 
-        # Standard backward pass for deceleration limiting.
+        # (2) Standard backward pass for deceleration limit
         dt_len = len(dt_array)
         for i in range(n - 2, -1, -1):
             dt_i = dt_array[i] if i < dt_len else 0.05
@@ -364,7 +376,7 @@ class VisionTurnSpeedController:
             feasible_speed = v_next - desired_acc * dt_i
             new_planned[i] = min(new_planned[i], feasible_speed, planned[i])
 
-        # Forward pass: limit acceleration changes between points.
+        # (3) Forward pass to limit accel/decel changes (skip positive accel limit if asked)
         new_planned[0] = min(new_planned[0], planned[0])
         dt_0 = dt_array[0] if dt_len > 0 else 0.05
         err0 = new_planned[0] - init_speed
@@ -373,6 +385,7 @@ class VisionTurnSpeedController:
             accel0 = clip(err0 / dt_0, -self.MAX_DECEL, 9999.0)
         else:
             accel0 = clip(err0 / dt_0, -self.MAX_DECEL, self.MAX_DECEL)
+
         new_planned[0] = init_speed + accel0 * dt_0
 
         for i in range(1, n):
@@ -384,6 +397,7 @@ class VisionTurnSpeedController:
                 desired_acc = clip(err / dt_i, -self.MAX_DECEL, 9999.0)
             else:
                 desired_acc = clip(err / dt_i, -self.MAX_DECEL, self.MAX_DECEL)
+
             feasible_speed = v_prev + desired_acc * dt_i
             new_planned[i] = min(new_planned[i], feasible_speed, planned[i])
 
@@ -392,7 +406,7 @@ class VisionTurnSpeedController:
     def _find_time_index(self, times: np.ndarray, target_time: float, clip_high=False) -> int:
         """
         Helper to find an index in 'times' that is closest to 'target_time'.
-        If clip_high=True, clamp to the last index if target_time exceeds times[-1].
+        If clip_high=True, we clamp to the last index if target_time > times[-1].
         """
         n = len(times)
         if target_time <= times[0]:
@@ -401,7 +415,7 @@ class VisionTurnSpeedController:
             return n - 1
         for i in range(n - 1):
             if times[i] <= target_time < times[i + 1]:
-                # Return whichever index is closer.
+                # Return whichever is closer
                 if (target_time - times[i]) < (times[i + 1] - target_time):
                     return i
                 else:
@@ -410,8 +424,7 @@ class VisionTurnSpeedController:
 
     def _single_step_fallback(self, v_ego, curvature, turn_aggressiveness):
         """
-        Fallback strategy when model data is not available.
-        Clamps speed based on lateral acceleration limits.
+        Used if we have no valid model data. A basic approach to clamp speed if lateral acceleration is too high.
         """
         lat_acc = nonlinear_lat_accel(v_ego, turn_aggressiveness)
         c = max(curvature, 1e-9)
